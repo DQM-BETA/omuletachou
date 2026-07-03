@@ -29,6 +29,18 @@ services:
     ports:
       - "5000:8080"
 
+  website:
+    build:
+      context: ./website
+    container_name: afiliado_website
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:5000
+    ports:
+      - "3000:3000"
+
   dashboard:
     build:
       context: ./dashboard
