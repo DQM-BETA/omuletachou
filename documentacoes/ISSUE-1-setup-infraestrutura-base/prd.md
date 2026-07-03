@@ -70,3 +70,33 @@ Criar a estrutura inicial do repositório omuletachou: solution .NET 8, projetos
 - [ ] Os 4 endpoints (4200, 3000, 5000/health) respondem após `docker compose up -d`
 - [ ] PR feature → desenv criado e aprovado (squash merge)
 - [ ] Nenhum segredo hardcoded (apenas `.env.example` com placeholders)
+
+## Critérios de Aceite Detalhados
+
+### Docker e containers
+- Given o repositório clonado When `docker compose build` é executado Then todos os 4 containers (db, api, dashboard, website) buildam sem erro em amd64 e arm64
+- Given `docker compose up -d` When verificar `docker compose ps` Then todos os containers estão com status `Up`
+- Given container `db` iniciado When conectar via psql Then PostgreSQL 16 responde na porta 5432
+
+### API (.NET 8)
+- Given container `api` iniciado When `GET localhost:5000/health` Then retorna HTTP 200
+- Given container `api` iniciado When `GET localhost:5000/hangfire` Then retorna HTTP 200 (Hangfire dashboard acessível)
+- Given `dotnet build` no projeto AfiliadoBot.Api Then compila sem erros ou warnings
+
+### Dashboard Angular
+- Given container `dashboard` iniciado When `GET localhost:4200` Then retorna HTTP 200 com HTML do Angular
+- Given Angular em execução When navegar para `/products`, `/queue`, `/facebook-manual`, `/settings`, `/reports` Then cada rota renderiza sem erro 404
+- Given `npm run build --configuration=production` no dashboard Then compila sem erros de TypeScript
+
+### Site Next.js
+- Given container `website` iniciado When `GET localhost:3000` Then retorna HTTP 200 com HTML renderizado (SSR)
+- Given Next.js em execução When navegar para `/oferta/teste` e `/categoria/eletronicos` Then rotas dinâmicas respondem sem erro 500
+- Given `npm run build` no website Then compila sem erros de TypeScript
+
+### Estrutura de projetos .NET
+- Given a solution `AfiliadoBot.sln` When `dotnet build` Then compila os 5 projetos: Api, Application, Domain, Infrastructure, Tests
+- Given `dotnet test` Then suite de testes roda sem falha (zero testes ou testes stub são aceitos nesta issue)
+
+### Proxy e comunicação entre containers
+- Given Angular em execução When `fetch('/api/health')` no browser Then proxy nginx redireciona para o container `api` e retorna 200
+- Given Next.js em execução no servidor When fetch para `http://api:8080/health` Then retorna 200 (rede Docker interna)
