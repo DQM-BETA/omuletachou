@@ -1,0 +1,77 @@
+using AfiliadoBot.Domain.Entities;
+using AfiliadoBot.Domain.Enums;
+using FluentAssertions;
+
+namespace AfiliadoBot.Tests.Domain;
+
+public class ProductTests
+{
+    private static Product CriarProdutoValido(
+        decimal salePrice = 100m,
+        decimal discountPct = 10m,
+        string affiliateLink = "https://amzn.to/xyz") =>
+        new Product(
+            title: "Produto Teste",
+            description: "Descricao",
+            salePrice: salePrice,
+            originalPrice: 120m,
+            discountPct: discountPct,
+            affiliateLink: affiliateLink,
+            slug: "produto-teste",
+            category: "Eletronicos",
+            platform: Platform.Amazon);
+
+    [Fact]
+    public void Constructor_ThrowsWhen_SalePriceNegative()
+    {
+        var act = () => CriarProdutoValido(salePrice: -1m);
+        act.Should().Throw<ArgumentException>().WithParameterName("salePrice");
+    }
+
+    [Fact]
+    public void Constructor_ThrowsWhen_DiscountPctOutOfRange()
+    {
+        var act = () => CriarProdutoValido(discountPct: 101m);
+        act.Should().Throw<ArgumentException>().WithParameterName("discountPct");
+    }
+
+    [Fact]
+    public void Constructor_ThrowsWhen_AffiliateLinkEmpty()
+    {
+        var act = () => CriarProdutoValido(affiliateLink: "");
+        act.Should().Throw<ArgumentNullException>().WithParameterName("affiliateLink");
+    }
+
+    [Fact]
+    public void Constructor_ValidArgs_CreatesSemErro()
+    {
+        var product = CriarProdutoValido();
+        product.Status.Should().Be(ProductStatus.Pending);
+        product.Id.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void UpdateAiResult_SetsQueued_WhenScoreAboveThreshold()
+    {
+        var product = CriarProdutoValido();
+        product.UpdateAiResult(score: Product.AiScoreThreshold, reason: "Bom", caption: "Caption");
+        product.Status.Should().Be(ProductStatus.Queued);
+    }
+
+    [Fact]
+    public void UpdateAiResult_SetsRejected_WhenScoreBelowThreshold()
+    {
+        var product = CriarProdutoValido();
+        product.UpdateAiResult(score: Product.AiScoreThreshold - 1, reason: "Ruim", caption: "Caption");
+        product.Status.Should().Be(ProductStatus.Rejected);
+    }
+
+    [Fact]
+    public void MarkAsPublished_ChangesStatus()
+    {
+        var product = CriarProdutoValido();
+        product.UpdateAiResult(score: Product.AiScoreThreshold, reason: "Ok", caption: "Caption");
+        product.MarkAsPublished();
+        product.Status.Should().Be(ProductStatus.Published);
+    }
+}
