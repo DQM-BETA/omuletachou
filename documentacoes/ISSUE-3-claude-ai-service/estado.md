@@ -1,7 +1,7 @@
 issue: 3
 titulo: feat: Claude AI Service (Scoring + Geracao de Legendas)
 rota: normal
-etapa_atual: Dev — aguardando spawn
+etapa_atual: Code Review
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-3-claude-ai-service
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-3-claude-ai-service
@@ -13,8 +13,8 @@ tech_stacks:
 ultimo_agente: lt
 sub_issues:
   - "#33 (stack:dotnet, task_id:T-01)"
-desenv_tasks_merged: []
-pr_homologacao: ~
+desenv_tasks_merged: ["#33"]
+pr_homologacao: 35
 pr_release: ~
 code_review_homolog_pr: ~
 qa_status: ~
@@ -35,7 +35,10 @@ Criada em 2026-07-03 pelo Coordenador.
 | 1 | PM Fase 1 | PM | concluido |
 | 2 | PM Fase 2 | PM | concluido |
 | 3 | Refinamento LT | LT | concluido |
+| 4 | Dev T-01 #33 | dev-dotnet | concluido |
+| 5 | Merge T-01 + PR homolog | LT | concluido |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo |
 |---|---|---|---|---|---|---|
+| 4 | Dev T-01 #33 | dev-dotnet | sonnet | 51135 | 59 | 366s |
