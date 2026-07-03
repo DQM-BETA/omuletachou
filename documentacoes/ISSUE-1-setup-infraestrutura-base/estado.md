@@ -42,3 +42,4 @@ Sub-A (#16) primeiro; Sub-B (#17) e Sub-C (#18) paralelizaveis apos Sub-A.
 | 2 | PM Fase 1 | PM | sonnet-4-6 | 20490 | 10 | 82 |
 | 3 | PM Fase 2 | PM | sonnet-4-6 | 23595 | 10 | 98 |
 | 4 | Refinamento LT | LT | sonnet-4-6 | 32468 | 16 | 146 |
+| 5 | Sync board | Coordenador | sonnet-4-6 | 43708 | 16 | 56 |
