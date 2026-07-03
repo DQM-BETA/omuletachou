@@ -3,8 +3,8 @@ issue: 2
 titulo: feat: Domain, EF Core e Schema de Banco
 repo: omuletachou
 rota: normal
-etapa_atual: QA
-ultimo_agente: code_review
+etapa_atual: Gate 2 — aguardando aprovação do Gerente para merge em main
+ultimo_agente: lt
 openspec_change: ~
 tech_stacks: [".NET 8", "EF Core 8", "PostgreSQL 16", "C#"]
 repos:
@@ -17,8 +17,8 @@ desenv_tasks_merged: [25, 26]
 sub_issues_frontend: {}
 pr_homologacao: 29
 pr_release: ~
-code_review_homolog_pr: 29
-qa_status: ~
+code_review_homolog_pr: ~
+qa_status: aprovado
 figma_url: ~
 blockers: nenhum
 ---
@@ -57,7 +57,8 @@ Issue de implementação do domínio, contexto EF Core e schema de banco de dado
 | 4 | Dev T-01 #25 (PR#27) | Dev .NET | concluido |
 | 5 | Dev T-02 #26 (PR#28) | Dev .NET | concluido |
 | 6 | PR desenv→homolog (#29) | LT | concluido |
-| 7 | Code Review homolog PR#29 | Code Review | aprovado — merge desenv→homolog realizado |
+| 7 | QA | QA | concluido |
+| 8 | PR homolog→main | LT | concluido |
 
 ## Custo (ledger)
 <!-- Preenchido pelo orquestrador a cada etapa -->
