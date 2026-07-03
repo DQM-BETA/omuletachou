@@ -5,7 +5,7 @@ issue: 1
 repo: omuletachou
 titulo: feat: Setup do Projeto e Infraestrutura Base
 rota: normal
-etapa_atual: Em Desenvolvimento (Sub-B #17 e Sub-C #18 em paralelo)
+etapa_atual: LT — PR desenv→homolog
 docs_path: repos/omuletachou/documentacoes/ISSUE-1-setup-infraestrutura-base
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-1-setup-infraestrutura-base
 ultimo_agente: lt
@@ -49,4 +49,6 @@ Sub-A (#16) primeiro; Sub-B (#17) e Sub-C (#18) paralelizaveis apos Sub-A.
 | 7 | Merge PR#19 | LT | sonnet-4-6 | 23963 | 11 | 67 |
 | 8 | Dev Sub-C #18 | Dev Node.js | sonnet-4-6 | 28298 | 22 | 139 |
 | 9 | Dev Sub-B #17 | Dev Angular | sonnet-4-6 | 36346 | 34 | 263 |
+| 10 | Merge PR#20 (Next.js) | LT | sonnet-4-6 | 19229 | 3 | 23 |
+| 11 | Merge PR#21 (Angular) | LT | sonnet-4-6 | 20888 | 4 | 27 |
 | 7 | Merge Sub-A #16 | LT | sonnet-4-6 | — | — | — |
