@@ -5,7 +5,7 @@ issue: 1
 repo: omuletachou
 titulo: feat: Setup do Projeto e Infraestrutura Base
 rota: normal
-etapa_atual: QA
+etapa_atual: LT — PR homolog→main (Gate 2)
 docs_path: repos/omuletachou/documentacoes/ISSUE-1-setup-infraestrutura-base
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-1-setup-infraestrutura-base
 ultimo_agente: code_review
@@ -61,4 +61,5 @@ Sub-A (#16) primeiro; Sub-B (#17) e Sub-C (#18) paralelizaveis apos Sub-A.
 | 11 | Merge PR#21 (Angular) | LT | sonnet-4-6 | 20888 | 4 | 27 |
 | 12 | PR desenv→homolog | LT | sonnet-4-6 | 23620 | 7 | 62 |
 | 13 | Code Review | CR Agent | sonnet-4-6 | 27701 | 21 | 135 |
+| 14 | QA | QA | sonnet-4-6 | 22381 | 17 | 107 |
 | 13 | Code Review #22 | Code Review | sonnet-4-6 | — | — | — |
