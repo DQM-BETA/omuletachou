@@ -43,3 +43,4 @@ Sub-A (#16) primeiro; Sub-B (#17) e Sub-C (#18) paralelizaveis apos Sub-A.
 | 3 | PM Fase 2 | PM | sonnet-4-6 | 23595 | 10 | 98 |
 | 4 | Refinamento LT | LT | sonnet-4-6 | 32468 | 16 | 146 |
 | 5 | Sync board | Coordenador | sonnet-4-6 | 43708 | 16 | 56 |
+| 6 | Dev Sub-A #16 | Dev .NET | sonnet-4-6 | 40896 | 47 | 217 |
