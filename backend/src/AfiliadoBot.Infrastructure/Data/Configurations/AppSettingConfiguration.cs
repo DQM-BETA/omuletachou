@@ -67,7 +67,8 @@ public class AppSettingConfiguration : IEntityTypeConfiguration<AppSetting>
             new { Id = 27, Key = "networks.youtube.enabled", Value = "true", UpdatedAt = now },
             new { Id = 28, Key = "networks.instagram.enabled", Value = "true", UpdatedAt = now },
             new { Id = 29, Key = "networks.tiktok.enabled", Value = "true", UpdatedAt = now },
-            new { Id = 30, Key = "networks.facebook.enabled", Value = "true", UpdatedAt = now }
+            new { Id = 30, Key = "networks.facebook.enabled", Value = "true", UpdatedAt = now },
+            new { Id = 31, Key = "claude.min_score_fallback", Value = "5", UpdatedAt = now }
         );
     }
 }
