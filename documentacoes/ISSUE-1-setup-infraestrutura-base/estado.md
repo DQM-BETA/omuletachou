@@ -22,8 +22,10 @@ Branch base: desenv
 |---|---|---|---|
 | 1 | Preparação | Coordenador | concluído |
 | 2 | PM Fase 1 | PM | concluído |
+| 3 | Gate 1 | Gerente | aguardando |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
 |---|---|---|---|---|---|---|
 | 1 | Preparação | Coordenador | sonnet-4-6 | 45991 | 16 | 70 |
+| 2 | PM Fase 1 | PM | sonnet-4-6 | 20490 | 10 | 82 |
