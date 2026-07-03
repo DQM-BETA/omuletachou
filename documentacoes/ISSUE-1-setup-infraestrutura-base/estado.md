@@ -1,4 +1,4 @@
-# Estado — ISSUE-1: Setup do Projeto e Infraestrutura Base
+﻿# Estado — ISSUE-1: Setup do Projeto e Infraestrutura Base
 
 ## Campos principais
 issue: 1
@@ -57,3 +57,4 @@ Sub-A (#16) primeiro; Sub-B (#17) e Sub-C (#18) paralelizaveis apos Sub-A.
 | 9 | Dev Sub-B #17 | Dev Angular | sonnet-4-6 | 36346 | 34 | 263 |
 | 10 | Merge PR#20 (Next.js) | LT | sonnet-4-6 | 19229 | 3 | 23 |
 | 11 | Merge PR#21 (Angular) | LT | sonnet-4-6 | 20888 | 4 | 27 |
+| 12 | PR desenv→homolog | LT | sonnet-4-6 | 23620 | 7 | 62 |
