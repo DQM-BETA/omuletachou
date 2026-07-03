@@ -84,7 +84,8 @@ namespace AfiliadoBot.Infrastructure.Migrations
                         new { Id = 27, Key = "networks.youtube.enabled", Value = "true", UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
                         new { Id = 28, Key = "networks.instagram.enabled", Value = "true", UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
                         new { Id = 29, Key = "networks.tiktok.enabled", Value = "true", UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                        new { Id = 30, Key = "networks.facebook.enabled", Value = "true", UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
+                        new { Id = 30, Key = "networks.facebook.enabled", Value = "true", UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
+                        new { Id = 31, Key = "claude.min_score_fallback", Value = "5", UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
                 });
 
             modelBuilder.Entity("AfiliadoBot.Domain.Entities.Product", b =>
