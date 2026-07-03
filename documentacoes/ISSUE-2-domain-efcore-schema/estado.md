@@ -3,7 +3,7 @@ issue: 2
 titulo: feat: Domain, EF Core e Schema de Banco
 repo: omuletachou
 rota: normal
-etapa_atual: Dev T-02 #26
+etapa_atual: Code Review
 ultimo_agente: lt
 openspec_change: ~
 tech_stacks: [".NET 8", "EF Core 8", "PostgreSQL 16", "C#"]
@@ -13,9 +13,9 @@ repo_path: "repos/omuletachou"
 docs_path: "repos/omuletachou/documentacoes/ISSUE-2-domain-efcore-schema"
 openspec_path: ~
 sub_issues: [25, 26]
-desenv_tasks_merged: [25]
+desenv_tasks_merged: [25, 26]
 sub_issues_frontend: {}
-pr_homologacao: ~
+pr_homologacao: 29
 pr_release: ~
 code_review_homolog_pr: ~
 qa_status: ~
@@ -55,6 +55,8 @@ Issue de implementação do domínio, contexto EF Core e schema de banco de dado
 | 2 | PM Fase 2 | PM | concluido |
 | 3 | Refinamento LT | LT | concluido |
 | 4 | Dev T-01 #25 (PR#27) | Dev .NET | concluido |
+| 5 | Dev T-02 #26 (PR#28) | Dev .NET | concluido |
+| 6 | PR desenv→homolog (#29) | LT | concluido |
 
 ## Custo (ledger)
 <!-- Preenchido pelo orquestrador a cada etapa -->
