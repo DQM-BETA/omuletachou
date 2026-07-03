@@ -1,15 +1,16 @@
-﻿# Estado — ISSUE-1: Setup do Projeto e Infraestrutura Base
+# Estado — ISSUE-1: Setup do Projeto e Infraestrutura Base
 
 ## Campos principais
 issue: 1
 repo: omuletachou
 titulo: feat: Setup do Projeto e Infraestrutura Base
 rota: normal
-etapa_atual: Code Review
+etapa_atual: QA
 docs_path: repos/omuletachou/documentacoes/ISSUE-1-setup-infraestrutura-base
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-1-setup-infraestrutura-base
-ultimo_agente: lt
+ultimo_agente: code_review
 pr_homologacao: 22
+code_review_homolog_pr: 22
 
 ## Contexto
 Stack multi: .NET 8 (backend) + Angular 17 (dashboard) + Next.js 14 (site publico) + Docker Compose 24+
@@ -42,6 +43,7 @@ Sub-A (#16) primeiro; Sub-B (#17) e Sub-C (#18) paralelizaveis apos Sub-A.
 | 10 | Merge Sub-C #18 (PR#20) | LT | concluido |
 | 11 | Merge Sub-B #17 (PR#21) | LT | concluido |
 | 12 | PR desenv→homolog (#22) | LT | concluido |
+| 13 | Code Review (#22) | Code Review | aprovado |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -58,3 +60,4 @@ Sub-A (#16) primeiro; Sub-B (#17) e Sub-C (#18) paralelizaveis apos Sub-A.
 | 10 | Merge PR#20 (Next.js) | LT | sonnet-4-6 | 19229 | 3 | 23 |
 | 11 | Merge PR#21 (Angular) | LT | sonnet-4-6 | 20888 | 4 | 27 |
 | 12 | PR desenv→homolog | LT | sonnet-4-6 | 23620 | 7 | 62 |
+| 13 | Code Review #22 | Code Review | sonnet-4-6 | — | — | — |
