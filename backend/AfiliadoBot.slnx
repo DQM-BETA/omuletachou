@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AfiliadoBot.Api/AfiliadoBot.Api.csproj" />
+    <Project Path="src/AfiliadoBot.Application/AfiliadoBot.Application.csproj" />
+    <Project Path="src/AfiliadoBot.Domain/AfiliadoBot.Domain.csproj" />
+    <Project Path="src/AfiliadoBot.Infrastructure/AfiliadoBot.Infrastructure.csproj" />
+    <Project Path="src/AfiliadoBot.Tests/AfiliadoBot.Tests.csproj" />
+  </Folder>
+</Solution>

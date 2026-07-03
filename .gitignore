@@ -1,0 +1,16 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+
+# Node
+node_modules/
+.next/
+dist/
+
+# Env
+.env
+
+# Docker
+.dockerignore
