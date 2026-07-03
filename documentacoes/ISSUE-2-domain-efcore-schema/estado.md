@@ -16,7 +16,7 @@ sub_issues: [25, 26]
 desenv_tasks_merged: [25, 26]
 sub_issues_frontend: {}
 pr_homologacao: 29
-pr_release: ~
+pr_release: 31
 code_review_homolog_pr: ~
 qa_status: aprovado
 figma_url: ~
