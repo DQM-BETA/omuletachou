@@ -1,11 +1,11 @@
-﻿# Estado — ISSUE-1: Setup do Projeto e Infraestrutura Base
+# Estado — ISSUE-1: Setup do Projeto e Infraestrutura Base
 
 ## Campos principais
 issue: 1
 repo: omuletachou
 titulo: feat: Setup do Projeto e Infraestrutura Base
 rota: normal
-etapa_atual: Coordenador — sincronizar sub-issues no board
+etapa_atual: Em Desenvolvimento (Sub-B #17 e Sub-C #18 em paralelo)
 docs_path: repos/omuletachou/documentacoes/ISSUE-1-setup-infraestrutura-base
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-1-setup-infraestrutura-base
 ultimo_agente: lt
@@ -21,7 +21,7 @@ Branch base: desenv
 - #18 (stack:nodejs, task_id:T-03) — Site Next.js 14: scaffold, 3 rotas stub, Dockerfile
 
 sub_issues: [16, 17, 18]
-desenv_tasks_merged: []
+desenv_tasks_merged: [16]
 
 ## Ordem de implementacao
 Sub-A (#16) primeiro; Sub-B (#17) e Sub-C (#18) paralelizaveis apos Sub-A.
@@ -34,6 +34,8 @@ Sub-A (#16) primeiro; Sub-B (#17) e Sub-C (#18) paralelizaveis apos Sub-A.
 | 3 | Gate 1 | Gerente | concluido |
 | 4 | PM Fase 2 | PM | concluido |
 | 5 | Refinamento LT | LT | concluido |
+| 6 | Dev Sub-A #16 | Dev .NET | concluido |
+| 7 | Merge Sub-A #16 | LT | concluido |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -44,3 +46,4 @@ Sub-A (#16) primeiro; Sub-B (#17) e Sub-C (#18) paralelizaveis apos Sub-A.
 | 4 | Refinamento LT | LT | sonnet-4-6 | 32468 | 16 | 146 |
 | 5 | Sync board | Coordenador | sonnet-4-6 | 43708 | 16 | 56 |
 | 6 | Dev Sub-A #16 | Dev .NET | sonnet-4-6 | 40896 | 47 | 217 |
+| 7 | Merge Sub-A #16 | LT | sonnet-4-6 | — | — | — |
