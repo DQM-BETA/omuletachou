@@ -1,14 +1,15 @@
-﻿# Estado — ISSUE-1: Setup do Projeto e Infraestrutura Base
+# Estado — ISSUE-1: Setup do Projeto e Infraestrutura Base
 
 ## Campos principais
 issue: 1
 repo: omuletachou
 titulo: feat: Setup do Projeto e Infraestrutura Base
 rota: normal
-etapa_atual: LT — PR desenv→homolog
+etapa_atual: Code Review
 docs_path: repos/omuletachou/documentacoes/ISSUE-1-setup-infraestrutura-base
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-1-setup-infraestrutura-base
 ultimo_agente: lt
+pr_homologacao: 22
 
 ## Contexto
 Stack multi: .NET 8 (backend) + Angular 17 (dashboard) + Next.js 14 (site publico) + Docker Compose 24+
@@ -21,7 +22,7 @@ Branch base: desenv
 - #18 (stack:nodejs, task_id:T-03) — Site Next.js 14: scaffold, 3 rotas stub, Dockerfile
 
 sub_issues: [16, 17, 18]
-desenv_tasks_merged: [16]
+desenv_tasks_merged: [16, 17, 18]
 
 ## Ordem de implementacao
 Sub-A (#16) primeiro; Sub-B (#17) e Sub-C (#18) paralelizaveis apos Sub-A.
@@ -36,6 +37,11 @@ Sub-A (#16) primeiro; Sub-B (#17) e Sub-C (#18) paralelizaveis apos Sub-A.
 | 5 | Refinamento LT | LT | concluido |
 | 6 | Dev Sub-A #16 | Dev .NET | concluido |
 | 7 | Merge Sub-A #16 | LT | concluido |
+| 8 | Dev Sub-C #18 | Dev Node.js | concluido |
+| 9 | Dev Sub-B #17 | Dev Angular | concluido |
+| 10 | Merge Sub-C #18 (PR#20) | LT | concluido |
+| 11 | Merge Sub-B #17 (PR#21) | LT | concluido |
+| 12 | PR desenv→homolog (#22) | LT | concluido |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -51,4 +57,3 @@ Sub-A (#16) primeiro; Sub-B (#17) e Sub-C (#18) paralelizaveis apos Sub-A.
 | 9 | Dev Sub-B #17 | Dev Angular | sonnet-4-6 | 36346 | 34 | 263 |
 | 10 | Merge PR#20 (Next.js) | LT | sonnet-4-6 | 19229 | 3 | 23 |
 | 11 | Merge PR#21 (Angular) | LT | sonnet-4-6 | 20888 | 4 | 27 |
-| 7 | Merge Sub-A #16 | LT | sonnet-4-6 | — | — | — |
