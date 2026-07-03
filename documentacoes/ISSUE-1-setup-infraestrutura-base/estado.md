@@ -1,4 +1,4 @@
-# Estado — ISSUE-1: Setup do Projeto e Infraestrutura Base
+﻿# Estado — ISSUE-1: Setup do Projeto e Infraestrutura Base
 
 ## Campos principais
 issue: 1
@@ -46,4 +46,5 @@ Sub-A (#16) primeiro; Sub-B (#17) e Sub-C (#18) paralelizaveis apos Sub-A.
 | 4 | Refinamento LT | LT | sonnet-4-6 | 32468 | 16 | 146 |
 | 5 | Sync board | Coordenador | sonnet-4-6 | 43708 | 16 | 56 |
 | 6 | Dev Sub-A #16 | Dev .NET | sonnet-4-6 | 40896 | 47 | 217 |
+| 7 | Merge PR#19 | LT | sonnet-4-6 | 23963 | 11 | 67 |
 | 7 | Merge Sub-A #16 | LT | sonnet-4-6 | — | — | — |
