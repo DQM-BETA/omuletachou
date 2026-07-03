@@ -47,4 +47,6 @@ Sub-A (#16) primeiro; Sub-B (#17) e Sub-C (#18) paralelizaveis apos Sub-A.
 | 5 | Sync board | Coordenador | sonnet-4-6 | 43708 | 16 | 56 |
 | 6 | Dev Sub-A #16 | Dev .NET | sonnet-4-6 | 40896 | 47 | 217 |
 | 7 | Merge PR#19 | LT | sonnet-4-6 | 23963 | 11 | 67 |
+| 8 | Dev Sub-C #18 | Dev Node.js | sonnet-4-6 | 28298 | 22 | 139 |
+| 9 | Dev Sub-B #17 | Dev Angular | sonnet-4-6 | 36346 | 34 | 263 |
 | 7 | Merge Sub-A #16 | LT | sonnet-4-6 | — | — | — |
