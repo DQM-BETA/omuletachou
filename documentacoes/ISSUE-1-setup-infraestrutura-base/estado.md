@@ -1,4 +1,4 @@
-# Estado — ISSUE-1: Setup do Projeto e Infraestrutura Base
+﻿# Estado — ISSUE-1: Setup do Projeto e Infraestrutura Base
 
 ## Campos principais
 issue: 1
@@ -65,4 +65,5 @@ Sub-A (#16) primeiro; Sub-B (#17) e Sub-C (#18) paralelizaveis apos Sub-A.
 | 12 | PR desenv→homolog | LT | sonnet-4-6 | 23620 | 7 | 62 |
 | 13 | Code Review | CR Agent | sonnet-4-6 | 27701 | 21 | 135 |
 | 14 | QA | QA | sonnet-4-6 | 22381 | 17 | 107 |
+| 15 | PR homolog→main | LT | sonnet-4-6 | 23722 | 5 | 48 |
 | 15 | PR homolog→main | LT | sonnet-4-6 | — | — | — |
