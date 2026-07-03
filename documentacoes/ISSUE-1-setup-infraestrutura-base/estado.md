@@ -1,4 +1,4 @@
-# Estado — ISSUE-1: Setup do Projeto e Infraestrutura Base
+﻿# Estado — ISSUE-1: Setup do Projeto e Infraestrutura Base
 
 ## Campos principais
 issue: 1
@@ -41,3 +41,4 @@ Sub-A (#16) primeiro; Sub-B (#17) e Sub-C (#18) paralelizaveis apos Sub-A.
 | 1 | Preparacao | Coordenador | sonnet-4-6 | 45991 | 16 | 70 |
 | 2 | PM Fase 1 | PM | sonnet-4-6 | 20490 | 10 | 82 |
 | 3 | PM Fase 2 | PM | sonnet-4-6 | 23595 | 10 | 98 |
+| 4 | Refinamento LT | LT | sonnet-4-6 | 32468 | 16 | 146 |
