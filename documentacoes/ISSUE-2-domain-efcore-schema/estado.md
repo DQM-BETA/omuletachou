@@ -3,8 +3,8 @@ issue: 2
 titulo: feat: Domain, EF Core e Schema de Banco
 repo: omuletachou
 rota: normal
-etapa_atual: Refinamento LT
-ultimo_agente: pm
+etapa_atual: Dev — aguardando spawn
+ultimo_agente: lt
 openspec_change: ~
 tech_stacks: [".NET 8", "EF Core 8", "PostgreSQL 16", "C#"]
 repos:
@@ -12,7 +12,7 @@ repos:
 repo_path: "repos/omuletachou"
 docs_path: "repos/omuletachou/documentacoes/ISSUE-2-domain-efcore-schema"
 openspec_path: ~
-sub_issues: []
+sub_issues: [25, 26]
 desenv_tasks_merged: []
 sub_issues_frontend: {}
 pr_homologacao: ~
@@ -31,13 +31,17 @@ Issue de implementação do domínio, contexto EF Core e schema de banco de dado
 **Objetivo:** Criar todas as entidades do domínio, contexto EF Core, migrations iniciais e seeds de configuração.
 
 ### Artefatos entregáveis
-- Entidades em `AfiliadoBot.Domain/Entities/`: `Product`, `PublicationQueue`, `AppSetting`, `PushSubscription`
+- Entidades em `AfiliadoBot.Domain/Entities/`: `Product`, `PublicationQueue`, `AppSetting`, `PushSubscription`, `PublicationLog`
 - Enums em `AfiliadoBot.Domain/Enums/`: `Platform`, `SocialNetwork`, `ProductStatus`, `PublicationStatus`
 - `AppDbContext` com configurações Fluent API
 - Migration inicial com todas as tabelas
-- Seeds de `app_settings` com 25+ campos
+- Seeds de `app_settings` com 30 campos (>= 25 exigidos)
 - Interfaces de domínio: `IPlatformCollector`, `ISocialPublisher`, `IMediaStorage`, `IAiService`
 - Testes unitários de entidades e validações
+
+### Sub-issues
+- #25 — T-01: Domain — Entidades, enums e interfaces (stack:dotnet)
+- #26 — T-02: Infrastructure — DbContext, Migrations e Seeds (stack:dotnet)
 
 ### Critérios de aceite
 - Given as migrations aplicadas When verificar o banco Then todas as tabelas existem com os campos corretos
@@ -49,6 +53,7 @@ Issue de implementação do domínio, contexto EF Core e schema de banco de dado
 |---|---|---|---|
 | 1 | PM Fase 1 | PM | concluido |
 | 2 | PM Fase 2 | PM | concluido |
+| 3 | Refinamento LT | LT | concluido |
 
 ## Custo (ledger)
 <!-- Preenchido pelo orquestrador a cada etapa -->
