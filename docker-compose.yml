@@ -29,6 +29,16 @@ services:
     ports:
       - "5000:8080"
 
+  dashboard:
+    build:
+      context: ./dashboard
+    container_name: afiliado_dashboard
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "4200:80"
+
 volumes:
   postgres_data:
   media_files:
