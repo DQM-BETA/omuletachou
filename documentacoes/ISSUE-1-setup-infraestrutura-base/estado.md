@@ -1,16 +1,17 @@
-﻿# Estado — ISSUE-1: Setup do Projeto e Infraestrutura Base
+# Estado — ISSUE-1: Setup do Projeto e Infraestrutura Base
 
 ## Campos principais
 issue: 1
 repo: omuletachou
 titulo: feat: Setup do Projeto e Infraestrutura Base
 rota: normal
-etapa_atual: LT — PR homolog→main (Gate 2)
+etapa_atual: Aguardando Aprovacao (Gate 2)
 docs_path: repos/omuletachou/documentacoes/ISSUE-1-setup-infraestrutura-base
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-1-setup-infraestrutura-base
-ultimo_agente: code_review
+ultimo_agente: lt
 pr_homologacao: 22
 code_review_homolog_pr: 22
+pr_release: 23
 
 ## Contexto
 Stack multi: .NET 8 (backend) + Angular 17 (dashboard) + Next.js 14 (site publico) + Docker Compose 24+
@@ -44,6 +45,8 @@ Sub-A (#16) primeiro; Sub-B (#17) e Sub-C (#18) paralelizaveis apos Sub-A.
 | 11 | Merge Sub-B #17 (PR#21) | LT | concluido |
 | 12 | PR desenv→homolog (#22) | LT | concluido |
 | 13 | Code Review (#22) | Code Review | aprovado |
+| 14 | QA | QA | aprovado |
+| 15 | PR homolog→main (#23) | LT | concluido |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -62,4 +65,4 @@ Sub-A (#16) primeiro; Sub-B (#17) e Sub-C (#18) paralelizaveis apos Sub-A.
 | 12 | PR desenv→homolog | LT | sonnet-4-6 | 23620 | 7 | 62 |
 | 13 | Code Review | CR Agent | sonnet-4-6 | 27701 | 21 | 135 |
 | 14 | QA | QA | sonnet-4-6 | 22381 | 17 | 107 |
-| 13 | Code Review #22 | Code Review | sonnet-4-6 | — | — | — |
+| 15 | PR homolog→main | LT | sonnet-4-6 | — | — | — |
