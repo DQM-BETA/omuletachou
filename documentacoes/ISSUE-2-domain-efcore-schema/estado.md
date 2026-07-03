@@ -3,8 +3,8 @@ issue: 2
 titulo: feat: Domain, EF Core e Schema de Banco
 repo: omuletachou
 rota: normal
-etapa_atual: Gate 1 — aguardando resposta do Gerente
-ultimo_agente: pm-analista-negocios
+etapa_atual: Refinamento LT
+ultimo_agente: pm
 openspec_change: ~
 tech_stacks: [".NET 8", "EF Core 8", "PostgreSQL 16", "C#"]
 repos:
@@ -48,6 +48,7 @@ Issue de implementação do domínio, contexto EF Core e schema de banco de dado
 | # | Etapa | Agente | Status |
 |---|---|---|---|
 | 1 | PM Fase 1 | PM | concluido |
+| 2 | PM Fase 2 | PM | concluido |
 
 ## Custo (ledger)
 <!-- Preenchido pelo orquestrador a cada etapa -->

@@ -13,19 +13,49 @@ Criar a camada de domínio do AfiliadoBot: entidades C#, enums, interfaces de co
 ## Funcionalidades Principais
 1. Entidades de domínio: `Product`, `PublicationQueue`, `AppSetting`, `PushSubscription`
 2. Enums de domínio: `Platform`, `SocialNetwork`, `ProductStatus`, `PublicationStatus`
-3. `AppDbContext` com configurações Fluent API (tabelas, constraints, índices, relacionamentos)
+3. `AppDbContext` com configurações Fluent API (tabelas, constraints, índices, relacionamentos, FK com ON DELETE CASCADE)
 4. Migration inicial criando todas as tabelas com colunas exatas (incluindo `ai_score`, `ai_reason`, `slug`, `category`)
 5. Tabela `push_subscriptions` com `endpoint UNIQUE`
-6. Seeds de `app_settings` cobrindo 25+ campos (Amazon, MercadoLivre, Shopee, Telegram, YouTube, Instagram, TikTok, Claude API, schedule, networks)
-7. Interfaces de contrato: `IPlatformCollector`, `ISocialPublisher`, `IMediaStorage`, `IAiService`
-8. Testes unitários validando entidades e regras de validação
+6. Seeds de `app_settings` cobrindo 25+ campos (Amazon, MercadoLivre, Shopee, Telegram, YouTube, Instagram, TikTok, Claude API, schedule, networks) — credenciais com valor em branco, campos não-sensíveis com valores reais
+7. Interfaces de contrato: `IPlatformCollector`, `ISocialPublisher`, `IMediaStorage`, `IAiService` em `AfiliadoBot.Domain/Interfaces/`
+8. Testes unitários validando entidades, validações de estado e transições de status
+
+## Decisões de Design
+
+### D1 — Relacionamento Product → PublicationQueue
+`PublicationQueue` referencia `Product` por FK (`product_id`). Cardinalidade: 1 produto → N entradas na fila, máximo 5 por rede social ativa. A migration deve criar a FK com `ON DELETE CASCADE`. Índice composto obrigatório em `publication_queue`: `(status, scheduled_at)` para otimizar as queries do PublisherJob.
+
+### D2 — Seeds de `app_settings`
+Apenas campos não-sensíveis recebem valores reais no seed:
+- `schedule.collector_cron` = `0 6 * * *`
+- `schedule.publisher_cron` = `0 9,12,15,18,20 * * *`
+- `publish.max_per_day` = `10`
+- `claude.min_score` = `6`
+- `networks.*.enabled` = `true`
+
+Credenciais (chaves de API, tokens, secrets) = valor em branco no seed. Valores reais são configurados via variáveis de ambiente em tempo de execução.
+
+### D3 — Enums: Platform vs SocialNetwork
+Dois enums distintos sem sobreposição:
+- `Platform` — origem da coleta: `Amazon`, `MercadoLivre`, `Shopee`. Campo de `Product`.
+- `SocialNetwork` — destino de publicação: `Telegram`, `Youtube`, `Instagram`, `TikTok`, `Facebook`. Campo de `PublicationQueue`.
+
+### D4 — Localização das Interfaces de Domínio
+As interfaces `IPlatformCollector`, `ISocialPublisher`, `IMediaStorage`, `IAiService` vivem em `AfiliadoBot.Domain/Interfaces/`. O Domain define os contratos; a Infrastructure os implementa. O projeto Domain não deve referenciar nenhum NuGet de infraestrutura (sem dependências externas além do .NET runtime).
+
+### D5 — Escopo dos Testes Unitários
+Os testes cobrem validações de estado e transições de status, não apenas construtores:
+- **Product:** `SalePrice >= 0`, `DiscountPct` entre 0 e 100, `AffiliateLink` não nulo
+- **ProductStatus:** `Pending → Rejected` (score < min_score), `Pending → Queued` (após processor aprovar)
+- **PublicationStatus:** `Scheduled → Published` (sucesso), `Scheduled → Failed` (falha); `Failed` com `retry_count >= 3` não retenta
+- **ClaudeAiService:** mock do `AnthropicClient`, deserialização do JSON de resposta, score abaixo do threshold resulta em `Approve = false`
 
 ## Critérios de Aceite
 
 ### CA-1: Tabelas criadas pela migration
 - **Given** o container `db` em execução e a migration aplicada via `dotnet ef database update`
 - **When** consultar o schema do PostgreSQL (`\dt` ou `information_schema.tables`)
-- **Then** as tabelas `products`, `publication_queues`, `app_settings`, `push_subscriptions` existem com todas as colunas especificadas
+- **Then** as tabelas `products`, `publication_queue`, `app_settings`, `push_subscriptions` existem com todas as colunas especificadas
 
 ### CA-2: Colunas especiais em `products`
 - **Given** a tabela `products` criada pela migration
@@ -40,22 +70,32 @@ Criar a camada de domínio do AfiliadoBot: entidades C#, enums, interfaces de co
 ### CA-4: Seeds de `app_settings`
 - **Given** os seeds aplicados (via `HasData` ou script de seed)
 - **When** executar `SELECT COUNT(*) FROM app_settings`
-- **Then** resultado >= 25
+- **Then** resultado >= 25; campos não-sensíveis têm os valores reais definidos em D2; campos de credenciais têm valor em branco
 
 ### CA-5: Testes de domínio passam
-- **Given** o projeto `AfiliadoBot.Tests` com testes unitários de entidades
+- **Given** o projeto `AfiliadoBot.Tests` com testes unitários de entidades e transições de status
 - **When** `dotnet test` é executado
-- **Then** 0 falhas; testes de domínio (criação de entidade, validações, estado de enums) todos verdes
+- **Then** 0 falhas; testes cobrem: validações de `Product` (SalePrice, DiscountPct, AffiliateLink), transições de `ProductStatus` (Pending→Rejected, Pending→Queued), transições de `PublicationStatus` (Scheduled→Published/Failed, retry_count>=3 bloqueia retentativa), mock de `ClaudeAiService` com score abaixo do threshold
 
-### CA-6: Interfaces de contrato presentes
+### CA-6: Interfaces de contrato presentes no Domain
 - **Given** o projeto `AfiliadoBot.Domain`
 - **When** `dotnet build` no projeto Domain
-- **Then** compila sem erros e os arquivos `IPlatformCollector.cs`, `ISocialPublisher.cs`, `IMediaStorage.cs`, `IAiService.cs` existem em `AfiliadoBot.Domain/Interfaces/`
+- **Then** compila sem erros; os arquivos `IPlatformCollector.cs`, `ISocialPublisher.cs`, `IMediaStorage.cs`, `IAiService.cs` existem em `AfiliadoBot.Domain/Interfaces/`; o projeto Domain não referencia NuGet de infraestrutura
 
 ### CA-7: AppDbContext registrado na API
 - **Given** `AppDbContext` configurado com a string de conexão via variável de ambiente
 - **When** `docker compose up` e `GET localhost:5000/health`
 - **Then** API inicia sem exceção de EF Core e health check retorna 200
+
+### CA-8: FK e índice em `publication_queue`
+- **Given** a migration aplicada
+- **When** consultar `information_schema.table_constraints` e `pg_indexes`
+- **Then** existe FK `product_id → products.id` com `ON DELETE CASCADE`; existe índice composto em `(status, scheduled_at)`
+
+### CA-9: Enums distintos sem sobreposição
+- **Given** o código compilado
+- **When** inspecionar os enums em `AfiliadoBot.Domain/Enums/`
+- **Then** `Platform` contém exatamente `Amazon`, `MercadoLivre`, `Shopee`; `SocialNetwork` contém exatamente `Telegram`, `Youtube`, `Instagram`, `TikTok`, `Facebook`; sem sobreposição de valores
 
 ## Riscos e Dependências
 
@@ -69,16 +109,4 @@ Criar a camada de domínio do AfiliadoBot: entidades C#, enums, interfaces de co
 | Drift entre nomes de colunas C# e SQL gerado pelo EF | Média | Configurar nomes explicitamente via Fluent API (`HasColumnName`) |
 | Seeds de `app_settings` incompletos (< 25) | Baixa | Definir lista completa antes do código; validar com CA-4 |
 | Migration não aplicável ao schema do container (volume sujo) | Baixa | Documentar `dotnet ef database drop --force` antes de recriar |
-| Conflito de namespaces entre projetos Domain e Infrastructure | Baixa | Revisão de arquitetura no design.md pelo LT/Arquiteto |
-
-## Perguntas de Clarificação ao Gerente
-
-1. **Relacionamentos entre entidades:** `PublicationQueue` referencia `Product` por FK? Se sim, qual a cardinalidade (um produto pode ter N publicações na fila)? Isso afeta os índices e constraints da migration.
-
-2. **Valores exatos dos seeds de `app_settings`:** Os 25+ campos devem ter valores reais (ex.: chaves de API de exemplo, intervalos de schedule) ou apenas chaves com valor em branco/placeholder? Valores reais no seed implicam rotação de segredos.
-
-3. **Enum `Platform` vs `SocialNetwork`:** Qual a distinção de negócio? `Platform` seria a fonte de coleta (Amazon, MercadoLivre, Shopee) e `SocialNetwork` o destino de publicação (Telegram, Instagram, TikTok, YouTube)? Ou há sobreposição?
-
-4. **Localização das interfaces:** As interfaces `IPlatformCollector`, `ISocialPublisher`, `IMediaStorage`, `IAiService` devem viver em `AfiliadoBot.Domain/Interfaces/` ou em `AfiliadoBot.Application/Interfaces/`? A distinção define se o Domain tem dependência de abstração de infraestrutura.
-
-5. **Escopo dos testes unitários:** Os testes devem cobrir apenas construtores e validações de entidade (estado interno), ou também testar comportamentos como transição de `ProductStatus` e `PublicationStatus`? Isso define o volume de testes esperados para o CA-5.
+| Conflito de namespaces entre projetos Domain e Infrastructure | Baixa | Revisão de arquitetura no design.md pelo LT |
