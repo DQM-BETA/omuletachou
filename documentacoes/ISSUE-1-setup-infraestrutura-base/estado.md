@@ -1,34 +1,43 @@
-﻿# Estado — ISSUE-1: Setup do Projeto e Infraestrutura Base
+# Estado — ISSUE-1: Setup do Projeto e Infraestrutura Base
 
 ## Campos principais
 issue: 1
 repo: omuletachou
 titulo: feat: Setup do Projeto e Infraestrutura Base
 rota: normal
-etapa_atual: Líder Técnico — refinamento
+etapa_atual: Coordenador — sincronizar sub-issues no board
 docs_path: repos/omuletachou/documentacoes/ISSUE-1-setup-infraestrutura-base
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-1-setup-infraestrutura-base
-ultimo_agente: pm-analista-negocios
+ultimo_agente: lt
 
 ## Contexto
-Stack multi: .NET 8 (backend) + Angular 17 (dashboard) + Next.js 14 (site público) + Docker Compose 24+
+Stack multi: .NET 8 (backend) + Angular 17 (dashboard) + Next.js 14 (site publico) + Docker Compose 24+
 Repo: DQM-BETA/omuletachou
 Branch base: desenv
 
 ## Sub-issues
-(a definir pelo LT no refinamento)
+- #16 (stack:dotnet, task_id:T-01) — Backend .NET 8: solution, health check, Dockerfile, docker-compose (db + api)
+- #17 (stack:angular, task_id:T-02) — Dashboard Angular 17: scaffold, 5 rotas stub, Dockerfile, nginx.conf
+- #18 (stack:nodejs, task_id:T-03) — Site Next.js 14: scaffold, 3 rotas stub, Dockerfile
 
-## Histórico de etapas
+sub_issues: [16, 17, 18]
+desenv_tasks_merged: []
+
+## Ordem de implementacao
+Sub-A (#16) primeiro; Sub-B (#17) e Sub-C (#18) paralelizaveis apos Sub-A.
+
+## Historico de etapas
 | # | Etapa | Agente | Status |
 |---|---|---|---|
-| 1 | Preparação | Coordenador | concluído |
-| 2 | PM Fase 1 | PM | concluído |
-| 3 | Gate 1 | Gerente | concluído |
-| 4 | PM Fase 2 | PM | concluído |
+| 1 | Preparacao | Coordenador | concluido |
+| 2 | PM Fase 1 | PM | concluido |
+| 3 | Gate 1 | Gerente | concluido |
+| 4 | PM Fase 2 | PM | concluido |
+| 5 | Refinamento LT | LT | concluido |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
 |---|---|---|---|---|---|---|
-| 1 | Preparação | Coordenador | sonnet-4-6 | 45991 | 16 | 70 |
+| 1 | Preparacao | Coordenador | sonnet-4-6 | 45991 | 16 | 70 |
 | 2 | PM Fase 1 | PM | sonnet-4-6 | 20490 | 10 | 82 |
 | 3 | PM Fase 2 | PM | sonnet-4-6 | 23595 | 10 | 98 |
