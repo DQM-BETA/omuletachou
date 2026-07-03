@@ -1,0 +1,34 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: afiliado_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: afiliadoBot
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: src/AfiliadoBot.Api/Dockerfile
+    container_name: afiliado_api
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=afiliadoBot;Username=${DB_USER};Password=${DB_PASSWORD}"
+    volumes:
+      - media_files:/app/media
+    ports:
+      - "5000:8080"
+
+volumes:
+  postgres_data:
+  media_files:

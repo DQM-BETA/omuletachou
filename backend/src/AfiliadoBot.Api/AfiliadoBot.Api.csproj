@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\AfiliadoBot.Application\AfiliadoBot.Application.csproj" />
+    <ProjectReference Include="..\AfiliadoBot.Infrastructure\AfiliadoBot.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="AfiliadoBot.Tests" />
+  </ItemGroup>
+
+</Project>
