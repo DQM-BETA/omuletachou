@@ -1,0 +1,6 @@
+@AfiliadoBot.Api_HostAddress = http://localhost:5045
+
+GET {{AfiliadoBot.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
