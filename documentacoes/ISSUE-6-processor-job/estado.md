@@ -2,7 +2,7 @@
 issue: 6
 titulo: feat: Processor Job (Midia e Fila de Publicacao)
 rota: normal
-etapa_atual: LT — merge feature/48 → desenv, depois PR desenv→homolog (todas sub-issues prontas)
+etapa_atual: Code Review
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-6-processor-job
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-6-processor-job
@@ -10,13 +10,13 @@ tech_stacks:
   - .NET 8
   - Hangfire
   - HttpClient
-ultimo_agente: dev-dotnet
+ultimo_agente: lt
 sub_issues:
   - "#47 (stack:dotnet, task_id:T-01) — LocalMediaStorage + Migration AddMediaLocalPathToProducts + CategoryDetector"
   - "#48 (stack:dotnet, task_id:T-02) — ProcessorJob.ExecuteAsync (orquestracao completa, depende de #47)"
-desenv_tasks_merged: ["#47"]
+desenv_tasks_merged: ["#47", "#48"]
 sub_issues_frontend: {}
-pr_homologacao: ~
+pr_homologacao: 51
 pr_release: ~
 code_review_homolog_pr: ~
 qa_status: ~
@@ -104,6 +104,7 @@ particionamento").
 - 2026-07-06 — Dev .NET: T-01 (#47) implementado — migration `AddMediaLocalPathToProducts` (campo `MediaLocalPath` + enum `Processing`/`Error` aditivo), `IMediaStorage`/`LocalMediaStorage` (download HTTP para `/app/media/`, deteccao de tipo por extensao, retorna null sem exception em falha), `CategoryDetector` (deteccao por palavra-chave, fallback "Geral"). 14 novos testes (LocalMediaStorageTests, CategoryDetectorTests). Suite completa: 65/65 passando. Build e boot da app (`dotnet run` + `/health`) validados. PR #49 (feature/47-local-media-storage → desenv) aberto.
 - 2026-07-06 — LT: merge squash do PR #49 (feature/47-local-media-storage → desenv) concluído. Sub-issue #47 fechada e card movido para "Concluído" no board. Como #48 (T-02) ainda não foi desenvolvida, PR desenv→homolog NÃO foi criado — aguarda merge de T-02 para consolidar as duas sub-issues em um único PR de homologação.
 - 2026-07-06 — Dev .NET: T-02 (#48) implementado — `ProcessorJob.ExecuteAsync()` completo: busca `Queued` ordenado por `AiScore` desc, lock otimista via `MarkAsProcessing()` + SaveChanges imediato, download de mídia via `IMediaStorage` (T-01), geração de slug apenas quando vazio (`Product.SetSlugIfEmpty`), detecção de categoria via `CategoryDetector` (T-01, só sobrescreve "Geral" via novo `Product.SetCategory`), link de afiliado MercadoLivre via `POST /affiliate-tools/links` real (falha → `MarkAsError` + pula fila, sem exception não capturada), legendas via `IAiService.GenerateCaptionAsync` por rede habilitada com credenciais em `app_settings`, `PublicationQueue` com Facebook forçado a `ManualPending` (novo método `PublicationQueue.MarkAsManualPending()` e novo valor no enum `PublicationStatus`) e demais redes `Scheduled` com `ScheduledAt` por round-robin (9h/12h/15h/18h/20h UTC, offset 0-10min, ordenado por `AiScore` desc). Finalização `MarkAsPublished()` ao concluir sem erro. `AfiliadoBot.Application` passou a referenciar `AfiliadoBot.Infrastructure` (necessário para `AfiliadoBotDbContext`). Endpoint `POST /api/jobs/processor/trigger` e registro DI (`AddHttpClient<ProcessorJob>()`) adicionados em `Program.cs`. 14 novos testes (`ProcessorJobTests`) cobrindo CA4-CA9, CA12-CA19. Suite completa: 79/79 passando (sem regressão nos 65 pré-existentes). Build e boot da app (`dotnet run`) validados sem exceção. PR #50 (feature/48-processor-job → desenv) aberto.
+- 2026-07-06 — LT: merge squash do PR #50 (feature/48-processor-job → desenv) concluído. Sub-issue #48 fechada (card movido para "Code Review" no board). Todas as sub-issues (#47, #48) mergeadas em `desenv`. PR #51 (desenv→homolog) criado consolidando T-01+T-02 da Issue #6 completa.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -115,6 +116,8 @@ particionamento").
 | 5 | Sincronização board | coordenador | haiku | 8721 | 4 | 52s |
 | 6 | Dev T-01 #47 | dev-dotnet | sonnet | 84515 | 59 | 345s |
 | 7 | Merge T-01 (#47) | lt | sonnet | 62895 | 19 | 155s |
+| 8 | Dev T-02 #48 | dev-dotnet | sonnet | 96706 | 55 | 386s |
+| 9 | Merge T-02 (#48) + PR desenv→homolog | lt | sonnet | (ver usage retornado) | — | — |
 
 ---
-*PR #49 mergeado (squash) em desenv. Sub-issue #47 concluída. Aguardando spawn do Dev .NET para T-02 (#48) — migration e demais artefatos de T-01 já disponíveis em desenv.*
+*PR #51 (desenv→homolog) criado, consolidando T-01 (#47) e T-02 (#48) — Issue #6 completa. Aguardando Code Review (plugin /code-review + agente Code Review).*
