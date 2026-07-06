@@ -16,4 +16,10 @@ public class AppSetting
         Value = value;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    public void UpdateValue(string value)
+    {
+        Value = value;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
