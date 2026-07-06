@@ -2,7 +2,7 @@
 issue: 4
 titulo: feat: Collector Amazon (PAAPI v5 + Scoring automatico)
 rota: normal
-etapa_atual: Coordenador — sincronizar board
+etapa_atual: Dev — aguardando spawn
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-4-collector-amazon
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-4-collector-amazon
@@ -12,7 +12,7 @@ tech_stacks:
   - HttpClient
   - AWS Signature V4
   - PAAPI v5
-ultimo_agente: lt
+ultimo_agente: coordenador
 sub_issues: ["#37 (stack:dotnet, task_id:T-01)"]
 desenv_tasks_merged: []
 pr_homologacao: ~
@@ -39,9 +39,11 @@ Criada em 2026-07-06 pelo Coordenador.
 | 2 | PM Fase 1 | pm | concluido — aguardando Gate 1 |
 | 3 | PM Fase 2 | pm | concluido |
 | 4 | Refinamento LT | LT | concluido |
+| 5 | Sincronizar board | Coordenador | concluido |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo |
 |---|---|---|---|---|---|---|
 | 2 | PM Fase 1 | pm | sonnet | 32184 | 14 | 128s |
 | 3 | PM Fase 2 | pm | sonnet | 38197 | 11 | 123s |
+| 4 | Refinamento LT | lt | sonnet | 46787 | 15 | 102s |
