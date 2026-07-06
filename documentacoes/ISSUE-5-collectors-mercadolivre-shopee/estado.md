@@ -2,7 +2,7 @@
 issue: 5
 titulo: feat: Collectors MercadoLivre e Shopee
 rota: normal
-etapa_atual: LT — merge feature/42 → desenv, depois PR desenv→homolog (todas sub-issues prontas)
+etapa_atual: Code Review
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-5-collectors-mercadolivre-shopee
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-5-collectors-mercadolivre-shopee
@@ -13,12 +13,12 @@ tech_stacks:
   - OAuth2
   - GraphQL manual
   - HMAC-SHA256
-ultimo_agente: dev-dotnet
+ultimo_agente: lt
 sub_issues:
   - "#41 (stack:dotnet, task_id:T-01)"
   - "#42 (stack:dotnet, task_id:T-02)"
-desenv_tasks_merged: ["#41"]
-pr_homologacao: ~
+desenv_tasks_merged: ["#41", "#42"]
+pr_homologacao: 45
 pr_release: ~
 code_review_homolog_pr: ~
 qa_status: ~
@@ -35,7 +35,7 @@ blockers: nenhum
 - Critérios de aceite Given/When/Then em `documentacoes/ISSUE-5-collectors-mercadolivre-shopee/criterios-aceite.md` (24 cenários cobrindo ML, Shopee, independência entre collectors, mudança de contrato em Product, testes).
 - LT concluiu refinamento técnico: task breakdown em `tasks.md` com decisões documentadas — (1) CollectorJob orquestrador NÃO incluído nesta Issue (fica para issue futura de Scheduler); (2) migration única feita em T-01, T-02 depende de T-01 mergeado em desenv (execução sequencial, não paralela, para evitar migrations concorrentes no mesmo schema); (3) confirmado que Shopee preenche `AffiliateLink` diretamente na criação (offerLink já vem pronto na API, diferente do ML que aguarda scoring).
 - Sub-issues criadas: #41 (T-01: MercadoLivreCollector — migration + OAuth2 + cache token + scoring) e #42 (T-02: ShopeeCollector — HMAC-SHA256 + GraphQL + fallback mídia), ambas stack:dotnet, label já existente no repo.
-- T-01 (#41) mergeada em desenv via PR #43 (squash). PR desenv→homolog NÃO criado ainda — aguardando T-02 (#42) também ser mergeada, pois a Issue #5 tem 2 sub-issues e o PR de homologação conjunto só é criado quando todas estiverem prontas (ver decisão do LT em tasks.md sobre migration sequencial).
+- T-01 (#41) mergeada em desenv via PR #43 (squash). T-02 (#42) mergeada em desenv via PR #44 (squash). Ambas sub-issues concluídas — PR desenv→homolog #45 criado com o release conjunto da Issue #5.
 
 ## Histórico de Etapas
 Criada em 2026-07-06 pelo Coordenador.
@@ -48,8 +48,9 @@ Criada em 2026-07-06 pelo Coordenador.
 | 4 | Refinamento LT | LT | concluido |
 | 5 | Sincronizar board | Coordenador | concluido |
 | 6 | Dev T-01 #41 | dev-dotnet | concluido |
-| 7 | Merge T-01 (#41) | LT | concluido — aguardando T-02 |
+| 7 | Merge T-01 (#41) | LT | concluido |
 | 8 | Dev T-02 #42 | dev-dotnet | concluido |
+| 9 | Merge T-02 + PR homolog | LT | concluido |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo |
@@ -60,4 +61,4 @@ Criada em 2026-07-06 pelo Coordenador.
 | 5 | Sincronizar board | coordenador | haiku | 81314 | 72 | 347s |
 | 6 | Dev T-01 #41 | dev-dotnet | sonnet | 100099 | 49 | 557s |
 | 7 | Merge T-01 (#41) | lt | sonnet | 39609 | 17 | 200s |
-| 6 | Dev T-01 #41 | dev-dotnet | sonnet | 100099 | 49 | 557s |
+| 8 | Dev T-02 #42 | dev-dotnet | sonnet | 78665 | 28 | 244s |
