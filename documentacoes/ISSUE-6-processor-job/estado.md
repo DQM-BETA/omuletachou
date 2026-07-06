@@ -10,7 +10,7 @@ tech_stacks:
   - .NET 8
   - Hangfire
   - HttpClient
-ultimo_agente: devops (pendente spawn)
+ultimo_agente: dev-dotnet (fix infra)
 sub_issues:
   - "#47 (stack:dotnet, task_id:T-01) — LocalMediaStorage + Migration AddMediaLocalPathToProducts + CategoryDetector"
   - "#48 (stack:dotnet, task_id:T-02) — ProcessorJob.ExecuteAsync (orquestracao completa, depende de #47)"
@@ -20,9 +20,9 @@ sub_issues_frontend: {}
 pr_homologacao: 51
 pr_release: ~
 code_review_homolog_pr: 51 (aprovado apos fix, rodada 2)
-qa_status: reprovado (bug de config — connection string mismatch, ver relatorio-qa.md)
+qa_status: reprovado (bug de config — connection string mismatch, fix em PR #54, aguardando merge para revalidar)
 figma_url: ~
-blockers: bug funcional — mismatch ConnectionStrings__Default (docker-compose.yml) vs GetConnectionString("DefaultConnection") (Program.cs); appsettings.json com placeholders ${DB_USER}/${DB_PASSWORD} nunca resolvidos, quebrando qualquer operacao de banco em ambiente Docker
+blockers: aguardando merge do PR #54 (fix infra connection string) em desenv, depois QA revalida
 ---
 
 ## Contexto
@@ -188,6 +188,7 @@ ambiente Docker. Detalhes completos em `relatorio-qa.md`.
 | 16 | Merge PR #51 homolog | lt | sonnet | 43953 | 7 | 94s |
 | 17 | QA (2ª tentativa — reprovado) | qa | sonnet | 88712 | 41 | 487s |
 | 18 | DevOps diagnostico connection string | devops | haiku | 26039 | 10 | 40s |
+| 19 | Dev fix connection string | dev-dotnet | sonnet | 29436 | 9 | 44s |
 
 ---
-*QA reprovado por bloqueio de INFRA (config docker-compose, pre-existente desde Issue #1, nao faz parte do diff desta Issue). Roteado para DevOps, nao para LT/Dev — fronteira definida no CLAUDE.md.*
+*Fix de infra (PR #54) aguardando merge em desenv. Depois, LT recria/atualiza PR desenv->homolog e QA revalida.*
