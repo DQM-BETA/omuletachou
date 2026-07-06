@@ -2,7 +2,7 @@
 issue: 4
 titulo: feat: Collector Amazon (PAAPI v5 + Scoring automatico)
 rota: normal
-etapa_atual: Líder Técnico — refinamento técnico
+etapa_atual: Coordenador — sincronizar board
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-4-collector-amazon
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-4-collector-amazon
@@ -12,8 +12,8 @@ tech_stacks:
   - HttpClient
   - AWS Signature V4
   - PAAPI v5
-ultimo_agente: pm
-sub_issues: []
+ultimo_agente: lt
+sub_issues: ["#37 (stack:dotnet, task_id:T-01)"]
 desenv_tasks_merged: []
 pr_homologacao: ~
 pr_release: ~
@@ -28,6 +28,7 @@ blockers: nenhum
 - Stack: .NET 8 + HttpClient (sem SDK AWS) + AWS Signature V4 manual
 - Atenção: PAAPI exige 1 venda nos primeiros 180 dias ou acesso é revogado
 - Sem ambiguidade arquitetural residual após Gate 1: chamada a `IAiService` segue via injeção direta no `AmazonCollector`, sem necessidade de orquestrador externo
+- Task breakdown: task única (T-01) — escopo coeso, uma stack só (dotnet)
 
 ## Histórico de Etapas
 Criada em 2026-07-06 pelo Coordenador.
@@ -37,8 +38,10 @@ Criada em 2026-07-06 pelo Coordenador.
 | 1 | Preparação Issue | Coordenador | concluido |
 | 2 | PM Fase 1 | pm | concluido — aguardando Gate 1 |
 | 3 | PM Fase 2 | pm | concluido |
+| 4 | Refinamento LT | LT | concluido |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo |
 |---|---|---|---|---|---|---|
 | 2 | PM Fase 1 | pm | sonnet | 32184 | 14 | 128s |
+| 3 | PM Fase 2 | pm | sonnet | 38197 | 11 | 123s |
