@@ -2,7 +2,7 @@
 issue: 6
 titulo: feat: Processor Job (Midia e Fila de Publicacao)
 rota: normal
-etapa_atual: Coordenador — sincronizar board
+etapa_atual: Dev — T-01 (#47, LocalMediaStorage + Migration + CategoryDetector)
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-6-processor-job
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-6-processor-job
@@ -10,7 +10,7 @@ tech_stacks:
   - .NET 8
   - Hangfire
   - HttpClient
-ultimo_agente: lt
+ultimo_agente: coordenador
 sub_issues:
   - "#47 (stack:dotnet, task_id:T-01) — LocalMediaStorage + Migration AddMediaLocalPathToProducts + CategoryDetector"
   - "#48 (stack:dotnet, task_id:T-02) — ProcessorJob.ExecuteAsync (orquestracao completa, depende de #47)"
@@ -100,6 +100,7 @@ particionamento").
 - 2026-07-06 — Gerente respondeu ao Gate 1 (comentário https://github.com/DQM-BETA/omuletachou/issues/6#issuecomment-4896910207)
 - 2026-07-06 — PM Fase 2: PRD consolidado, `criterios-aceite.md` criado, sem ambiguidade arquitetural — segue direto para Líder Técnico
 - 2026-07-06 — LT: refinamento técnico concluído. `tasks.md` criado com decisão de particionamento (T-01/T-02 sequenciais). Sub-issues criadas: #47 (T-01, stack:dotnet), #48 (T-02, stack:dotnet, depende de #47). Sem UI — pula UX/UI.
+- 2026-07-06 — Coordenador: sincronizou board com sub-issues #47 e #48. Ambas movidas para "Em Desenvolvimento" junto com a issue mãe #6.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -107,6 +108,8 @@ particionamento").
 | 1 | Preparação | coordenador | haiku | 24343 | 17 | 104s |
 | 2 | PM Fase 1 | pm | sonnet | 34424 | 11 | 100s |
 | 3 | PM Fase 2 | pm | sonnet | 53235 | 16 | 146s |
+| 4 | Refinamento LT | lt | sonnet | 62563 | 16 | 183s |
+| 5 | Sincronização board | coordenador | haiku | 8721 | 4 | 52s |
 
 ---
-*Refinamento técnico concluído. Aguardando sincronização do board (Coordenador) e depois Dev .NET para as sub-issues #47/#48.*
+*Board sincronizado. Sub-issues #47 e #48 prontas para desenvolvimento (sequential). T-02 aguardará merge de T-01 em desenv antes de iniciar.*
