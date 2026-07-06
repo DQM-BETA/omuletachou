@@ -2,7 +2,7 @@
 issue: 5
 titulo: feat: Collectors MercadoLivre e Shopee
 rota: normal
-etapa_atual: Dev — aguardando spawn T-02 (#42)
+etapa_atual: LT — merge feature/42 → desenv, depois PR desenv→homolog (todas sub-issues prontas)
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-5-collectors-mercadolivre-shopee
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-5-collectors-mercadolivre-shopee
@@ -13,7 +13,7 @@ tech_stacks:
   - OAuth2
   - GraphQL manual
   - HMAC-SHA256
-ultimo_agente: lt
+ultimo_agente: dev-dotnet
 sub_issues:
   - "#41 (stack:dotnet, task_id:T-01)"
   - "#42 (stack:dotnet, task_id:T-02)"
@@ -49,6 +49,7 @@ Criada em 2026-07-06 pelo Coordenador.
 | 5 | Sincronizar board | Coordenador | concluido |
 | 6 | Dev T-01 #41 | dev-dotnet | concluido |
 | 7 | Merge T-01 (#41) | LT | concluido — aguardando T-02 |
+| 8 | Dev T-02 #42 | dev-dotnet | concluido |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo |
@@ -57,4 +58,6 @@ Criada em 2026-07-06 pelo Coordenador.
 | 3 | PM Fase 2 | pm | sonnet | 44795 | 10 | 121s |
 | 4 | Refinamento LT | lt | sonnet | 61583 | 19 | 175s |
 | 5 | Sincronizar board | coordenador | haiku | 81314 | 72 | 347s |
+| 6 | Dev T-01 #41 | dev-dotnet | sonnet | 100099 | 49 | 557s |
+| 7 | Merge T-01 (#41) | lt | sonnet | 39609 | 17 | 200s |
 | 6 | Dev T-01 #41 | dev-dotnet | sonnet | 100099 | 49 | 557s |
