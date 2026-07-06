@@ -2,7 +2,7 @@
 issue: 6
 titulo: feat: Processor Job (Midia e Fila de Publicacao)
 rota: normal
-etapa_atual: QA
+etapa_atual: Code Review (fix infra, novo PR desenv->homolog)
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-6-processor-job
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-6-processor-job
@@ -10,19 +10,19 @@ tech_stacks:
   - .NET 8
   - Hangfire
   - HttpClient
-ultimo_agente: dev-dotnet (fix infra)
+ultimo_agente: lt
 sub_issues:
   - "#47 (stack:dotnet, task_id:T-01) — LocalMediaStorage + Migration AddMediaLocalPathToProducts + CategoryDetector"
   - "#48 (stack:dotnet, task_id:T-02) — ProcessorJob.ExecuteAsync (orquestracao completa, depende de #47)"
   - "#52 (stack:dotnet, task_id:FIX-01) — Fix: permalink ML nao capturado, AffiliateLink com payload invalido (Code Review reprovou PR #51)"
 desenv_tasks_merged: ["#47", "#48", "#52"]
 sub_issues_frontend: {}
-pr_homologacao: 51
+pr_homologacao: 55
 pr_release: ~
-code_review_homolog_pr: 51 (aprovado apos fix, rodada 2)
-qa_status: reprovado (bug de config — connection string mismatch, fix em PR #54, aguardando merge para revalidar)
+code_review_homolog_pr: 51 (aprovado apos fix, rodada 2) — novo PR #55 aguardando Code Review (fix infra)
+qa_status: reprovado (bug de config — connection string mismatch, fix em PR #54, mergeado em desenv; novo PR #55 desenv->homolog criado, aguardando Code Review antes de revalidar)
 figma_url: ~
-blockers: aguardando merge do PR #54 (fix infra connection string) em desenv, depois QA revalida
+blockers: aguardando Code Review (2 camadas) no PR #55 (desenv->homolog); so depois o merge e a revalidacao do QA
 ---
 
 ## Contexto
@@ -147,6 +147,20 @@ usada; o app cai no `appsettings.json`, que tem a chave certa mas com placeholde
 `${DB_USER}`/`${DB_PASSWORD}` nunca resolvidos. Qualquer operação que toque o banco falha em
 ambiente Docker. Detalhes completos em `relatorio-qa.md`.
 
+## Fix de infra — connection string (2026-07-06)
+
+**Fix implementado (Dev .NET):** correção do mismatch de chave entre `docker-compose.yml`
+(`ConnectionStrings__Default`) e `Program.cs` (`GetConnectionString("DefaultConnection")`).
+PR #54 (`feature/ISSUE-6-fix-connection-string` → `desenv`).
+
+**LT — merge e nova promoção (2026-07-06):**
+- PR #54 mergeado em `desenv` via squash (`gh pr merge 54 --squash --auto`), confirmado
+  `state: MERGED`, `mergedAt: 2026-07-06T20:51:36Z`.
+- `git pull origin desenv` local: fast-forward `50e5620..e8a8616` (1 arquivo, `docker-compose.yml`).
+- **Novo PR #55** (`desenv` → `homolog`) criado, consolidando o fix de infra para homologação.
+  **NÃO mergeado ainda** — aguarda rodada de Code Review (2 camadas) antes da promoção e da
+  revalidação do QA.
+
 ## Histórico
 - 2026-07-06 — Coordenador preparou Issue (estado.md, diretórios, label, card no board)
 - 2026-07-06 — PM Fase 1: PRD inicial (`prd.md`) escrito; 9 perguntas de Gate 1 postadas na Issue #6 (comentário https://github.com/DQM-BETA/omuletachou/issues/6#issuecomment-4896543914)
@@ -166,6 +180,8 @@ ambiente Docker. Detalhes completos em `relatorio-qa.md`.
 - 2026-07-06 — QA: verificação pré-validação encontrou PR #51 (desenv→homolog) ainda **OPEN** (mergedAt null). Branch homolog remota confirmada em `baddb12` (PR #45, Issue #5), sem nenhum commit de #47/#48/#52. Validação NÃO prosseguiu (rodar testes contra homolog sem o merge testaria código desatualizado). Bloqueado até o LT mergear o PR #51.
 - 2026-07-06 — LT: mergeado o PR #51 (desenv→homolog) via merge commit (`gh pr merge 51 --merge`), commit `c08e965`. Confirmado: `gh pr view 51` retorna `state: MERGED`, `mergedAt: 2026-07-06T20:34:50Z`. `git log origin/homolog` confirma topo em `c08e965` ("Merge pull request #51 from DQM-BETA/desenv"), contendo os commits de #47/#48/#52. Bloqueio removido — pronto para nova tentativa de validação do QA.
 - 2026-07-06 — QA (2ª tentativa): PR #51 confirmado MERGED (commit c08e965 no topo de homolog). Build ok, 80/80 testes passando, código inspecionado (fix #52 confirmado). Validação integrada via `docker compose up`: `/health` OK, mas `POST /api/jobs/processor/trigger` retornou HTTP 500 por falha de autenticação no Postgres (`password authentication failed for user "${DB_USER}"`), reproduzido mesmo com volumes limpos. Causa raiz: mismatch de chave entre `docker-compose.yml` (`ConnectionStrings__Default`) e `Program.cs` (`GetConnectionString("DefaultConnection")`) — o app usa o `appsettings.json` local com placeholders `${DB_USER}`/`${DB_PASSWORD}` nunca resolvidos. **QA REPROVADO** — fluxo integrado real quebrado apesar da suite unitária 100% ok. Relatório completo em `relatorio-qa.md`.
+- 2026-07-06 — Dev .NET: fix de infra implementado — correção do mismatch entre `ConnectionStrings__Default` (docker-compose.yml) e `GetConnectionString("DefaultConnection")` (Program.cs). PR #54 (feature/ISSUE-6-fix-connection-string → desenv) aberto.
+- 2026-07-06 — LT: merge squash do PR #54 (feature/ISSUE-6-fix-connection-string → desenv) concluído (`mergedAt: 2026-07-06T20:51:36Z`). `git pull origin desenv` confirmou fast-forward `50e5620..e8a8616`. Novo PR **#55** (desenv→homolog) criado consolidando o fix de infra, **não mergeado** — aguarda Code Review (2 camadas) antes da promoção e da revalidação do QA.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -189,6 +205,7 @@ ambiente Docker. Detalhes completos em `relatorio-qa.md`.
 | 17 | QA (2ª tentativa — reprovado) | qa | sonnet | 88712 | 41 | 487s |
 | 18 | DevOps diagnostico connection string | devops | haiku | 26039 | 10 | 40s |
 | 19 | Dev fix connection string | dev-dotnet | sonnet | 29436 | 9 | 44s |
+| 20 | Merge fix infra + PR #55 | lt | sonnet | (pendente usage) | - | - |
 
 ---
-*Fix de infra (PR #54) aguardando merge em desenv. Depois, LT recria/atualiza PR desenv->homolog e QA revalida.*
+*PR #55 (desenv->homolog) aberto, aguardando Code Review (2 camadas) antes do merge e da revalidação do QA.*
