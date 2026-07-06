@@ -70,6 +70,16 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasConversion<int>()
             .IsRequired();
 
+        builder.Property(x => x.ExternalId)
+            .HasColumnName("external_id")
+            .IsRequired()
+            .HasMaxLength(200)
+            .HasDefaultValue(string.Empty);
+
+        builder.HasIndex(x => new { x.Platform, x.ExternalId })
+            .IsUnique()
+            .HasDatabaseName("IX_products_platform_external_id");
+
         builder.Property(x => x.AiScore)
             .HasColumnName("ai_score");
 
