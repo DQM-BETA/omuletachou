@@ -2,7 +2,7 @@
 issue: 6
 titulo: feat: Processor Job (Midia e Fila de Publicacao)
 rota: normal
-etapa_atual: Code Review (fix infra, novo PR desenv->homolog)
+etapa_atual: DevOps — diagnosticar auto-migrate EF Core no startup
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-6-processor-job
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-6-processor-job
@@ -19,10 +19,10 @@ desenv_tasks_merged: ["#47", "#48", "#52"]
 sub_issues_frontend: {}
 pr_homologacao: 55
 pr_release: ~
-code_review_homolog_pr: 51 (aprovado apos fix, rodada 2) — novo PR #55 aguardando Code Review (fix infra)
-qa_status: reprovado (bug de config — connection string mismatch, fix em PR #54, mergeado em desenv; novo PR #55 desenv->homolog criado, aguardando Code Review antes de revalidar)
+code_review_homolog_pr: 51 (aprovado apos fix, rodada 2) — PR #55 (fix infra) aprovado (2 camadas) e mergeado em homolog
+qa_status: reprovado (bug de config — connection string mismatch, fix em PR #54/#55, mergeado em homolog); pendente revalidacao apos resolver auto-migrate EF Core
 figma_url: ~
-blockers: aguardando Code Review (2 camadas) no PR #55 (desenv->homolog); so depois o merge e a revalidacao do QA
+blockers: PR #55 mergeado em homolog; falta DevOps diagnosticar auto-migrate EF Core no startup do container antes da revalidacao do QA
 ---
 
 ## Contexto
@@ -161,6 +161,15 @@ PR #54 (`feature/ISSUE-6-fix-connection-string` → `desenv`).
   **NÃO mergeado ainda** — aguarda rodada de Code Review (2 camadas) antes da promoção e da
   revalidação do QA.
 
+## Merge do PR #55 (fix connection string) — homolog (2026-07-06)
+
+Code Review (2 camadas) aprovou o PR #55. LT mergeou (`gh pr merge 55 --merge`, merge commit,
+sem squash — promoção `desenv→homolog`). Confirmado `state: MERGED`,
+`mergedAt: 2026-07-06T21:37:23Z`, commit `26efaba` no topo de `origin/homolog`. Fix de connection
+string agora presente em `homolog`. Ainda pendente: diagnóstico de por que as migrations do EF
+Core não estão sendo aplicadas automaticamente no startup do container (necessário para a
+revalidação completa do QA via `docker compose up`) — encaminhado ao DevOps.
+
 ## Histórico
 - 2026-07-06 — Coordenador preparou Issue (estado.md, diretórios, label, card no board)
 - 2026-07-06 — PM Fase 1: PRD inicial (`prd.md`) escrito; 9 perguntas de Gate 1 postadas na Issue #6 (comentário https://github.com/DQM-BETA/omuletachou/issues/6#issuecomment-4896543914)
@@ -182,6 +191,7 @@ PR #54 (`feature/ISSUE-6-fix-connection-string` → `desenv`).
 - 2026-07-06 — QA (2ª tentativa): PR #51 confirmado MERGED (commit c08e965 no topo de homolog). Build ok, 80/80 testes passando, código inspecionado (fix #52 confirmado). Validação integrada via `docker compose up`: `/health` OK, mas `POST /api/jobs/processor/trigger` retornou HTTP 500 por falha de autenticação no Postgres (`password authentication failed for user "${DB_USER}"`), reproduzido mesmo com volumes limpos. Causa raiz: mismatch de chave entre `docker-compose.yml` (`ConnectionStrings__Default`) e `Program.cs` (`GetConnectionString("DefaultConnection")`) — o app usa o `appsettings.json` local com placeholders `${DB_USER}`/`${DB_PASSWORD}` nunca resolvidos. **QA REPROVADO** — fluxo integrado real quebrado apesar da suite unitária 100% ok. Relatório completo em `relatorio-qa.md`.
 - 2026-07-06 — Dev .NET: fix de infra implementado — correção do mismatch entre `ConnectionStrings__Default` (docker-compose.yml) e `GetConnectionString("DefaultConnection")` (Program.cs). PR #54 (feature/ISSUE-6-fix-connection-string → desenv) aberto.
 - 2026-07-06 — LT: merge squash do PR #54 (feature/ISSUE-6-fix-connection-string → desenv) concluído (`mergedAt: 2026-07-06T20:51:36Z`). `git pull origin desenv` confirmou fast-forward `50e5620..e8a8616`. Novo PR **#55** (desenv→homolog) criado consolidando o fix de infra, **não mergeado** — aguarda Code Review (2 camadas) antes da promoção e da revalidação do QA.
+- 2026-07-06 — Code Review (PR #55, fix connection string): aprovado (2 camadas). LT mergeou PR #55 (desenv→homolog) via merge commit (`gh pr merge 55 --merge`), commit `26efaba`. Confirmado: `gh pr view 55` retorna `state: MERGED`, `mergedAt: 2026-07-06T21:37:23Z`. `git log origin/homolog` confirma topo em `26efaba` ("Merge pull request #55 from DQM-BETA/desenv"). Falta ainda resolver migrations do EF Core não aplicadas automaticamente no startup do container Docker — encaminhado ao DevOps para diagnóstico.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -207,6 +217,7 @@ PR #54 (`feature/ISSUE-6-fix-connection-string` → `desenv`).
 | 19 | Dev fix connection string | dev-dotnet | sonnet | 29436 | 9 | 44s |
 | 20 | Merge fix infra + PR #55 | lt | sonnet | 47076 | 7 | 113s |
 | 21 | Code Review PR #55 (fix conn string) | code-review | sonnet | 40431 | 17 | 186s |
+| 22 | Merge PR #55 homolog | lt | sonnet | (pendente) | 5 | (pendente) |
 
 ---
-*PR #55 (desenv->homolog) aberto, aguardando Code Review (2 camadas) antes do merge e da revalidação do QA.*
+*PR #55 (desenv->homolog) mergeado — falta resolver migrations nao aplicadas (auto-migrate) no container Docker antes de revalidar QA.*
