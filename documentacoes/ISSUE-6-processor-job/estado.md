@@ -206,6 +206,7 @@ PR #54 (`feature/ISSUE-6-fix-connection-string` → `desenv`).
 | 18 | DevOps diagnostico connection string | devops | haiku | 26039 | 10 | 40s |
 | 19 | Dev fix connection string | dev-dotnet | sonnet | 29436 | 9 | 44s |
 | 20 | Merge fix infra + PR #55 | lt | sonnet | 47076 | 7 | 113s |
+| 21 | Code Review PR #55 (fix conn string) | code-review | sonnet | 40431 | 17 | 186s |
 
 ---
 *PR #55 (desenv->homolog) aberto, aguardando Code Review (2 camadas) antes do merge e da revalidação do QA.*
