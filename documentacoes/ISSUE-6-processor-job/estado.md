@@ -188,6 +188,7 @@ ambiente Docker. Detalhes completos em `relatorio-qa.md`.
 | 16 | Merge PR #51 homolog | lt | sonnet | 43953 | 7 | 94s |
 | 17 | QA (2ª tentativa — reprovado) | qa | sonnet | 88712 | 41 | 487s |
 | 18 | DevOps diagnostico connection string | devops | haiku | 26039 | 10 | 40s |
+| 19 | Dev fix connection string | dev-dotnet | sonnet | 29436 | 9 | 44s |
 
 ---
 *QA reprovado por bloqueio de INFRA (config docker-compose, pre-existente desde Issue #1, nao faz parte do diff desta Issue). Roteado para DevOps, nao para LT/Dev — fronteira definida no CLAUDE.md.*
