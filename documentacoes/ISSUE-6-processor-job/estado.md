@@ -169,6 +169,7 @@ commits de #47/#48/#52. QA pode prosseguir com a validação.
 | 13 | Merge fix permalink #52 | lt | sonnet | 36285 | 11 | 105s |
 | 14 | Code Review PR #51 (rodada 2) | code-review | sonnet | 48258 | 19 | 126s |
 | 15 | QA (bloqueado) | qa | sonnet | 46913 | 8 | 107s |
+| 16 | Merge PR #51 homolog | lt | sonnet | 43953 | 7 | 94s |
 | 16 | LT merge PR #51 desenv->homolog | lt | sonnet | 0 | 0 | 0s |
 
 ---
