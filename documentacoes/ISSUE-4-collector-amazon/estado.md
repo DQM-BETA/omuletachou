@@ -2,7 +2,7 @@
 issue: 4
 titulo: feat: Collector Amazon (PAAPI v5 + Scoring automatico)
 rota: normal
-etapa_atual: Dev — aguardando spawn
+etapa_atual: Code Review
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-4-collector-amazon
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-4-collector-amazon
@@ -12,10 +12,10 @@ tech_stacks:
   - HttpClient
   - AWS Signature V4
   - PAAPI v5
-ultimo_agente: coordenador
+ultimo_agente: lt
 sub_issues: ["#37 (stack:dotnet, task_id:T-01)"]
-desenv_tasks_merged: []
-pr_homologacao: ~
+desenv_tasks_merged: ["#37"]
+pr_homologacao: 39
 pr_release: ~
 code_review_homolog_pr: ~
 qa_status: ~
@@ -40,6 +40,8 @@ Criada em 2026-07-06 pelo Coordenador.
 | 3 | PM Fase 2 | pm | concluido |
 | 4 | Refinamento LT | LT | concluido |
 | 5 | Sincronizar board | Coordenador | concluido |
+| 6 | Dev T-01 #37 | dev-dotnet | concluido |
+| 7 | Merge T-01 + PR homolog | LT | concluido |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo |
@@ -47,3 +49,5 @@ Criada em 2026-07-06 pelo Coordenador.
 | 2 | PM Fase 1 | pm | sonnet | 32184 | 14 | 128s |
 | 3 | PM Fase 2 | pm | sonnet | 38197 | 11 | 123s |
 | 4 | Refinamento LT | lt | sonnet | 46787 | 15 | 102s |
+| 5 | Sincronizar board | coordenador | haiku | 48367 | 43 | 268s |
+| 6 | Dev T-01 #37 | dev-dotnet | sonnet | 90641 | 79 | 405s |
