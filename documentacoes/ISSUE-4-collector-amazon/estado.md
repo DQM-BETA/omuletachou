@@ -57,6 +57,4 @@ Criada em 2026-07-06 pelo Coordenador.
 | 7 | Merge T-01 + PR homolog | lt | sonnet | 31470 | 8 | 81s |
 | 8 | Code Review PR #39 | code-review | sonnet | 75064 | 24 | 244s |
 | 9 | QA homolog | qa | sonnet | 61693 | 32 | 462s |
-| 6 | Dev T-01 #37 | dev-dotnet | sonnet | 90641 | 79 | 405s |
-| 7 | Merge T-01 + PR homolog | lt | sonnet | 31470 | 8 | 81s |
-| 8 | Code Review PR #39 | code-review | sonnet | 75064 | 24 | 244s |
+| 10 | PR release homolog→main | lt | sonnet | 31662 | 7 | 66s |
