@@ -2,7 +2,7 @@
 issue: 5
 titulo: feat: Collectors MercadoLivre e Shopee
 rota: normal
-etapa_atual: QA
+etapa_atual: Gate 2 — aguardando aprovação Gerente
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-5-collectors-mercadolivre-shopee
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-5-collectors-mercadolivre-shopee
@@ -13,13 +13,13 @@ tech_stacks:
   - OAuth2
   - GraphQL manual
   - HMAC-SHA256
-ultimo_agente: qa
+ultimo_agente: lt
 sub_issues:
   - "#41 (stack:dotnet, task_id:T-01)"
   - "#42 (stack:dotnet, task_id:T-02)"
 desenv_tasks_merged: ["#41", "#42"]
 pr_homologacao: 45
-pr_release: ~
+pr_release: 46
 code_review_homolog_pr: 45
 qa_status: aprovado
 blockers: nenhum
@@ -38,6 +38,7 @@ blockers: nenhum
 - T-01 (#41) mergeada em desenv via PR #43 (squash). T-02 (#42) mergeada em desenv via PR #44 (squash). Ambas sub-issues concluídas — PR desenv→homolog #45 criado com o release conjunto da Issue #5.
 - Code Review (2 camadas) aprovou o PR #45 — 51/51 testes, build ok, sem regressão. PR #45 mergeado desenv→homolog via merge commit em 2026-07-06.
 - QA validou os 24 critérios de aceite em `homolog` (branch sincronizada via `git reset --hard origin/homolog`, commit `baddb12` confirmado): build ok, 51/51 testes passando, sem regressão no AmazonCollector (7/7). Aplicação subiu via Docker (`/health` 200 OK), mas o teste manual dos endpoints de trigger foi bloqueado por um problema de infraestrutura local (interpolação `${DB_USER}`/`${DB_PASSWORD}` no `docker-compose.yml`/`.env`, não relacionado ao código desta Issue — `docker-compose.yml` não tocado pelos PRs #43/#44/#45). Relatório completo em `relatorio-qa.md`.
+- LT criou PR de release homolog→main #46, aguardando Gate 2 do Gerente.
 
 ## Histórico de Etapas
 Criada em 2026-07-06 pelo Coordenador.
@@ -56,6 +57,7 @@ Criada em 2026-07-06 pelo Coordenador.
 | 10 | Code Review PR #45 | code-review | concluido |
 | 11 | Merge PR homolog #45 | LT | concluido |
 | 12 | QA homolog | qa | concluido — CAs ok |
+| 13 | PR release homolog→main | LT | concluido |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo |
@@ -70,3 +72,4 @@ Criada em 2026-07-06 pelo Coordenador.
 | 9 | Merge T-02 + PR homolog | lt | sonnet | 39160 | 19 | 183s |
 | 10 | Code Review PR #45 | code-review | sonnet | 72123 | 18 | 155s |
 | 11 | Merge PR homolog #45 | lt | sonnet | 33020 | 8 | 67s |
+| 12 | QA homolog | qa | sonnet | 1241 | 66 | 1071s |
