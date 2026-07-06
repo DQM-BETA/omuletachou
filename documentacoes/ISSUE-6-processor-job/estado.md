@@ -2,7 +2,7 @@
 issue: 6
 titulo: feat: Processor Job (Midia e Fila de Publicacao)
 rota: normal
-etapa_atual: Líder Técnico — refinamento técnico
+etapa_atual: Coordenador — sincronizar board
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-6-processor-job
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-6-processor-job
@@ -10,8 +10,10 @@ tech_stacks:
   - .NET 8
   - Hangfire
   - HttpClient
-ultimo_agente: pm
-sub_issues: []
+ultimo_agente: lt
+sub_issues:
+  - "#47 (stack:dotnet, task_id:T-01) — LocalMediaStorage + Migration AddMediaLocalPathToProducts + CategoryDetector"
+  - "#48 (stack:dotnet, task_id:T-02) — ProcessorJob.ExecuteAsync (orquestracao completa, depende de #47)"
 desenv_tasks_merged: []
 sub_issues_frontend: {}
 pr_homologacao: ~
@@ -74,19 +76,37 @@ lote) é detalhe de implementação — não requer Arquiteto.
 - `criterios-aceite.md` — 21 critérios de aceite em Given/When/Then cobrindo
   LocalMediaStorage, máquina de estados, Slug, Category, AffiliateLink ML, PublicationQueue,
   migration e encadeamento de jobs.
+- `tasks.md` — Task breakdown técnico: decisão de particionamento (T-01/T-02) e detalhamento
+  de escopo, critérios e contexto técnico por sub-tarefa.
+
+## Refinamento técnico (Líder Técnico)
+
+Duas sub-issues, ambas stack `dotnet`, **sequenciais** (T-02 depende de T-01 mergeado em `desenv`):
+
+- **#47 (T-01)** — `LocalMediaStorage` (download de mídia) + migration
+  `AddMediaLocalPathToProducts` (campo `MediaLocalPath`, enum `Processing`/`Error`) +
+  `CategoryDetector`. Unidades pequenas, testáveis isoladamente, sem dependência do fluxo do job.
+- **#48 (T-02)** — `ProcessorJob.ExecuteAsync()` completo: orquestra busca Queued→Processing,
+  mídia (via T-01), slug, categoria (via T-01), AffiliateLink ML, geração de legendas via
+  `IAiService`, criação de `PublicationQueue` por rede com round-robin, finalização
+  Published/Error. Máquina de estados coesa por produto — não fatiada além disso.
+
+Justificativa completa da decisão de particionamento em `tasks.md` (seção "Decisão de
+particionamento").
 
 ## Histórico
 - 2026-07-06 — Coordenador preparou Issue (estado.md, diretórios, label, card no board)
 - 2026-07-06 — PM Fase 1: PRD inicial (`prd.md`) escrito; 9 perguntas de Gate 1 postadas na Issue #6 (comentário https://github.com/DQM-BETA/omuletachou/issues/6#issuecomment-4896543914)
 - 2026-07-06 — Gerente respondeu ao Gate 1 (comentário https://github.com/DQM-BETA/omuletachou/issues/6#issuecomment-4896910207)
 - 2026-07-06 — PM Fase 2: PRD consolidado, `criterios-aceite.md` criado, sem ambiguidade arquitetural — segue direto para Líder Técnico
+- 2026-07-06 — LT: refinamento técnico concluído. `tasks.md` criado com decisão de particionamento (T-01/T-02 sequenciais). Sub-issues criadas: #47 (T-01, stack:dotnet), #48 (T-02, stack:dotnet, depende de #47). Sem UI — pula UX/UI.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|---|---|---|---|---|---|
 | 1 | Preparação | coordenador | haiku | 24343 | 17 | 104s |
 | 2 | PM Fase 1 | pm | sonnet | 34424 | 11 | 100s |
-| 3 | PM Fase 2 | pm | sonnet | ~ | ~ | ~ |
+| 3 | PM Fase 2 | pm | sonnet | 53235 | 16 | 146s |
 
 ---
-*Aguardando refinamento técnico do Líder Técnico.*
+*Refinamento técnico concluído. Aguardando sincronização do board (Coordenador) e depois Dev .NET para as sub-issues #47/#48.*
