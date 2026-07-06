@@ -10,7 +10,7 @@ tech_stacks:
   - .NET 8
   - Hangfire
   - HttpClient
-ultimo_agente: qa
+ultimo_agente: lt
 sub_issues:
   - "#47 (stack:dotnet, task_id:T-01) — LocalMediaStorage + Migration AddMediaLocalPathToProducts + CategoryDetector"
   - "#48 (stack:dotnet, task_id:T-02) — ProcessorJob.ExecuteAsync (orquestracao completa, depende de #47)"
@@ -19,10 +19,10 @@ desenv_tasks_merged: ["#47", "#48", "#52"]
 sub_issues_frontend: {}
 pr_homologacao: 51
 pr_release: ~
-code_review_homolog_pr: 51 (aprovado apos fix)
-qa_status: bloqueado (PR #51 nao mergeado em homolog)
+code_review_homolog_pr: 51 (aprovado apos fix, rodada 2)
+qa_status: pendente (PR #51 mergeado em homolog — pronto para nova tentativa de validacao)
 figma_url: ~
-blockers: PR #51 (desenv->homolog) ainda OPEN, mergedAt null — homolog remoto em baddb12 (PR #45, Issue #5), sem commits de #47/#48/#52
+blockers: nenhum
 ---
 
 ## Contexto
@@ -116,20 +116,21 @@ toda chamada ao endpoint de afiliados em produção gera payload inválido.
 PR #51 (desenv→homolog) permanece aberto e bloqueado até #52 ser corrigida, mergeada em `desenv`
 e o PR #51 refletir o fix.
 
-## QA — bloqueado (2026-07-06)
+## QA — bloqueado (2026-07-06), depois destravado
 
 **Verificação pré-validação obrigatória (conforme processo do agente QA) encontrou:**
 - `gh pr view 51 --repo DQM-BETA/omuletachou --json state,mergedAt` → `{"state":"OPEN","mergedAt":null,"baseRefName":"homolog","headRefName":"desenv"}`
 - `git log origin/homolog --oneline -5` → topo em `baddb12` (Merge pull request #45, referente à Issue #5), **sem nenhum commit** de #47/#48/#52 (Issue #6).
 
-**Conclusão:** o merge desenv→homolog do PR #51 ainda não ocorreu, apesar do Code Review ter
+**Conclusão:** o merge desenv→homolog do PR #51 ainda não havia ocorrido, apesar do Code Review ter
 aprovado (rodada 2) e do `estado.md` estar em `etapa_atual: QA`. Rodar a suíte de testes/build
-contra a branch `homolog` neste momento testaria código desatualizado (sem o fix do permalink
-ML), gerando falso positivo ou falso negativo. **Validação NÃO prosseguiu** — nenhum teste, build
-ou inspeção de screenshots foi executado nesta rodada.
+contra a branch `homolog` naquele momento testaria código desatualizado (sem o fix do permalink
+ML), gerando falso positivo ou falso negativo. **Validação NÃO prosseguiu** naquela rodada — nenhum
+teste, build ou inspeção de screenshots foi executado.
 
-**Ação necessária:** Líder Técnico precisa mergear o PR #51 (desenv→homolog) antes do QA poder
-validar em homolog.
+**Destravado (2026-07-06):** LT executou o merge do PR #51 (desenv→homolog), merge commit
+`c08e965`. `homolog` remoto avançou de `baddb12` para `c08e965`, agora contendo todos os
+commits de #47/#48/#52. QA pode prosseguir com a validação.
 
 ## Histórico
 - 2026-07-06 — Coordenador preparou Issue (estado.md, diretórios, label, card no board)
@@ -148,6 +149,7 @@ validar em homolog.
 - 2026-07-06 — LT: merge squash do PR #53 (feature/ISSUE-6-fix-permalink-ml → desenv) concluído. Sub-issue #52 fechada, card movido para "Concluído" no board. PR #51 (desenv→homolog) reflete o fix automaticamente (mesma branch desenv).
 - 2026-07-06 — Code Review (PR #51, rodada 2): ambas camadas aprovaram. Bug do permalink ML confirmado corrigido — `EnsureAffiliateLinkAsync` usa `product.SourceUrl`, sem chamada HTTP quando `SourceUrl` ausente. Build ok, 80/80 testes. Nenhuma regressão nos collectors Amazon/ML/Shopee.
 - 2026-07-06 — QA: verificação pré-validação encontrou PR #51 (desenv→homolog) ainda **OPEN** (mergedAt null). Branch homolog remota confirmada em `baddb12` (PR #45, Issue #5), sem nenhum commit de #47/#48/#52. Validação NÃO prosseguiu (rodar testes contra homolog sem o merge testaria código desatualizado). Bloqueado até o LT mergear o PR #51.
+- 2026-07-06 — LT: mergeado o PR #51 (desenv→homolog) via merge commit (`gh pr merge 51 --merge`), commit `c08e965`. Confirmado: `gh pr view 51` retorna `state: MERGED`, `mergedAt: 2026-07-06T20:34:50Z`. `git log origin/homolog` confirma topo em `c08e965` ("Merge pull request #51 from DQM-BETA/desenv"), contendo os commits de #47/#48/#52. Bloqueio removido — pronto para nova tentativa de validação do QA.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -167,7 +169,7 @@ validar em homolog.
 | 13 | Merge fix permalink #52 | lt | sonnet | 36285 | 11 | 105s |
 | 14 | Code Review PR #51 (rodada 2) | code-review | sonnet | 48258 | 19 | 126s |
 | 15 | QA (bloqueado) | qa | sonnet | 46913 | 8 | 107s |
-| 14 | Code Review PR #51 (rodada 2) | code-review | sonnet | 48258 | 19 | 126s |
+| 16 | LT merge PR #51 desenv->homolog | lt | sonnet | 0 | 0 | 0s |
 
 ---
-*QA bloqueado: PR #51 (desenv->homolog) ainda nao mergeado. LT precisa mergear antes de nova tentativa de validacao.*
+*PR #51 mergeado desenv->homolog (merge commit c08e965). Pronto para QA validar em homolog.*
