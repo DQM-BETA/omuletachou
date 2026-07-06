@@ -2,7 +2,7 @@
 issue: 4
 titulo: feat: Collector Amazon (PAAPI v5 + Scoring automatico)
 rota: normal
-etapa_atual: Code Review
+etapa_atual: Gate 2 — aguardando aprovacao Gerente
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-4-collector-amazon
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-4-collector-amazon
@@ -16,9 +16,9 @@ ultimo_agente: lt
 sub_issues: ["#37 (stack:dotnet, task_id:T-01)"]
 desenv_tasks_merged: ["#37"]
 pr_homologacao: 39
-pr_release: ~
-code_review_homolog_pr: ~
-qa_status: ~
+pr_release: 40
+code_review_homolog_pr: 39
+qa_status: aprovado
 blockers: nenhum
 ---
 
@@ -42,6 +42,9 @@ Criada em 2026-07-06 pelo Coordenador.
 | 5 | Sincronizar board | Coordenador | concluido |
 | 6 | Dev T-01 #37 | dev-dotnet | concluido |
 | 7 | Merge T-01 + PR homolog | LT | concluido |
+| 8 | Code Review PR #39 | code-review | concluido — 32/32 testes, build ok, merge homolog realizado |
+| 9 | QA homolog | qa | concluido — CAs ok |
+| 10 | PR release homolog→main | LT | concluido |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo |
@@ -51,3 +54,9 @@ Criada em 2026-07-06 pelo Coordenador.
 | 4 | Refinamento LT | lt | sonnet | 46787 | 15 | 102s |
 | 5 | Sincronizar board | coordenador | haiku | 48367 | 43 | 268s |
 | 6 | Dev T-01 #37 | dev-dotnet | sonnet | 90641 | 79 | 405s |
+| 7 | Merge T-01 + PR homolog | lt | sonnet | 31470 | 8 | 81s |
+| 8 | Code Review PR #39 | code-review | sonnet | 75064 | 24 | 244s |
+| 9 | QA homolog | qa | sonnet | 61693 | 32 | 462s |
+| 6 | Dev T-01 #37 | dev-dotnet | sonnet | 90641 | 79 | 405s |
+| 7 | Merge T-01 + PR homolog | lt | sonnet | 31470 | 8 | 81s |
+| 8 | Code Review PR #39 | code-review | sonnet | 75064 | 24 | 244s |
