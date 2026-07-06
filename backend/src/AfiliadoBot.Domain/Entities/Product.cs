@@ -18,6 +18,7 @@ public class Product
     public string Slug { get; private set; } = string.Empty;
     public string Category { get; private set; } = string.Empty;
     public Platform Platform { get; private set; }
+    public string ExternalId { get; private set; } = string.Empty;
     public int? AiScore { get; private set; }
     public string? AiReason { get; private set; }
     public string? AiCaption { get; private set; }
@@ -40,7 +41,8 @@ public class Product
         string slug,
         string category,
         Platform platform,
-        string? imageUrl = null)
+        string? imageUrl = null,
+        string externalId = "")
     {
         if (salePrice < 0)
             throw new ArgumentException("SalePrice nao pode ser negativo.", nameof(salePrice));
@@ -62,6 +64,7 @@ public class Product
         Category = category;
         Platform = platform;
         ImageUrl = imageUrl;
+        ExternalId = externalId;
         Status = ProductStatus.Pending;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
@@ -86,6 +89,25 @@ public class Product
     public void MarkAsPublished()
     {
         Status = ProductStatus.Published;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Atualiza preco/midia de um produto ja existente (upsert por coleta).
+    /// Preserva Id, Status, AiScore, Slug e CreatedAt. Nao reexecuta o scoring de IA.
+    /// </summary>
+    public void UpdateFromCollector(decimal salePrice, decimal originalPrice, decimal discountPct, string? imageUrl)
+    {
+        if (salePrice < 0)
+            throw new ArgumentException("SalePrice nao pode ser negativo.", nameof(salePrice));
+
+        if (discountPct < 0 || discountPct > 100)
+            throw new ArgumentException("DiscountPct deve estar entre 0 e 100.", nameof(discountPct));
+
+        SalePrice = salePrice;
+        OriginalPrice = originalPrice;
+        DiscountPct = discountPct;
+        ImageUrl = imageUrl;
         UpdatedAt = DateTime.UtcNow;
     }
 }

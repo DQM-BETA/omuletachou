@@ -1,5 +1,6 @@
 using AfiliadoBot.Domain.Interfaces;
 using AfiliadoBot.Infrastructure.Data;
+using AfiliadoBot.Infrastructure.Integrations.Platforms;
 using AfiliadoBot.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,9 +24,18 @@ builder.Services.AddScoped<IAiService>(sp =>
     return new ClaudeAiService(wrapper);
 });
 
+// Collectors
+builder.Services.AddHttpClient<IPlatformCollector, AmazonCollector>();
+
 var app = builder.Build();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+
+app.MapPost("/api/jobs/collector/trigger", async (IPlatformCollector collector, CancellationToken ct) =>
+{
+    var products = await collector.CollectAsync(ct);
+    return Results.Ok(new { count = products.Count() });
+});
 
 app.Run();
 
