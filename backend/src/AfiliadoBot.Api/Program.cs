@@ -2,6 +2,7 @@ using AfiliadoBot.Domain.Interfaces;
 using AfiliadoBot.Infrastructure.Data;
 using AfiliadoBot.Infrastructure.Integrations.Platforms;
 using AfiliadoBot.Infrastructure.Services;
+using AfiliadoBot.Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,6 +29,9 @@ builder.Services.AddScoped<IAiService>(sp =>
 builder.Services.AddHttpClient<IPlatformCollector, AmazonCollector>();
 builder.Services.AddHttpClient<MercadoLivreCollector>();
 builder.Services.AddHttpClient<ShopeeCollector>();
+
+// Media storage (ProcessorJob, Issue #6)
+builder.Services.AddHttpClient<IMediaStorage, LocalMediaStorage>();
 
 var app = builder.Build();
 
