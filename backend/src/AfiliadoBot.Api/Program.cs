@@ -1,3 +1,4 @@
+using AfiliadoBot.Application.Jobs;
 using AfiliadoBot.Domain.Interfaces;
 using AfiliadoBot.Infrastructure.Data;
 using AfiliadoBot.Infrastructure.Integrations.Platforms;
@@ -33,6 +34,9 @@ builder.Services.AddHttpClient<ShopeeCollector>();
 // Media storage (ProcessorJob, Issue #6)
 builder.Services.AddHttpClient<IMediaStorage, LocalMediaStorage>();
 
+// ProcessorJob (Issue #6)
+builder.Services.AddHttpClient<ProcessorJob>();
+
 var app = builder.Build();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
@@ -53,6 +57,12 @@ app.MapPost("/api/jobs/collector/shopee/trigger", async (ShopeeCollector collect
 {
     var products = await collector.CollectAsync(ct);
     return Results.Ok(new { count = products.Count() });
+});
+
+app.MapPost("/api/jobs/processor/trigger", async (ProcessorJob job, CancellationToken ct) =>
+{
+    await job.ExecuteAsync(ct);
+    return Results.Ok();
 });
 
 app.Run();

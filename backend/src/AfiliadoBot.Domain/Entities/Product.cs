@@ -159,6 +159,39 @@ public class Product
     }
 
     /// <summary>
+    /// Atualiza a categoria detectada pelo CategoryDetector (ProcessorJob, Issue #6).
+    /// So substitui quando a categoria atual ainda for o fallback "Geral" — nao sobrescreve
+    /// categoria ja detectada/definida anteriormente com um valor mais especifico.
+    /// </summary>
+    public void SetCategory(string category)
+    {
+        if (string.IsNullOrWhiteSpace(category))
+            return;
+
+        if (!string.Equals(Category, "Geral", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        Category = category;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Gera e persiste o slug quando ainda nao preenchido (ProcessorJob, Issue #6).
+    /// Nunca regera um slug ja existente.
+    /// </summary>
+    public void SetSlugIfEmpty(string slug)
+    {
+        if (!string.IsNullOrWhiteSpace(Slug))
+            return;
+
+        if (string.IsNullOrWhiteSpace(slug))
+            return;
+
+        Slug = slug;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
     /// Preenche o link de afiliado apos aprovacao do scoring (usado pelo ProcessorJob, Issue #6).
     /// </summary>
     public void SetAffiliateLink(string link)
