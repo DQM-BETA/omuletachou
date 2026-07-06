@@ -1,4 +1,7 @@
 using System;
+using AfiliadoBot.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -9,6 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AfiliadoBot.Infrastructure.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(AfiliadoBotDbContext))]
+    [Migration("20240101000000_InitialSchema")]
     public partial class InitialSchema : Migration
     {
         /// <inheritdoc />

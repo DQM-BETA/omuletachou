@@ -1,4 +1,7 @@
 using System;
+using AfiliadoBot.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -6,6 +9,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace AfiliadoBot.Infrastructure.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(AfiliadoBotDbContext))]
+    [Migration("20240102000000_AddClaudeMinScoreFallbackSeed")]
     public partial class AddClaudeMinScoreFallbackSeed : Migration
     {
         /// <inheritdoc />

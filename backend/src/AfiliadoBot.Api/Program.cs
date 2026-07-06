@@ -39,6 +39,16 @@ builder.Services.AddHttpClient<ProcessorJob>();
 
 var app = builder.Build();
 
+// Apply pending EF Core migrations on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+    if (db.Database.IsRelational())
+    {
+        db.Database.Migrate();
+    }
+}
+
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
 app.MapPost("/api/jobs/collector/trigger", async (IPlatformCollector collector, CancellationToken ct) =>
