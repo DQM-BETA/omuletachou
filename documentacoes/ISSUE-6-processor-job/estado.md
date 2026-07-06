@@ -166,6 +166,8 @@ validar em homolog.
 | 12 | Dev fix permalink #52 | dev-dotnet | sonnet | 79148 | 41 | 222s |
 | 13 | Merge fix permalink #52 | lt | sonnet | 36285 | 11 | 105s |
 | 14 | Code Review PR #51 (rodada 2) | code-review | sonnet | 48258 | 19 | 126s |
+| 15 | QA (bloqueado) | qa | sonnet | 46913 | 8 | 107s |
+| 14 | Code Review PR #51 (rodada 2) | code-review | sonnet | 48258 | 19 | 126s |
 
 ---
 *QA bloqueado: PR #51 (desenv->homolog) ainda nao mergeado. LT precisa mergear antes de nova tentativa de validacao.*
