@@ -2,7 +2,7 @@
 issue: 6
 titulo: feat: Processor Job (Midia e Fila de Publicacao)
 rota: normal
-etapa_atual: DevOps — diagnosticar auto-migrate EF Core no startup
+etapa_atual: BLOQUEADO — decisao tecnica pendente (squash migrations vs reconstrucao)
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-6-processor-job
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-6-processor-job
@@ -219,6 +219,7 @@ revalidação completa do QA via `docker compose up`) — encaminhado ao DevOps.
 | 21 | Code Review PR #55 (fix conn string) | code-review | sonnet | 40431 | 17 | 186s |
 | 22 | Merge PR #55 homolog | lt | sonnet | 50031 | 9 | 154s |
 | 23 | DevOps diagnostico auto-migrate | devops | haiku | 23251 | 8 | 33s |
+| 24 | Dev fix auto-migrate (bloqueado) | dev-dotnet | sonnet | 103817 | 82 | 912s |
 
 ---
-*PR #55 (desenv->homolog) mergeado — falta resolver migrations nao aplicadas (auto-migrate) no container Docker antes de revalidar QA.*
+*BLOQUEADO — trava anti-loop: 2 correcoes de infra encadeadas (connection string, depois discovery de migrations) revelaram um 3o problema estrutural (Designer.cs incompletos nas migrations manuais InitialSchema/AddClaudeMinScoreFallbackSeed). Decisao tecnica pendente do Gerente: squash de migrations vs reconstrucao manual. Reportado, aguardando autorizacao.*
