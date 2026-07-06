@@ -10,7 +10,7 @@ tech_stacks:
   - .NET 8
   - Hangfire
   - HttpClient
-ultimo_agente: code-review
+ultimo_agente: qa
 sub_issues:
   - "#47 (stack:dotnet, task_id:T-01) — LocalMediaStorage + Migration AddMediaLocalPathToProducts + CategoryDetector"
   - "#48 (stack:dotnet, task_id:T-02) — ProcessorJob.ExecuteAsync (orquestracao completa, depende de #47)"
@@ -20,9 +20,9 @@ sub_issues_frontend: {}
 pr_homologacao: 51
 pr_release: ~
 code_review_homolog_pr: 51 (aprovado apos fix)
-qa_status: ~
+qa_status: bloqueado (PR #51 nao mergeado em homolog)
 figma_url: ~
-blockers: nenhum
+blockers: PR #51 (desenv->homolog) ainda OPEN, mergedAt null — homolog remoto em baddb12 (PR #45, Issue #5), sem commits de #47/#48/#52
 ---
 
 ## Contexto
@@ -116,6 +116,21 @@ toda chamada ao endpoint de afiliados em produção gera payload inválido.
 PR #51 (desenv→homolog) permanece aberto e bloqueado até #52 ser corrigida, mergeada em `desenv`
 e o PR #51 refletir o fix.
 
+## QA — bloqueado (2026-07-06)
+
+**Verificação pré-validação obrigatória (conforme processo do agente QA) encontrou:**
+- `gh pr view 51 --repo DQM-BETA/omuletachou --json state,mergedAt` → `{"state":"OPEN","mergedAt":null,"baseRefName":"homolog","headRefName":"desenv"}`
+- `git log origin/homolog --oneline -5` → topo em `baddb12` (Merge pull request #45, referente à Issue #5), **sem nenhum commit** de #47/#48/#52 (Issue #6).
+
+**Conclusão:** o merge desenv→homolog do PR #51 ainda não ocorreu, apesar do Code Review ter
+aprovado (rodada 2) e do `estado.md` estar em `etapa_atual: QA`. Rodar a suíte de testes/build
+contra a branch `homolog` neste momento testaria código desatualizado (sem o fix do permalink
+ML), gerando falso positivo ou falso negativo. **Validação NÃO prosseguiu** — nenhum teste, build
+ou inspeção de screenshots foi executado nesta rodada.
+
+**Ação necessária:** Líder Técnico precisa mergear o PR #51 (desenv→homolog) antes do QA poder
+validar em homolog.
+
 ## Histórico
 - 2026-07-06 — Coordenador preparou Issue (estado.md, diretórios, label, card no board)
 - 2026-07-06 — PM Fase 1: PRD inicial (`prd.md`) escrito; 9 perguntas de Gate 1 postadas na Issue #6 (comentário https://github.com/DQM-BETA/omuletachou/issues/6#issuecomment-4896543914)
@@ -132,6 +147,7 @@ e o PR #51 refletir o fix.
 - 2026-07-06 — Dev .NET: fix #52 implementado. Novo campo `Product.SourceUrl` (nullable, incluído no construtor e em `UpdateFromCollector`) + migration `AddSourceUrlToProducts` (coluna `source_url` nullable). `MercadoLivreCollector`: `MercadoLivreItem` ganhou campo `Permalink` capturado de `item.permalink` em `ParseItems`; `UpsertProductAsync` passa `sourceUrl: item.Permalink` tanto na criação quanto no upsert de produto existente. `ProcessorJob.EnsureAffiliateLinkAsync`: payload agora usa `product.SourceUrl` (não mais `ImageUrl`/`MediaUrl`/`ExternalId`); se `SourceUrl` nulo/vazio, `MarkAsError("SourceUrl ausente — nao e possivel gerar link de afiliado ML")` e retorna `false` sem chamar a API. Testes atualizados: `MercadoLivreCollectorTests` (mock com `permalink`, assert `SourceUrl` na criação e no upsert) e `ProcessorJobTests` (`CriarProduto` com parâmetro `sourceUrl`, teste existente de falha HTTP ML agora seta `sourceUrl` válido, novo teste `ExecuteAsync_MarcaError_QuandoSourceUrlAusente` confirmando que a API não é chamada quando `SourceUrl` está ausente). Suite completa: 80/80 passando (79 pré-existentes + 1 novo). Build e boot da app (`dotnet run`) validados sem exceção. PR #53 (feature/ISSUE-6-fix-permalink-ml → desenv) aberto.
 - 2026-07-06 — LT: merge squash do PR #53 (feature/ISSUE-6-fix-permalink-ml → desenv) concluído. Sub-issue #52 fechada, card movido para "Concluído" no board. PR #51 (desenv→homolog) reflete o fix automaticamente (mesma branch desenv).
 - 2026-07-06 — Code Review (PR #51, rodada 2): ambas camadas aprovaram. Bug do permalink ML confirmado corrigido — `EnsureAffiliateLinkAsync` usa `product.SourceUrl`, sem chamada HTTP quando `SourceUrl` ausente. Build ok, 80/80 testes. Nenhuma regressão nos collectors Amazon/ML/Shopee.
+- 2026-07-06 — QA: verificação pré-validação encontrou PR #51 (desenv→homolog) ainda **OPEN** (mergedAt null). Branch homolog remota confirmada em `baddb12` (PR #45, Issue #5), sem nenhum commit de #47/#48/#52. Validação NÃO prosseguiu (rodar testes contra homolog sem o merge testaria código desatualizado). Bloqueado até o LT mergear o PR #51.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -152,4 +168,4 @@ e o PR #51 refletir o fix.
 | 14 | Code Review PR #51 (rodada 2) | code-review | sonnet | 48258 | 19 | 126s |
 
 ---
-*Code Review (rodada 2) aprovou o PR #51 apos correcao do bug do permalink ML — 80/80 testes. Pronto para QA.*
+*QA bloqueado: PR #51 (desenv->homolog) ainda nao mergeado. LT precisa mergear antes de nova tentativa de validacao.*
