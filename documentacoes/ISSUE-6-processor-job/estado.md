@@ -217,7 +217,7 @@ revalidação completa do QA via `docker compose up`) — encaminhado ao DevOps.
 | 19 | Dev fix connection string | dev-dotnet | sonnet | 29436 | 9 | 44s |
 | 20 | Merge fix infra + PR #55 | lt | sonnet | 47076 | 7 | 113s |
 | 21 | Code Review PR #55 (fix conn string) | code-review | sonnet | 40431 | 17 | 186s |
-| 22 | Merge PR #55 homolog | lt | sonnet | (pendente) | 5 | (pendente) |
+| 22 | Merge PR #55 homolog | lt | sonnet | 50031 | 9 | 154s |
 
 ---
 *PR #55 (desenv->homolog) mergeado — falta resolver migrations nao aplicadas (auto-migrate) no container Docker antes de revalidar QA.*
