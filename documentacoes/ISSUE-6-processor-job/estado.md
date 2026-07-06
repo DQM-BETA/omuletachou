@@ -2,7 +2,7 @@
 issue: 6
 titulo: feat: Processor Job (Midia e Fila de Publicacao)
 rota: normal
-etapa_atual: DevOps — diagnosticar auto-migrate EF Core no startup
+etapa_atual: BLOQUEADO — decisao tecnica pendente (squash migrations vs reconstrucao Designer.cs)
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-6-processor-job
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-6-processor-job
@@ -219,6 +219,20 @@ revalidação completa do QA via `docker compose up`) — encaminhado ao DevOps.
 | 21 | Code Review PR #55 (fix conn string) | code-review | sonnet | 40431 | 17 | 186s |
 | 22 | Merge PR #55 homolog | lt | sonnet | 50031 | 9 | 154s |
 | 23 | DevOps diagnostico auto-migrate | devops | haiku | 23251 | 8 | 33s |
+| 24 | Dev fix auto-migrate (bloqueado) | dev-dotnet | sonnet | 103817 | 82 | 912s |
+
+## BLOQUEADO — decisão técnica pendente (2026-07-06)
+
+Trava anti-loop acionada: 3 problemas de infra encadeados na mesma tentativa de validar a Issue #6 em Docker:
+1. Connection string mismatch (corrigido, PR #55 mergeado)
+2. Migrations nunca aplicadas no startup — `Program.cs` sem `Database.Migrate()` (fix parcial aplicado pelo Dev)
+3. **Novo bloqueio descoberto:** as duas migrations mais antigas (`InitialSchema`, `AddClaudeMinScoreFallbackSeed`, escritas manualmente sem `dotnet ef migrations add`) não têm arquivo `.Designer.cs` completo — o EF as ignorava na discovery (corrigido parcialmente adicionando atributos `[DbContext]`/`[Migration]` manualmente), mas agora falha ao aplicar `InsertData` do seed de `app_settings` por falta do model snapshot completo daquele estágio.
+
+**Decisão necessária:**
+- (a) Reconstruir manualmente os `Designer.cs` faltantes de `InitialSchema`/`AddClaudeMinScoreFallbackSeed` — trabalhoso, propenso a erro
+- (b) Consolidar/squash todo o histórico de migrations num único `InitialSchema` novo via `dotnet ef migrations add` a partir do modelo atual — mais simples, mas reescreve histórico (aceitável pois não há produção com dados reais ainda)
+
+Branch `feature/ISSUE-6-fix-auto-migrate` pushada com o progresso até aqui, sem PR (fix incompleto). Detalhes completos em `.claude/melhorias/2026-07-06-devops-omuletachou-ef-migrations-not-applied.md`.
 
 ---
-*PR #55 (desenv->homolog) mergeado — falta resolver migrations nao aplicadas (auto-migrate) no container Docker antes de revalidar QA.*
+*BLOQUEADO — aguardando decisão do Gerente entre opção (a) reconstruir Designer.cs ou (b) squash de migrations.*
