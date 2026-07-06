@@ -17,6 +17,7 @@ public class Product
     public string? ImageUrl { get; private set; }
     public string? MediaUrl { get; private set; }
     public string? MediaType { get; private set; }
+    public string? MediaLocalPath { get; private set; }
     public string Slug { get; private set; } = string.Empty;
     public string Category { get; private set; } = string.Empty;
     public Platform Platform { get; private set; }
@@ -92,6 +93,41 @@ public class Product
     public void MarkAsPublished()
     {
         Status = ProductStatus.Published;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Marca o produto como em processamento (lock otimista do ProcessorJob, Issue #6).
+    /// Deve ser persistido imediatamente ao pegar o produto, antes de qualquer outra operacao.
+    /// </summary>
+    public void MarkAsProcessing()
+    {
+        Status = ProductStatus.Processing;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Marca o produto como erro nao recuperavel (ProcessorJob, Issue #6).
+    /// Reaproveita o campo AiReason para persistir a mensagem descritiva do erro.
+    /// </summary>
+    public void MarkAsError(string reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new ArgumentException("Reason nao pode ser nulo ou vazio.", nameof(reason));
+
+        Status = ProductStatus.Error;
+        AiReason = reason;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Preenche o caminho local da midia baixada e o tipo detectado (ProcessorJob, Issue #6).
+    /// LocalPath nulo indica falha no download (produto segue sem midia local).
+    /// </summary>
+    public void SetLocalMedia(string? localPath, string? mediaType)
+    {
+        MediaLocalPath = localPath;
+        MediaType = mediaType;
         UpdatedAt = DateTime.UtcNow;
     }
 
