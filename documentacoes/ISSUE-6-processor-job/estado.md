@@ -10,7 +10,7 @@ tech_stacks:
   - .NET 8
   - Hangfire
   - HttpClient
-ultimo_agente: lt
+ultimo_agente: qa
 sub_issues:
   - "#47 (stack:dotnet, task_id:T-01) — LocalMediaStorage + Migration AddMediaLocalPathToProducts + CategoryDetector"
   - "#48 (stack:dotnet, task_id:T-02) — ProcessorJob.ExecuteAsync (orquestracao completa, depende de #47)"
@@ -20,9 +20,9 @@ sub_issues_frontend: {}
 pr_homologacao: 51
 pr_release: ~
 code_review_homolog_pr: 51 (aprovado apos fix, rodada 2)
-qa_status: pendente (PR #51 mergeado em homolog — pronto para nova tentativa de validacao)
+qa_status: reprovado (bug de config — connection string mismatch, ver relatorio-qa.md)
 figma_url: ~
-blockers: nenhum
+blockers: bug funcional — mismatch ConnectionStrings__Default (docker-compose.yml) vs GetConnectionString("DefaultConnection") (Program.cs); appsettings.json com placeholders ${DB_USER}/${DB_PASSWORD} nunca resolvidos, quebrando qualquer operacao de banco em ambiente Docker
 ---
 
 ## Contexto
@@ -79,6 +79,8 @@ lote) é detalhe de implementação — não requer Arquiteto.
   migration e encadeamento de jobs.
 - `tasks.md` — Task breakdown técnico: decisão de particionamento (T-01/T-02) e detalhamento
   de escopo, critérios e contexto técnico por sub-tarefa.
+- `relatorio-qa.md` — Relatório de QA (rodada com PR mergeado): 80/80 testes ok, mas
+  validação integrada via Docker reprovada por bug de config de connection string.
 
 ## Refinamento técnico (Líder Técnico)
 
@@ -116,7 +118,7 @@ toda chamada ao endpoint de afiliados em produção gera payload inválido.
 PR #51 (desenv→homolog) permanece aberto e bloqueado até #52 ser corrigida, mergeada em `desenv`
 e o PR #51 refletir o fix.
 
-## QA — bloqueado (2026-07-06), depois destravado
+## QA — bloqueado (2026-07-06), depois destravado, depois reprovado
 
 **Verificação pré-validação obrigatória (conforme processo do agente QA) encontrou:**
 - `gh pr view 51 --repo DQM-BETA/omuletachou --json state,mergedAt` → `{"state":"OPEN","mergedAt":null,"baseRefName":"homolog","headRefName":"desenv"}`
@@ -130,7 +132,20 @@ teste, build ou inspeção de screenshots foi executado.
 
 **Destravado (2026-07-06):** LT executou o merge do PR #51 (desenv→homolog), merge commit
 `c08e965`. `homolog` remoto avançou de `baddb12` para `c08e965`, agora contendo todos os
-commits de #47/#48/#52. QA pode prosseguir com a validação.
+commits de #47/#48/#52. QA prosseguiu com a validação.
+
+**Reprovado (2026-07-06, 2ª tentativa):** com o PR já mergeado, build (0 erros) e suite de testes
+(80/80) passaram integralmente. Inspeção de código confirmou o fix #52 (`SourceUrl`) e cobertura
+completa dos 21 CAs nos testes unitários. Porém, a **validação integrada obrigatória** (subir a
+aplicação via `docker compose up` e exercer o fluxo real) encontrou falha: `GET /health` retorna
+200, mas `POST /api/jobs/processor/trigger` retorna **HTTP 500**
+(`Npgsql.PostgresException 28P01: password authentication failed for user "${DB_USER}"`),
+reproduzido mesmo com volumes limpos (`docker compose down -v`). Causa raiz: `docker-compose.yml`
+define a env var `ConnectionStrings__Default`, mas `Program.cs` lê
+`GetConnectionString("DefaultConnection")` — chaves diferentes, então a env var do compose nunca é
+usada; o app cai no `appsettings.json`, que tem a chave certa mas com placeholders literais
+`${DB_USER}`/`${DB_PASSWORD}` nunca resolvidos. Qualquer operação que toque o banco falha em
+ambiente Docker. Detalhes completos em `relatorio-qa.md`.
 
 ## Histórico
 - 2026-07-06 — Coordenador preparou Issue (estado.md, diretórios, label, card no board)
@@ -150,6 +165,7 @@ commits de #47/#48/#52. QA pode prosseguir com a validação.
 - 2026-07-06 — Code Review (PR #51, rodada 2): ambas camadas aprovaram. Bug do permalink ML confirmado corrigido — `EnsureAffiliateLinkAsync` usa `product.SourceUrl`, sem chamada HTTP quando `SourceUrl` ausente. Build ok, 80/80 testes. Nenhuma regressão nos collectors Amazon/ML/Shopee.
 - 2026-07-06 — QA: verificação pré-validação encontrou PR #51 (desenv→homolog) ainda **OPEN** (mergedAt null). Branch homolog remota confirmada em `baddb12` (PR #45, Issue #5), sem nenhum commit de #47/#48/#52. Validação NÃO prosseguiu (rodar testes contra homolog sem o merge testaria código desatualizado). Bloqueado até o LT mergear o PR #51.
 - 2026-07-06 — LT: mergeado o PR #51 (desenv→homolog) via merge commit (`gh pr merge 51 --merge`), commit `c08e965`. Confirmado: `gh pr view 51` retorna `state: MERGED`, `mergedAt: 2026-07-06T20:34:50Z`. `git log origin/homolog` confirma topo em `c08e965` ("Merge pull request #51 from DQM-BETA/desenv"), contendo os commits de #47/#48/#52. Bloqueio removido — pronto para nova tentativa de validação do QA.
+- 2026-07-06 — QA (2ª tentativa): PR #51 confirmado MERGED (commit c08e965 no topo de homolog). Build ok, 80/80 testes passando, código inspecionado (fix #52 confirmado). Validação integrada via `docker compose up`: `/health` OK, mas `POST /api/jobs/processor/trigger` retornou HTTP 500 por falha de autenticação no Postgres (`password authentication failed for user "${DB_USER}"`), reproduzido mesmo com volumes limpos. Causa raiz: mismatch de chave entre `docker-compose.yml` (`ConnectionStrings__Default`) e `Program.cs` (`GetConnectionString("DefaultConnection")`) — o app usa o `appsettings.json` local com placeholders `${DB_USER}`/`${DB_PASSWORD}` nunca resolvidos. **QA REPROVADO** — fluxo integrado real quebrado apesar da suite unitária 100% ok. Relatório completo em `relatorio-qa.md`.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -170,7 +186,7 @@ commits de #47/#48/#52. QA pode prosseguir com a validação.
 | 14 | Code Review PR #51 (rodada 2) | code-review | sonnet | 48258 | 19 | 126s |
 | 15 | QA (bloqueado) | qa | sonnet | 46913 | 8 | 107s |
 | 16 | Merge PR #51 homolog | lt | sonnet | 43953 | 7 | 94s |
-| 16 | LT merge PR #51 desenv->homolog | lt | sonnet | 0 | 0 | 0s |
+| 17 | QA (2ª tentativa — reprovado) | qa | sonnet | ~50000 | ~25 | ~400s |
 
 ---
-*PR #51 mergeado desenv->homolog (merge commit c08e965). Pronto para QA validar em homolog.*
+*QA reprovado: bug de config (connection string mismatch) impede o fluxo integrado real de funcionar em Docker/homolog. Aguarda LT mapear e Dev corrigir.*
