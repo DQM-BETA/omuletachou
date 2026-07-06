@@ -2,7 +2,7 @@
 issue: 6
 titulo: feat: Processor Job (Midia e Fila de Publicacao)
 rota: normal
-etapa_atual: Code Review
+etapa_atual: Dev — aguardando spawn (fix permalink ML)
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-6-processor-job
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-6-processor-job
@@ -14,14 +14,15 @@ ultimo_agente: lt
 sub_issues:
   - "#47 (stack:dotnet, task_id:T-01) — LocalMediaStorage + Migration AddMediaLocalPathToProducts + CategoryDetector"
   - "#48 (stack:dotnet, task_id:T-02) — ProcessorJob.ExecuteAsync (orquestracao completa, depende de #47)"
+  - "#52 (stack:dotnet, task_id:FIX-01) — Fix: permalink ML nao capturado, AffiliateLink com payload invalido (Code Review reprovou PR #51)"
 desenv_tasks_merged: ["#47", "#48"]
 sub_issues_frontend: {}
 pr_homologacao: 51
 pr_release: ~
-code_review_homolog_pr: ~
+code_review_homolog_pr: reprovado (bloqueador: payload invalido no AffiliateLink ML)
 qa_status: ~
 figma_url: ~
-blockers: nenhum
+blockers: PR #51 (desenv->homolog) bloqueado ate #52 ser corrigida, mergeada em desenv e o PR #51 atualizado
 ---
 
 ## Contexto
@@ -94,6 +95,27 @@ Duas sub-issues, ambas stack `dotnet`, **sequenciais** (T-02 depende de T-01 mer
 Justificativa completa da decisão de particionamento em `tasks.md` (seção "Decisão de
 particionamento").
 
+## Code Review reprovou o PR #51 (2026-07-06)
+
+**Bloqueador:** `ProcessorJob.cs` usa `product.ImageUrl ?? product.MediaUrl ?? product.ExternalId`
+como payload da chamada `POST /affiliate-tools/links`, mas o endpoint espera o **permalink**
+(URL da página do produto no ML). `MercadoLivreCollector` (Issue #5) nunca captura/salva o
+campo `permalink` retornado por `GET /sites/MLB/search` em nenhum campo do `Product` — hoje
+`ImageUrl` é sempre null para ML e `ExternalId` é só o ID (`MLB123456`), não uma URL. Resultado:
+toda chamada ao endpoint de afiliados em produção gera payload inválido.
+
+**Correção mapeada (sub-issue #52):**
+- Novo campo `Product.SourceUrl` (string?) + migration incremental.
+- `MercadoLivreCollector`: capturar `permalink` da resposta de busca (`MercadoLivreItem` +
+  `ParseItems` + `UpsertProductAsync`) e popular `SourceUrl`.
+- `ProcessorJob`: usar `product.SourceUrl` (não `ImageUrl`/`MediaUrl`/`ExternalId`) no payload
+  `{"url": SourceUrl}`; se nulo, `MarkAsError` com mensagem descritiva em vez de payload inválido.
+- Atualizar `MercadoLivreCollectorTests` e `ProcessorJobTests`.
+- Branch: `feature/ISSUE-6-fix-permalink-ml` (base: `desenv`).
+
+PR #51 (desenv→homolog) permanece aberto e bloqueado até #52 ser corrigida, mergeada em `desenv`
+e o PR #51 refletir o fix.
+
 ## Histórico
 - 2026-07-06 — Coordenador preparou Issue (estado.md, diretórios, label, card no board)
 - 2026-07-06 — PM Fase 1: PRD inicial (`prd.md`) escrito; 9 perguntas de Gate 1 postadas na Issue #6 (comentário https://github.com/DQM-BETA/omuletachou/issues/6#issuecomment-4896543914)
@@ -105,6 +127,8 @@ particionamento").
 - 2026-07-06 — LT: merge squash do PR #49 (feature/47-local-media-storage → desenv) concluído. Sub-issue #47 fechada e card movido para "Concluído" no board. Como #48 (T-02) ainda não foi desenvolvida, PR desenv→homolog NÃO foi criado — aguarda merge de T-02 para consolidar as duas sub-issues em um único PR de homologação.
 - 2026-07-06 — Dev .NET: T-02 (#48) implementado — `ProcessorJob.ExecuteAsync()` completo: busca `Queued` ordenado por `AiScore` desc, lock otimista via `MarkAsProcessing()` + SaveChanges imediato, download de mídia via `IMediaStorage` (T-01), geração de slug apenas quando vazio (`Product.SetSlugIfEmpty`), detecção de categoria via `CategoryDetector` (T-01, só sobrescreve "Geral" via novo `Product.SetCategory`), link de afiliado MercadoLivre via `POST /affiliate-tools/links` real (falha → `MarkAsError` + pula fila, sem exception não capturada), legendas via `IAiService.GenerateCaptionAsync` por rede habilitada com credenciais em `app_settings`, `PublicationQueue` com Facebook forçado a `ManualPending` (novo método `PublicationQueue.MarkAsManualPending()` e novo valor no enum `PublicationStatus`) e demais redes `Scheduled` com `ScheduledAt` por round-robin (9h/12h/15h/18h/20h UTC, offset 0-10min, ordenado por `AiScore` desc). Finalização `MarkAsPublished()` ao concluir sem erro. `AfiliadoBot.Application` passou a referenciar `AfiliadoBot.Infrastructure` (necessário para `AfiliadoBotDbContext`). Endpoint `POST /api/jobs/processor/trigger` e registro DI (`AddHttpClient<ProcessorJob>()`) adicionados em `Program.cs`. 14 novos testes (`ProcessorJobTests`) cobrindo CA4-CA9, CA12-CA19. Suite completa: 79/79 passando (sem regressão nos 65 pré-existentes). Build e boot da app (`dotnet run`) validados sem exceção. PR #50 (feature/48-processor-job → desenv) aberto.
 - 2026-07-06 — LT: merge squash do PR #50 (feature/48-processor-job → desenv) concluído. Sub-issue #48 fechada (card movido para "Code Review" no board). Todas as sub-issues (#47, #48) mergeadas em `desenv`. PR #51 (desenv→homolog) criado consolidando T-01+T-02 da Issue #6 completa.
+- 2026-07-06 — Code Review (PR #51): Camada 2 (build/testes/veto) aprovada (79/79 testes, build ok). Camada 1 (revisão manual) **reprovou**: `ProcessorJob.cs` usa `ImageUrl ?? MediaUrl ?? ExternalId` como payload do endpoint de afiliados ML, que espera o `permalink` do produto — campo nunca capturado pelo `MercadoLivreCollector` (Issue #5). Comentário postado na Issue #6.
+- 2026-07-06 — LT: mapeou a correção. Confirmado no código que `MercadoLivreCollector.ParseItems`/`MercadoLivreItem`/`UpsertProductAsync` não capturam `permalink`. Criada sub-issue de fix **#52** (branch `feature/ISSUE-6-fix-permalink-ml`, novo campo `Product.SourceUrl` + migration, ajuste no collector e no `ProcessorJob`). PR #51 permanece aberto/bloqueado.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -117,7 +141,10 @@ particionamento").
 | 6 | Dev T-01 #47 | dev-dotnet | sonnet | 84515 | 59 | 345s |
 | 7 | Merge T-01 (#47) | lt | sonnet | 62895 | 19 | 155s |
 | 8 | Dev T-02 #48 | dev-dotnet | sonnet | 96706 | 55 | 386s |
+| 9 | Merge T-02 + PR homolog | lt | sonnet | 65413 | 21 | 208s |
+| 10 | Code Review PR #51 | code-review | sonnet | 69276 | 16 | 156s |
 | 9 | Merge T-02 (#48) + PR desenv→homolog | lt | sonnet | (ver usage retornado) | — | — |
+| 11 | Code Review reprovou — mapear correção | lt | sonnet | (ver usage retornado) | — | — |
 
 ---
-*PR #51 (desenv→homolog) criado, consolidando T-01 (#47) e T-02 (#48) — Issue #6 completa. Aguardando Code Review (plugin /code-review + agente Code Review).*
+*Code Review reprovou o PR #51 — sub-issue de correção #52 criada (permalink ML não capturado). Aguardando spawn de Dev .NET para o fix.*
