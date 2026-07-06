@@ -2,7 +2,7 @@
 issue: 6
 titulo: feat: Processor Job (Midia e Fila de Publicacao)
 rota: normal
-etapa_atual: LT — merge feature/47 → desenv
+etapa_atual: Dev — aguardando spawn T-02 (#48)
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-6-processor-job
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-6-processor-job
@@ -10,11 +10,11 @@ tech_stacks:
   - .NET 8
   - Hangfire
   - HttpClient
-ultimo_agente: dev-dotnet
+ultimo_agente: lt
 sub_issues:
   - "#47 (stack:dotnet, task_id:T-01) — LocalMediaStorage + Migration AddMediaLocalPathToProducts + CategoryDetector"
   - "#48 (stack:dotnet, task_id:T-02) — ProcessorJob.ExecuteAsync (orquestracao completa, depende de #47)"
-desenv_tasks_merged: []
+desenv_tasks_merged: ["#47"]
 sub_issues_frontend: {}
 pr_homologacao: ~
 pr_release: ~
@@ -102,6 +102,7 @@ particionamento").
 - 2026-07-06 — LT: refinamento técnico concluído. `tasks.md` criado com decisão de particionamento (T-01/T-02 sequenciais). Sub-issues criadas: #47 (T-01, stack:dotnet), #48 (T-02, stack:dotnet, depende de #47). Sem UI — pula UX/UI.
 - 2026-07-06 — Coordenador: sincronizou board com sub-issues #47 e #48. Ambas movidas para "Em Desenvolvimento" junto com a issue mãe #6.
 - 2026-07-06 — Dev .NET: T-01 (#47) implementado — migration `AddMediaLocalPathToProducts` (campo `MediaLocalPath` + enum `Processing`/`Error` aditivo), `IMediaStorage`/`LocalMediaStorage` (download HTTP para `/app/media/`, deteccao de tipo por extensao, retorna null sem exception em falha), `CategoryDetector` (deteccao por palavra-chave, fallback "Geral"). 14 novos testes (LocalMediaStorageTests, CategoryDetectorTests). Suite completa: 65/65 passando. Build e boot da app (`dotnet run` + `/health`) validados. PR #49 (feature/47-local-media-storage → desenv) aberto.
+- 2026-07-06 — LT: merge squash do PR #49 (feature/47-local-media-storage → desenv) concluído. Sub-issue #47 fechada e card movido para "Concluído" no board. Como #48 (T-02) ainda não foi desenvolvida, PR desenv→homolog NÃO foi criado — aguarda merge de T-02 para consolidar as duas sub-issues em um único PR de homologação.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -111,6 +112,7 @@ particionamento").
 | 3 | PM Fase 2 | pm | sonnet | 53235 | 16 | 146s |
 | 4 | Refinamento LT | lt | sonnet | 62563 | 16 | 183s |
 | 5 | Sincronização board | coordenador | haiku | 8721 | 4 | 52s |
+| 6 | Dev T-01 #47 | dev-dotnet | sonnet | 84515 | 59 | 345s |
 
 ---
-*Board sincronizado. Sub-issues #47 e #48 prontas para desenvolvimento (sequential). T-02 aguardará merge de T-01 em desenv antes de iniciar.*
+*PR #49 mergeado (squash) em desenv. Sub-issue #47 concluída. Aguardando spawn do Dev .NET para T-02 (#48) — migration e demais artefatos de T-01 já disponíveis em desenv.*
