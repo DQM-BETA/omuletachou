@@ -45,12 +45,19 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         builder.Property(x => x.AffiliateLink)
             .HasColumnName("affiliate_link")
-            .IsRequired()
             .HasColumnType("text");
 
         builder.Property(x => x.ImageUrl)
             .HasColumnName("image_url")
             .HasColumnType("text");
+
+        builder.Property(x => x.MediaUrl)
+            .HasColumnName("media_url")
+            .HasColumnType("text");
+
+        builder.Property(x => x.MediaType)
+            .HasColumnName("media_type")
+            .HasMaxLength(20);
 
         builder.Property(x => x.Slug)
             .HasColumnName("slug")

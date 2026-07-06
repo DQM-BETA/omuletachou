@@ -26,12 +26,19 @@ builder.Services.AddScoped<IAiService>(sp =>
 
 // Collectors
 builder.Services.AddHttpClient<IPlatformCollector, AmazonCollector>();
+builder.Services.AddHttpClient<MercadoLivreCollector>();
 
 var app = builder.Build();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
 app.MapPost("/api/jobs/collector/trigger", async (IPlatformCollector collector, CancellationToken ct) =>
+{
+    var products = await collector.CollectAsync(ct);
+    return Results.Ok(new { count = products.Count() });
+});
+
+app.MapPost("/api/jobs/collector/mercadolivre/trigger", async (MercadoLivreCollector collector, CancellationToken ct) =>
 {
     var products = await collector.CollectAsync(ct);
     return Results.Ok(new { count = products.Count() });
