@@ -2,7 +2,7 @@
 issue: 6
 titulo: feat: Processor Job (Midia e Fila de Publicacao)
 rota: normal
-etapa_atual: LT — merge fix permalink → desenv, depois atualizar PR #51
+etapa_atual: QA
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-6-processor-job
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-6-processor-job
@@ -10,19 +10,19 @@ tech_stacks:
   - .NET 8
   - Hangfire
   - HttpClient
-ultimo_agente: dev-dotnet
+ultimo_agente: code-review
 sub_issues:
   - "#47 (stack:dotnet, task_id:T-01) — LocalMediaStorage + Migration AddMediaLocalPathToProducts + CategoryDetector"
   - "#48 (stack:dotnet, task_id:T-02) — ProcessorJob.ExecuteAsync (orquestracao completa, depende de #47)"
   - "#52 (stack:dotnet, task_id:FIX-01) — Fix: permalink ML nao capturado, AffiliateLink com payload invalido (Code Review reprovou PR #51)"
-desenv_tasks_merged: ["#47", "#48"]
+desenv_tasks_merged: ["#47", "#48", "#52"]
 sub_issues_frontend: {}
 pr_homologacao: 51
 pr_release: ~
-code_review_homolog_pr: reprovado (bloqueador: payload invalido no AffiliateLink ML)
+code_review_homolog_pr: 51 (aprovado apos fix)
 qa_status: ~
 figma_url: ~
-blockers: PR #51 (desenv->homolog) bloqueado ate #52 ser corrigida, mergeada em desenv e o PR #51 atualizado
+blockers: nenhum
 ---
 
 ## Contexto
@@ -130,6 +130,8 @@ e o PR #51 refletir o fix.
 - 2026-07-06 — Code Review (PR #51): Camada 2 (build/testes/veto) aprovada (79/79 testes, build ok). Camada 1 (revisão manual) **reprovou**: `ProcessorJob.cs` usa `ImageUrl ?? MediaUrl ?? ExternalId` como payload do endpoint de afiliados ML, que espera o `permalink` do produto — campo nunca capturado pelo `MercadoLivreCollector` (Issue #5). Comentário postado na Issue #6.
 - 2026-07-06 — LT: mapeou a correção. Confirmado no código que `MercadoLivreCollector.ParseItems`/`MercadoLivreItem`/`UpsertProductAsync` não capturam `permalink`. Criada sub-issue de fix **#52** (branch `feature/ISSUE-6-fix-permalink-ml`, novo campo `Product.SourceUrl` + migration, ajuste no collector e no `ProcessorJob`). PR #51 permanece aberto/bloqueado.
 - 2026-07-06 — Dev .NET: fix #52 implementado. Novo campo `Product.SourceUrl` (nullable, incluído no construtor e em `UpdateFromCollector`) + migration `AddSourceUrlToProducts` (coluna `source_url` nullable). `MercadoLivreCollector`: `MercadoLivreItem` ganhou campo `Permalink` capturado de `item.permalink` em `ParseItems`; `UpsertProductAsync` passa `sourceUrl: item.Permalink` tanto na criação quanto no upsert de produto existente. `ProcessorJob.EnsureAffiliateLinkAsync`: payload agora usa `product.SourceUrl` (não mais `ImageUrl`/`MediaUrl`/`ExternalId`); se `SourceUrl` nulo/vazio, `MarkAsError("SourceUrl ausente — nao e possivel gerar link de afiliado ML")` e retorna `false` sem chamar a API. Testes atualizados: `MercadoLivreCollectorTests` (mock com `permalink`, assert `SourceUrl` na criação e no upsert) e `ProcessorJobTests` (`CriarProduto` com parâmetro `sourceUrl`, teste existente de falha HTTP ML agora seta `sourceUrl` válido, novo teste `ExecuteAsync_MarcaError_QuandoSourceUrlAusente` confirmando que a API não é chamada quando `SourceUrl` está ausente). Suite completa: 80/80 passando (79 pré-existentes + 1 novo). Build e boot da app (`dotnet run`) validados sem exceção. PR #53 (feature/ISSUE-6-fix-permalink-ml → desenv) aberto.
+- 2026-07-06 — LT: merge squash do PR #53 (feature/ISSUE-6-fix-permalink-ml → desenv) concluído. Sub-issue #52 fechada, card movido para "Concluído" no board. PR #51 (desenv→homolog) reflete o fix automaticamente (mesma branch desenv).
+- 2026-07-06 — Code Review (PR #51, rodada 2): ambas camadas aprovaram. Bug do permalink ML confirmado corrigido — `EnsureAffiliateLinkAsync` usa `product.SourceUrl`, sem chamada HTTP quando `SourceUrl` ausente. Build ok, 80/80 testes. Nenhuma regressão nos collectors Amazon/ML/Shopee.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -145,8 +147,9 @@ e o PR #51 refletir o fix.
 | 9 | Merge T-02 + PR homolog | lt | sonnet | 65413 | 21 | 208s |
 | 10 | Code Review PR #51 | code-review | sonnet | 69276 | 16 | 156s |
 | 11 | LT mapear fix permalink | lt | sonnet | 47367 | 7 | 93s |
-| 9 | Merge T-02 (#48) + PR desenv→homolog | lt | sonnet | (ver usage retornado) | — | — |
-| 11 | Code Review reprovou — mapear correção | lt | sonnet | (ver usage retornado) | — | — |
+| 12 | Dev fix permalink #52 | dev-dotnet | sonnet | 79148 | 41 | 222s |
+| 13 | Merge fix permalink #52 | lt | sonnet | 36285 | 11 | 105s |
+| 14 | Code Review PR #51 (rodada 2) | code-review | sonnet | 48258 | 19 | 126s |
 
 ---
-*Code Review reprovou o PR #51 — sub-issue de correção #52 criada (permalink ML não capturado). Aguardando spawn de Dev .NET para o fix.*
+*Code Review (rodada 2) aprovou o PR #51 apos correcao do bug do permalink ML — 80/80 testes. Pronto para QA.*
