@@ -63,6 +63,10 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasColumnName("media_local_path")
             .HasColumnType("text");
 
+        builder.Property(x => x.SourceUrl)
+            .HasColumnName("source_url")
+            .HasColumnType("text");
+
         builder.Property(x => x.Slug)
             .HasColumnName("slug")
             .IsRequired()

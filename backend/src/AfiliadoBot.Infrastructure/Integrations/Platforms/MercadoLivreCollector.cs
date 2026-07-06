@@ -309,6 +309,12 @@ public class MercadoLivreCollector : IPlatformCollector
                 thumbnail = thumbnailProp.GetString();
             }
 
+            string? permalink = null;
+            if (item.TryGetProperty("permalink", out var permalinkProp))
+            {
+                permalink = permalinkProp.GetString();
+            }
+
             decimal? discount = null;
             if (item.TryGetProperty("discount", out var discountProp) &&
                 discountProp.ValueKind != JsonValueKind.Null)
@@ -324,7 +330,7 @@ public class MercadoLivreCollector : IPlatformCollector
             if (discountPct < 0) discountPct = 0;
             if (discountPct > 100) discountPct = 100;
 
-            items.Add(new MercadoLivreItem(id!, title, salePrice, finalOriginalPrice, discountPct, thumbnail));
+            items.Add(new MercadoLivreItem(id!, title, salePrice, finalOriginalPrice, discountPct, thumbnail, permalink));
         }
 
         return items;
@@ -343,7 +349,8 @@ public class MercadoLivreCollector : IPlatformCollector
                 item.DiscountPct,
                 imageUrl: null,
                 mediaUrl: item.Thumbnail,
-                mediaType: item.Thumbnail is not null ? "image" : null);
+                mediaType: item.Thumbnail is not null ? "image" : null,
+                sourceUrl: item.Permalink);
             return existing;
         }
 
@@ -361,7 +368,8 @@ public class MercadoLivreCollector : IPlatformCollector
             platform: Platform.MercadoLivre,
             externalId: item.Id,
             mediaUrl: item.Thumbnail,
-            mediaType: item.Thumbnail is not null ? "image" : null);
+            mediaType: item.Thumbnail is not null ? "image" : null,
+            sourceUrl: item.Permalink);
 
         _dbContext.Products.Add(product);
 
@@ -403,5 +411,6 @@ public class MercadoLivreCollector : IPlatformCollector
         decimal SalePrice,
         decimal OriginalPrice,
         decimal DiscountPct,
-        string? Thumbnail);
+        string? Thumbnail,
+        string? Permalink);
 }

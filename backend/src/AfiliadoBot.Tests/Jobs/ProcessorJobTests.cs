@@ -30,7 +30,8 @@ public class ProcessorJobTests
         string slug = "produto-teste",
         string category = "Geral",
         string? mediaUrl = null,
-        int aiScore = 8)
+        int aiScore = 8,
+        string? sourceUrl = null)
     {
         var product = new Product(
             title: title,
@@ -42,7 +43,8 @@ public class ProcessorJobTests
             slug: slug,
             category: category,
             platform: platform,
-            mediaUrl: mediaUrl);
+            mediaUrl: mediaUrl,
+            sourceUrl: sourceUrl);
 
         product.UpdateAiResult(aiScore, "Bom desconto", "");
         return product;
@@ -316,7 +318,10 @@ public class ProcessorJobTests
     public async Task ExecuteAsync_MarcaError_QuandoFalhaGeracaoLinkML()
     {
         using var db = CreateInMemoryContext();
-        var product = CriarProduto(platform: Platform.MercadoLivre, affiliateLink: null);
+        var product = CriarProduto(
+            platform: Platform.MercadoLivre,
+            affiliateLink: null,
+            sourceUrl: "https://produto.mercadolivre.com.br/MLB-123-produto-teste");
         db.Products.Add(product);
         await db.SaveChangesAsync();
 
@@ -326,6 +331,34 @@ public class ProcessorJobTests
         var reloaded = await db.Products.FirstAsync();
         reloaded.Status.Should().Be(ProductStatus.Error);
         reloaded.AiReason.Should().Contain("link de afiliado");
+
+        var entries = await db.PublicationQueues.Where(q => q.ProductId == product.Id).ToListAsync();
+        entries.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MarcaError_QuandoSourceUrlAusente()
+    {
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto(platform: Platform.MercadoLivre, affiliateLink: null, sourceUrl: null);
+        db.Products.Add(product);
+        await db.SaveChangesAsync();
+
+        var callCount = 0;
+        var httpClient = CreateHttpClient(_ =>
+        {
+            callCount++;
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"url\": \"x\"}") };
+        });
+
+        var job = CreateJob(db, httpClient: httpClient);
+        await job.ExecuteAsync();
+
+        callCount.Should().Be(0, "nao deve chamar a API de afiliados com payload invalido quando SourceUrl esta ausente");
+
+        var reloaded = await db.Products.FirstAsync();
+        reloaded.Status.Should().Be(ProductStatus.Error);
+        reloaded.AiReason.Should().Contain("SourceUrl ausente");
 
         var entries = await db.PublicationQueues.Where(q => q.ProductId == product.Id).ToListAsync();
         entries.Should().BeEmpty();

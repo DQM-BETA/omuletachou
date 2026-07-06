@@ -23,7 +23,8 @@ public class MercadoLivreCollectorTests
               "title": "Smartphone XPTO",
               "price": 899.90,
               "original_price": 1299.90,
-              "thumbnail": "https://http2.mlstatic.com/thumb.jpg"
+              "thumbnail": "https://http2.mlstatic.com/thumb.jpg",
+              "permalink": "https://produto.mercadolivre.com.br/MLB-123456-smartphone-xpto"
             }
           ]
         }
@@ -126,6 +127,7 @@ public class MercadoLivreCollectorTests
         result[0].SalePrice.Should().Be(899.90m);
         result[0].MediaUrl.Should().Be("https://http2.mlstatic.com/thumb.jpg");
         result[0].MediaType.Should().Be("image");
+        result[0].SourceUrl.Should().Be("https://produto.mercadolivre.com.br/MLB-123456-smartphone-xpto");
     }
 
     [Fact]
@@ -245,6 +247,7 @@ public class MercadoLivreCollectorTests
         updated.SalePrice.Should().Be(899.90m);
         updated.Status.Should().Be(ProductStatus.Published); // preservado
         updated.AiScore.Should().Be(9); // preservado, nao re-scoreado
+        updated.SourceUrl.Should().Be("https://produto.mercadolivre.com.br/MLB-123456-smartphone-xpto");
 
         aiMock.Verify(a => a.ScoreProductAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()), Times.Never);
     }

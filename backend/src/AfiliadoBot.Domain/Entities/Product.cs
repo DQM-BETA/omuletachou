@@ -18,6 +18,7 @@ public class Product
     public string? MediaUrl { get; private set; }
     public string? MediaType { get; private set; }
     public string? MediaLocalPath { get; private set; }
+    public string? SourceUrl { get; private set; }
     public string Slug { get; private set; } = string.Empty;
     public string Category { get; private set; } = string.Empty;
     public Platform Platform { get; private set; }
@@ -47,7 +48,8 @@ public class Product
         string? imageUrl = null,
         string externalId = "",
         string? mediaUrl = null,
-        string? mediaType = null)
+        string? mediaType = null,
+        string? sourceUrl = null)
     {
         if (salePrice < 0)
             throw new ArgumentException("SalePrice nao pode ser negativo.", nameof(salePrice));
@@ -69,6 +71,7 @@ public class Product
         ExternalId = externalId;
         MediaUrl = mediaUrl;
         MediaType = mediaType;
+        SourceUrl = sourceUrl;
         Status = ProductStatus.Pending;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
@@ -141,7 +144,8 @@ public class Product
         decimal discountPct,
         string? imageUrl,
         string? mediaUrl = null,
-        string? mediaType = null)
+        string? mediaType = null,
+        string? sourceUrl = null)
     {
         if (salePrice < 0)
             throw new ArgumentException("SalePrice nao pode ser negativo.", nameof(salePrice));
@@ -155,6 +159,8 @@ public class Product
         ImageUrl = imageUrl;
         MediaUrl = mediaUrl;
         MediaType = mediaType;
+        if (sourceUrl is not null)
+            SourceUrl = sourceUrl;
         UpdatedAt = DateTime.UtcNow;
     }
 
