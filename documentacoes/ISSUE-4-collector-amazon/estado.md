@@ -2,7 +2,7 @@
 issue: 4
 titulo: feat: Collector Amazon (PAAPI v5 + Scoring automatico)
 rota: normal
-etapa_atual: PM Fase 1 — aguardando resposta Gate 1 (Gerente)
+etapa_atual: Líder Técnico — refinamento técnico
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-4-collector-amazon
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-4-collector-amazon
@@ -27,6 +27,7 @@ blockers: nenhum
 - Objetivo: coletar produtos da Amazon PAAPI v5 e aplicar scoring automático via IAiService
 - Stack: .NET 8 + HttpClient (sem SDK AWS) + AWS Signature V4 manual
 - Atenção: PAAPI exige 1 venda nos primeiros 180 dias ou acesso é revogado
+- Sem ambiguidade arquitetural residual após Gate 1: chamada a `IAiService` segue via injeção direta no `AmazonCollector`, sem necessidade de orquestrador externo
 
 ## Histórico de Etapas
 Criada em 2026-07-06 pelo Coordenador.
@@ -35,7 +36,9 @@ Criada em 2026-07-06 pelo Coordenador.
 |---|---|---|---|
 | 1 | Preparação Issue | Coordenador | concluido |
 | 2 | PM Fase 1 | pm | concluido — aguardando Gate 1 |
+| 3 | PM Fase 2 | pm | concluido |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo |
 |---|---|---|---|---|---|---|
+| 2 | PM Fase 1 | pm | sonnet | 32184 | 14 | 128s |
