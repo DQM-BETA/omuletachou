@@ -150,7 +150,16 @@ public class ProcessorJob
         if (product.Platform != Platform.MercadoLivre || !string.IsNullOrWhiteSpace(product.AffiliateLink))
             return true;
 
-        var permalink = product.ImageUrl ?? product.MediaUrl ?? product.ExternalId;
+        if (string.IsNullOrWhiteSpace(product.SourceUrl))
+        {
+            _logger.LogWarning(
+                "ProcessorJob: SourceUrl ausente para o produto {ProductId}. Nao e possivel gerar link de afiliado ML.",
+                product.Id);
+            product.MarkAsError("SourceUrl ausente — nao e possivel gerar link de afiliado ML");
+            return false;
+        }
+
+        var permalink = product.SourceUrl;
 
         var accessToken = (await _dbContext.AppSettings
             .Where(s => s.Key == "mercadolivre.access_token")
