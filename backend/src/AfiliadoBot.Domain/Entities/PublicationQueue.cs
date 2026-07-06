@@ -34,6 +34,16 @@ public class PublicationQueue
     }
 
     /// <summary>
+    /// Forca o status ManualPending (usado para Facebook, ProcessorJob Issue #6), que fica
+    /// pendente de acao manual em vez de agendamento automatico. ScheduledAt e mantido apenas
+    /// como valor informativo (nao usado pelo Publisher nesse status).
+    /// </summary>
+    public void MarkAsManualPending()
+    {
+        Status = PublicationStatus.ManualPending;
+    }
+
+    /// <summary>
     /// Registra uma tentativa de publicacao.
     /// Sucesso: Status=Published, PublishedAt=UtcNow.
     /// Falha: RetryCount++, ErrorMessage=errorMessage, Status=Failed.

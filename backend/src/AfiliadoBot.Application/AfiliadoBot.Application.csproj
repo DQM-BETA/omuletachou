@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AfiliadoBot.Domain\AfiliadoBot.Domain.csproj" />
+    <ProjectReference Include="..\AfiliadoBot.Infrastructure\AfiliadoBot.Infrastructure.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
