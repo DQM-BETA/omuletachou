@@ -9,7 +9,7 @@ public class ProductTests
     private static Product CriarProdutoValido(
         decimal salePrice = 100m,
         decimal discountPct = 10m,
-        string affiliateLink = "https://amzn.to/xyz") =>
+        string? affiliateLink = "https://amzn.to/xyz") =>
         new Product(
             title: "Produto Teste",
             description: "Descricao",
@@ -36,10 +36,29 @@ public class ProductTests
     }
 
     [Fact]
-    public void Constructor_ThrowsWhen_AffiliateLinkEmpty()
+    public void Constructor_AllowsNullOrEmpty_AffiliateLink()
     {
         var act = () => CriarProdutoValido(affiliateLink: "");
-        act.Should().Throw<ArgumentNullException>().WithParameterName("affiliateLink");
+        act.Should().NotThrow();
+
+        var product = CriarProdutoValido(affiliateLink: null);
+        product.AffiliateLink.Should().BeNull();
+    }
+
+    [Fact]
+    public void SetAffiliateLink_UpdatesLink_WhenValid()
+    {
+        var product = CriarProdutoValido(affiliateLink: null);
+        product.SetAffiliateLink("https://amzn.to/novo");
+        product.AffiliateLink.Should().Be("https://amzn.to/novo");
+    }
+
+    [Fact]
+    public void SetAffiliateLink_ThrowsWhen_LinkEmpty()
+    {
+        var product = CriarProdutoValido(affiliateLink: null);
+        var act = () => product.SetAffiliateLink("");
+        act.Should().Throw<ArgumentException>().WithParameterName("link");
     }
 
     [Fact]

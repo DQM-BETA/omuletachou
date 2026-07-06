@@ -13,8 +13,10 @@ public class Product
     public decimal SalePrice { get; private set; }
     public decimal OriginalPrice { get; private set; }
     public decimal DiscountPct { get; private set; }
-    public string AffiliateLink { get; private set; } = string.Empty;
+    public string? AffiliateLink { get; private set; }
     public string? ImageUrl { get; private set; }
+    public string? MediaUrl { get; private set; }
+    public string? MediaType { get; private set; }
     public string Slug { get; private set; } = string.Empty;
     public string Category { get; private set; } = string.Empty;
     public Platform Platform { get; private set; }
@@ -37,12 +39,14 @@ public class Product
         decimal salePrice,
         decimal originalPrice,
         decimal discountPct,
-        string affiliateLink,
+        string? affiliateLink,
         string slug,
         string category,
         Platform platform,
         string? imageUrl = null,
-        string externalId = "")
+        string externalId = "",
+        string? mediaUrl = null,
+        string? mediaType = null)
     {
         if (salePrice < 0)
             throw new ArgumentException("SalePrice nao pode ser negativo.", nameof(salePrice));
@@ -50,21 +54,20 @@ public class Product
         if (discountPct < 0 || discountPct > 100)
             throw new ArgumentException("DiscountPct deve estar entre 0 e 100.", nameof(discountPct));
 
-        if (string.IsNullOrWhiteSpace(affiliateLink))
-            throw new ArgumentNullException(nameof(affiliateLink), "AffiliateLink nao pode ser nulo ou vazio.");
-
         Id = Guid.NewGuid();
         Title = title;
         Description = description;
         SalePrice = salePrice;
         OriginalPrice = originalPrice;
         DiscountPct = discountPct;
-        AffiliateLink = affiliateLink;
+        AffiliateLink = string.IsNullOrWhiteSpace(affiliateLink) ? null : affiliateLink;
         Slug = slug;
         Category = category;
         Platform = platform;
         ImageUrl = imageUrl;
         ExternalId = externalId;
+        MediaUrl = mediaUrl;
+        MediaType = mediaType;
         Status = ProductStatus.Pending;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
@@ -96,7 +99,13 @@ public class Product
     /// Atualiza preco/midia de um produto ja existente (upsert por coleta).
     /// Preserva Id, Status, AiScore, Slug e CreatedAt. Nao reexecuta o scoring de IA.
     /// </summary>
-    public void UpdateFromCollector(decimal salePrice, decimal originalPrice, decimal discountPct, string? imageUrl)
+    public void UpdateFromCollector(
+        decimal salePrice,
+        decimal originalPrice,
+        decimal discountPct,
+        string? imageUrl,
+        string? mediaUrl = null,
+        string? mediaType = null)
     {
         if (salePrice < 0)
             throw new ArgumentException("SalePrice nao pode ser negativo.", nameof(salePrice));
@@ -108,6 +117,20 @@ public class Product
         OriginalPrice = originalPrice;
         DiscountPct = discountPct;
         ImageUrl = imageUrl;
+        MediaUrl = mediaUrl;
+        MediaType = mediaType;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Preenche o link de afiliado apos aprovacao do scoring (usado pelo ProcessorJob, Issue #6).
+    /// </summary>
+    public void SetAffiliateLink(string link)
+    {
+        if (string.IsNullOrWhiteSpace(link))
+            throw new ArgumentException("AffiliateLink nao pode ser nulo ou vazio.", nameof(link));
+
+        AffiliateLink = link;
         UpdatedAt = DateTime.UtcNow;
     }
 }
