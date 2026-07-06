@@ -1,7 +1,7 @@
 issue: 3
 titulo: feat: Claude AI Service (Scoring + Geracao de Legendas)
 rota: normal
-etapa_atual: Code Review
+etapa_atual: Gate 2 — aguardando aprovação Gerente
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-3-claude-ai-service
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-3-claude-ai-service
@@ -15,9 +15,9 @@ sub_issues:
   - "#33 (stack:dotnet, task_id:T-01)"
 desenv_tasks_merged: ["#33"]
 pr_homologacao: 35
-pr_release: ~
-code_review_homolog_pr: ~
-qa_status: ~
+pr_release: 36
+code_review_homolog_pr: 35
+qa_status: aprovado
 blockers: nenhum
 
 ## Contexto
@@ -37,8 +37,14 @@ Criada em 2026-07-03 pelo Coordenador.
 | 3 | Refinamento LT | LT | concluido |
 | 4 | Dev T-01 #33 | dev-dotnet | concluido |
 | 5 | Merge T-01 + PR homolog | LT | concluido |
+| 6 | Code Review PR #35 | code-review | concluido — 25/25 testes, build ok, merge homolog aprovado |
+| 7 | QA homolog | qa | concluido — CAs ok |
+| 8 | PR release homolog→main | LT | concluido |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo |
 |---|---|---|---|---|---|---|
 | 4 | Dev T-01 #33 | dev-dotnet | sonnet | 51135 | 59 | 366s |
+| 5 | Merge T-01 + PR homolog | lt | sonnet | 23927 | 10 | 85s |
+| 6 | Code Review PR #35 | code-review | sonnet | 47145 | 15 | 163s |
+| 7 | QA homolog | qa | sonnet | 37029 | 18 | 126s |
