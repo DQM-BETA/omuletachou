@@ -59,6 +59,14 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasColumnName("media_type")
             .HasMaxLength(20);
 
+        builder.Property(x => x.MediaLocalPath)
+            .HasColumnName("media_local_path")
+            .HasColumnType("text");
+
+        builder.Property(x => x.SourceUrl)
+            .HasColumnName("source_url")
+            .HasColumnType("text");
+
         builder.Property(x => x.Slug)
             .HasColumnName("slug")
             .IsRequired()

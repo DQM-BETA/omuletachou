@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -30,6 +30,38 @@ namespace AfiliadoBot.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "products",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    title = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    description = table.Column<string>(type: "text", nullable: false),
+                    sale_price = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    original_price = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    discount_pct = table.Column<decimal>(type: "numeric(5,2)", nullable: false),
+                    affiliate_link = table.Column<string>(type: "text", nullable: true),
+                    image_url = table.Column<string>(type: "text", nullable: true),
+                    media_url = table.Column<string>(type: "text", nullable: true),
+                    media_type = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    media_local_path = table.Column<string>(type: "text", nullable: true),
+                    source_url = table.Column<string>(type: "text", nullable: true),
+                    slug = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
+                    category = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    platform = table.Column<int>(type: "integer", nullable: false),
+                    external_id = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false, defaultValue: ""),
+                    ai_score = table.Column<int>(type: "integer", nullable: true),
+                    ai_reason = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: true),
+                    ai_caption = table.Column<string>(type: "text", nullable: true),
+                    status = table.Column<int>(type: "integer", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamptz", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamptz", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_products", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "push_subscriptions",
                 columns: table => new
                 {
@@ -42,33 +74,6 @@ namespace AfiliadoBot.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_push_subscriptions", x => x.id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "products",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    title = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
-                    description = table.Column<string>(type: "text", nullable: false),
-                    sale_price = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
-                    original_price = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
-                    discount_pct = table.Column<decimal>(type: "numeric(5,2)", nullable: false),
-                    affiliate_link = table.Column<string>(type: "text", nullable: false),
-                    image_url = table.Column<string>(type: "text", nullable: true),
-                    slug = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
-                    category = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    platform = table.Column<int>(type: "integer", nullable: false),
-                    ai_score = table.Column<int>(type: "integer", nullable: true),
-                    ai_reason = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: true),
-                    ai_caption = table.Column<string>(type: "text", nullable: true),
-                    status = table.Column<int>(type: "integer", nullable: false),
-                    created_at = table.Column<DateTime>(type: "timestamptz", nullable: false),
-                    updated_at = table.Column<DateTime>(type: "timestamptz", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_products", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -120,45 +125,52 @@ namespace AfiliadoBot.Infrastructure.Migrations
 
             migrationBuilder.InsertData(
                 table: "app_settings",
-                columns: new[] { "id", "key", "value", "updated_at" },
+                columns: new[] { "id", "key", "updated_at", "value" },
                 values: new object[,]
                 {
-                    { 1, "amazon.access_key", "", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 2, "amazon.secret_key", "", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 3, "amazon.partner_tag", "", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 4, "amazon.marketplace", "", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 5, "mercadolivre.access_token", "", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 6, "mercadolivre.refresh_token", "", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 7, "mercadolivre.client_id", "", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 8, "mercadolivre.client_secret", "", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 9, "shopee.partner_id", "", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 10, "shopee.partner_key", "", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 11, "shopee.shop_id", "", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 12, "telegram.bot_token", "", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 13, "telegram.channel_id", "", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 14, "youtube.api_key", "", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 15, "youtube.channel_id", "", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 16, "instagram.access_token", "", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 17, "instagram.page_id", "", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 18, "tiktok.access_token", "", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 19, "tiktok.open_id", "", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 20, "claude.api_key", "", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 21, "claude.model", "", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 22, "claude.min_score", "6", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 23, "schedule.collector_cron", "0 6 * * *", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 24, "schedule.publisher_cron", "0 9,12,15,18,20 * * *", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 25, "publish.max_per_day", "10", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 26, "networks.telegram.enabled", "true", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 27, "networks.youtube.enabled", "true", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 28, "networks.instagram.enabled", "true", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 29, "networks.tiktok.enabled", "true", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) },
-                    { 30, "networks.facebook.enabled", "true", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) }
+                    { 1, "amazon.access_key", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "" },
+                    { 2, "amazon.secret_key", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "" },
+                    { 3, "amazon.partner_tag", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "" },
+                    { 4, "amazon.marketplace", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "" },
+                    { 5, "mercadolivre.access_token", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "" },
+                    { 6, "mercadolivre.refresh_token", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "" },
+                    { 7, "mercadolivre.client_id", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "" },
+                    { 8, "mercadolivre.client_secret", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "" },
+                    { 9, "shopee.partner_id", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "" },
+                    { 10, "shopee.partner_key", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "" },
+                    { 11, "shopee.shop_id", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "" },
+                    { 12, "telegram.bot_token", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "" },
+                    { 13, "telegram.channel_id", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "" },
+                    { 14, "youtube.api_key", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "" },
+                    { 15, "youtube.channel_id", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "" },
+                    { 16, "instagram.access_token", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "" },
+                    { 17, "instagram.page_id", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "" },
+                    { 18, "tiktok.access_token", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "" },
+                    { 19, "tiktok.open_id", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "" },
+                    { 20, "claude.api_key", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "" },
+                    { 21, "claude.model", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "" },
+                    { 22, "claude.min_score", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "6" },
+                    { 23, "schedule.collector_cron", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "0 6 * * *" },
+                    { 24, "schedule.publisher_cron", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "0 9,12,15,18,20 * * *" },
+                    { 25, "publish.max_per_day", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "10" },
+                    { 26, "networks.telegram.enabled", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "true" },
+                    { 27, "networks.youtube.enabled", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "true" },
+                    { 28, "networks.instagram.enabled", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "true" },
+                    { 29, "networks.tiktok.enabled", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "true" },
+                    { 30, "networks.facebook.enabled", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "true" },
+                    { 31, "claude.min_score_fallback", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "5" }
                 });
 
             migrationBuilder.CreateIndex(
                 name: "IX_app_settings_key",
                 table: "app_settings",
                 column: "key",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_products_platform_external_id",
+                table: "products",
+                columns: new[] { "platform", "external_id" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -192,11 +204,20 @@ namespace AfiliadoBot.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(name: "publication_logs");
-            migrationBuilder.DropTable(name: "publication_queue");
-            migrationBuilder.DropTable(name: "products");
-            migrationBuilder.DropTable(name: "push_subscriptions");
-            migrationBuilder.DropTable(name: "app_settings");
+            migrationBuilder.DropTable(
+                name: "app_settings");
+
+            migrationBuilder.DropTable(
+                name: "publication_logs");
+
+            migrationBuilder.DropTable(
+                name: "push_subscriptions");
+
+            migrationBuilder.DropTable(
+                name: "publication_queue");
+
+            migrationBuilder.DropTable(
+                name: "products");
         }
     }
 }

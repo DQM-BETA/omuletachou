@@ -23,7 +23,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Default: "Host=db;Port=5432;Database=afiliadoBot;Username=${DB_USER};Password=${DB_PASSWORD}"
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=afiliadoBot;Username=${DB_USER};Password=${DB_PASSWORD}"
     volumes:
       - media_files:/app/media
     ports:

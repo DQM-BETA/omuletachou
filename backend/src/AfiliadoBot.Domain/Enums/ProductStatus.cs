@@ -5,5 +5,7 @@ public enum ProductStatus
     Pending,
     Queued,
     Published,
-    Rejected
+    Rejected,
+    Processing,
+    Error
 }

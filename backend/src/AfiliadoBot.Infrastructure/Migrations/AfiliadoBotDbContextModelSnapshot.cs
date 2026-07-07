@@ -329,6 +329,10 @@ namespace AfiliadoBot.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("image_url");
 
+                    b.Property<string>("MediaLocalPath")
+                        .HasColumnType("text")
+                        .HasColumnName("media_local_path");
+
                     b.Property<string>("MediaType")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
@@ -355,6 +359,10 @@ namespace AfiliadoBot.Infrastructure.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)")
                         .HasColumnName("slug");
+
+                    b.Property<string>("SourceUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("source_url");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer")
