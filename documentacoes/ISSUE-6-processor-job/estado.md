@@ -2,7 +2,7 @@
 issue: 6
 titulo: feat: Processor Job (Midia e Fila de Publicacao)
 rota: normal
-etapa_atual: QA aprovado — aguardando PR homolog->main
+etapa_atual: Gate 2 — aguardando aprovação Gerente
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-6-processor-job
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-6-processor-job
@@ -10,7 +10,7 @@ tech_stacks:
   - .NET 8
   - Hangfire
   - HttpClient
-ultimo_agente: qa
+ultimo_agente: lt
 sub_issues:
   - "#47 (stack:dotnet, task_id:T-01) — LocalMediaStorage + Migration AddMediaLocalPathToProducts + CategoryDetector"
   - "#48 (stack:dotnet, task_id:T-02) — ProcessorJob.ExecuteAsync (orquestracao completa, depende de #47)"
@@ -18,7 +18,7 @@ sub_issues:
 desenv_tasks_merged: ["#47", "#48", "#52"]
 sub_issues_frontend: {}
 pr_homologacao: 57
-pr_release: ~
+pr_release: 58
 code_review_homolog_pr: 51 (aprovado apos fix, rodada 2) — PR #55 (fix infra) aprovado (2 camadas) e mergeado em homolog — PR #56 (squash migrations) aprovado (2 camadas) e mergeado em desenv — PR #57 (desenv->homolog, consolidado) aprovado (2 camadas) e mergeado em homolog
 qa_status: aprovado (fluxo integrado via Docker validado com sucesso apos fix de connection string e squash de migrations)
 figma_url: ~
@@ -263,6 +263,7 @@ aprovação postado na Issue #6. Relatório completo em `relatorio-qa.md`.
 - 2026-07-07 — LT: mergeado o PR #57 (`desenv` → `homolog`) via merge commit (`gh pr merge 57 --merge`), commit `9d0d04c`. Self-approval bloqueado pelo GitHub (esperado — LT é autor do PR), merge prosseguiu direto sem review formal. Confirmado `state: MERGED`, `mergedAt: 2026-07-07T13:15:06Z`. `git log origin/homolog` confirma topo em `9d0d04c` ("Merge pull request #57 from DQM-BETA/desenv"). Squash de migrations + auto-migrate agora em `homolog`. Pronto para QA revalidar o fluxo integrado final via Docker.
 - 2026-07-07 — QA (rodada final): PR #57 confirmado MERGED em homolog (commit 9d0d04c). Build ok, 80/80 testes passando. Validação integrada via `docker compose up -d --build` em ambiente limpo (`down -v` antes): todos os 4 containers subiram, migration `InitialSchema` aplicada automaticamente no startup (confirmado via `psql` direto no container: única linha em `__EFMigrationsHistory`, coluna `media_local_path` presente e nullable). `GET /health` → 200. `POST /api/jobs/processor/trigger` → 200, sem erro de schema/conexão (query real executada contra Postgres, sem produtos Queued no banco limpo — comportamento de negócio esperado). Nenhuma exceção nos logs da API. Ambos os bugs de infra das rodadas anteriores (connection string mismatch e squash de migrations) confirmados resolvidos em homolog real. **QA APROVADO.** Comentário postado na Issue #6. Relatório completo em `relatorio-qa.md`.
 
+- 2026-07-07 — LT: criado PR #58 (`homolog` -> `main`) de release, consolidando toda a Issue #6 (T-01 #47, T-02 #48, fix permalink #52, fixes de infra connection string e squash de migrations). QA aprovado na rodada final. Aguardando Gate 2 (aprovacao do Gerente).
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|---|---|---|---|---|---|
@@ -298,4 +299,4 @@ aprovação postado na Issue #6. Relatório completo em `relatorio-qa.md`.
 | 30 | QA (rodada final — aprovado) | qa | sonnet | 73273 | 28 | 353s |
 
 ---
-*QA APROVADO na rodada final (2026-07-07). Fluxo integrado via Docker validado com sucesso — ambos os bugs de infra (connection string e squash de migrations) confirmados resolvidos. Pronto para o LT criar o PR homolog→main e submeter ao Gate 2 (Gerente).*
+*PR #58 (homolog->main) criado (2026-07-07). Aguardando aprovacao do Gerente no Gate 2.*
