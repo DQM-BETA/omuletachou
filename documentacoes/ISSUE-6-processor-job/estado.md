@@ -295,7 +295,7 @@ aprovação postado na Issue #6. Relatório completo em `relatorio-qa.md`.
 | 27 | Merge PR #56 + PR #57 homolog | lt | sonnet | 56094 | 9 | 141s |
 | 28 | Code Review PR #57 (homolog) | code-review | sonnet | 31025 | 11 | 160s |
 | 29 | Merge final PR #57 homolog | lt | sonnet | 55269 | 6 | 134s |
-| 30 | QA (rodada final — aprovado) | qa | sonnet | TBD | TBD | TBD |
+| 30 | QA (rodada final — aprovado) | qa | sonnet | 73273 | 28 | 353s |
 
 ---
 *QA APROVADO na rodada final (2026-07-07). Fluxo integrado via Docker validado com sucesso — ambos os bugs de infra (connection string e squash de migrations) confirmados resolvidos. Pronto para o LT criar o PR homolog→main e submeter ao Gate 2 (Gerente).*
