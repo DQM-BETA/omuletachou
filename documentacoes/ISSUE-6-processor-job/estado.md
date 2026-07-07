@@ -2,7 +2,7 @@
 issue: 6
 titulo: feat: Processor Job (Midia e Fila de Publicacao)
 rota: normal
-etapa_atual: BLOQUEADO — decisao tecnica pendente (squash migrations vs reconstrucao Designer.cs)
+etapa_atual: Em Desenvolvimento (fix infra — squash migrations, autorizado pelo Gerente)
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-6-processor-job
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-6-processor-job
@@ -22,7 +22,7 @@ pr_release: ~
 code_review_homolog_pr: 51 (aprovado apos fix, rodada 2) — PR #55 (fix infra) aprovado (2 camadas) e mergeado em homolog
 qa_status: reprovado (bug de config — connection string mismatch, fix em PR #54/#55, mergeado em homolog); pendente revalidacao apos resolver auto-migrate EF Core
 figma_url: ~
-blockers: PR #55 mergeado em homolog; falta DevOps diagnosticar auto-migrate EF Core no startup do container antes da revalidacao do QA
+blockers: PR #55 mergeado em homolog; squash de migrations autorizado pelo Gerente, implementacao pendente (Dev .NET) em feature/ISSUE-6-squash-migrations
 ---
 
 ## Contexto
@@ -170,6 +170,38 @@ string agora presente em `homolog`. Ainda pendente: diagnóstico de por que as m
 Core não estão sendo aplicadas automaticamente no startup do container (necessário para a
 revalidação completa do QA via `docker compose up`) — encaminhado ao DevOps.
 
+## BLOQUEADO — decisão técnica pendente (2026-07-06), RESOLVIDA pelo Gerente
+
+Trava anti-loop acionada: 3 problemas de infra encadeados na mesma tentativa de validar a Issue #6 em Docker:
+1. Connection string mismatch (corrigido, PR #55 mergeado)
+2. Migrations nunca aplicadas no startup — `Program.cs` sem `Database.Migrate()` (fix parcial aplicado pelo Dev)
+3. `InitialSchema`/`AddClaudeMinScoreFallbackSeed` (escritas manualmente sem `dotnet ef migrations add`) sem `.Designer.cs` completo — EF falha ao aplicar `InsertData` do seed de `app_settings` por falta do model snapshot completo daquele estágio.
+
+**Decisão do Gerente:** opção (b) — consolidar/squash todo o histórico de migrations num único
+`InitialSchema` novo, gerado via `dotnet ef migrations add` a partir do modelo atual do código.
+Aceitável pois o projeto não tem deploy em produção com dados reais a preservar ainda.
+
+Branch `feature/ISSUE-6-fix-auto-migrate` (progresso anterior, incompleto, sem PR) permanece
+como referência do diagnóstico, mas a implementação do squash deve ser feita em nova branch
+dedicada pelo Dev .NET: `feature/ISSUE-6-squash-migrations` (base: `desenv`).
+
+**Escopo da implementação (Dev .NET), NÃO executado pelo LT:**
+1. Adicionar `Database.Migrate()` em `Program.cs` (guardar por `IsRelational()` para não quebrar
+   host de testes com InMemory, conforme já validado na branch anterior).
+2. Apagar todas as migrations existentes em `backend/src/AfiliadoBot.Infrastructure/Migrations/`.
+3. Gerar uma única migration nova via `dotnet ef migrations add InitialSchema` a partir do
+   modelo atual (deve cobrir products, app_settings com os 31 seeds, publication_queue,
+   publication_logs, push_subscriptions).
+4. Garantir que testes que sobem `WebApplicationFactory<Program>` usem EF InMemory (via
+   `CustomWebApplicationFactory`, já existe precedente na branch anterior) para não conflitar
+   com o `Migrate()` real no host de teste.
+5. Build + suite de testes completa passando.
+6. Validação obrigatória via `docker compose up` limpo (`down -v` antes) + `GET /health` 200 —
+   é o critério de pronto desta correção (motivo de todo o encadeamento de bloqueios).
+7. PR `feature/ISSUE-6-squash-migrations` → `desenv`.
+
+Detalhes completos do diagnóstico em `.claude/melhorias/2026-07-06-devops-omuletachou-ef-migrations-not-applied.md`.
+
 ## Histórico
 - 2026-07-06 — Coordenador preparou Issue (estado.md, diretórios, label, card no board)
 - 2026-07-06 — PM Fase 1: PRD inicial (`prd.md`) escrito; 9 perguntas de Gate 1 postadas na Issue #6 (comentário https://github.com/DQM-BETA/omuletachou/issues/6#issuecomment-4896543914)
@@ -192,6 +224,7 @@ revalidação completa do QA via `docker compose up`) — encaminhado ao DevOps.
 - 2026-07-06 — Dev .NET: fix de infra implementado — correção do mismatch entre `ConnectionStrings__Default` (docker-compose.yml) e `GetConnectionString("DefaultConnection")` (Program.cs). PR #54 (feature/ISSUE-6-fix-connection-string → desenv) aberto.
 - 2026-07-06 — LT: merge squash do PR #54 (feature/ISSUE-6-fix-connection-string → desenv) concluído (`mergedAt: 2026-07-06T20:51:36Z`). `git pull origin desenv` confirmou fast-forward `50e5620..e8a8616`. Novo PR **#55** (desenv→homolog) criado consolidando o fix de infra, **não mergeado** — aguarda Code Review (2 camadas) antes da promoção e da revalidação do QA.
 - 2026-07-06 — Code Review (PR #55, fix connection string): aprovado (2 camadas). LT mergeou PR #55 (desenv→homolog) via merge commit (`gh pr merge 55 --merge`), commit `26efaba`. Confirmado: `gh pr view 55` retorna `state: MERGED`, `mergedAt: 2026-07-06T21:37:23Z`. `git log origin/homolog` confirma topo em `26efaba` ("Merge pull request #55 from DQM-BETA/desenv"). Falta ainda resolver migrations do EF Core não aplicadas automaticamente no startup do container Docker — encaminhado ao DevOps para diagnóstico.
+- 2026-07-07 — LT: recebida instrução para consolidar o histórico de migrations (squash em `InitialSchema` único), autorizado pelo Gerente após bloqueio da trava anti-loop. Instrução incluía passos de implementação (editar `Program.cs`, apagar/gerar migrations, ajustar testes, `dotnet build`/`dotnet test`, `docker compose up`) — **fora do escopo do LT** (sem `Edit`, não roda build/teste/docker de aplicação). Nenhum código foi alterado. `estado.md` atualizado com o escopo detalhado da implementação (opção b, decisão do Gerente) para o próximo Dev .NET executar em `feature/ISSUE-6-squash-migrations` (base `desenv`). Nenhuma branch nova criada pelo LT.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -221,18 +254,5 @@ revalidação completa do QA via `docker compose up`) — encaminhado ao DevOps.
 | 23 | DevOps diagnostico auto-migrate | devops | haiku | 23251 | 8 | 33s |
 | 24 | Dev fix auto-migrate (bloqueado) | dev-dotnet | sonnet | 103817 | 82 | 912s |
 
-## BLOQUEADO — decisão técnica pendente (2026-07-06)
-
-Trava anti-loop acionada: 3 problemas de infra encadeados na mesma tentativa de validar a Issue #6 em Docker:
-1. Connection string mismatch (corrigido, PR #55 mergeado)
-2. Migrations nunca aplicadas no startup — `Program.cs` sem `Database.Migrate()` (fix parcial aplicado pelo Dev)
-3. **Novo bloqueio descoberto:** as duas migrations mais antigas (`InitialSchema`, `AddClaudeMinScoreFallbackSeed`, escritas manualmente sem `dotnet ef migrations add`) não têm arquivo `.Designer.cs` completo — o EF as ignorava na discovery (corrigido parcialmente adicionando atributos `[DbContext]`/`[Migration]` manualmente), mas agora falha ao aplicar `InsertData` do seed de `app_settings` por falta do model snapshot completo daquele estágio.
-
-**Decisão necessária:**
-- (a) Reconstruir manualmente os `Designer.cs` faltantes de `InitialSchema`/`AddClaudeMinScoreFallbackSeed` — trabalhoso, propenso a erro
-- (b) Consolidar/squash todo o histórico de migrations num único `InitialSchema` novo via `dotnet ef migrations add` a partir do modelo atual — mais simples, mas reescreve histórico (aceitável pois não há produção com dados reais ainda)
-
-Branch `feature/ISSUE-6-fix-auto-migrate` pushada com o progresso até aqui, sem PR (fix incompleto). Detalhes completos em `.claude/melhorias/2026-07-06-devops-omuletachou-ef-migrations-not-applied.md`.
-
 ---
-*BLOQUEADO — aguardando decisão do Gerente entre opção (a) reconstruir Designer.cs ou (b) squash de migrations.*
+*Squash de migrations autorizado pelo Gerente — implementação pendente do Dev .NET em `feature/ISSUE-6-squash-migrations`.*
