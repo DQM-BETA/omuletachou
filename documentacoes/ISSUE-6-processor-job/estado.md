@@ -258,6 +258,7 @@ esse mesmo bloqueio).
 | 25 | Dev squash migrations (PR #56) | dev-dotnet | sonnet | 65277 | 44 | 376s |
 | 26 | Code Review PR #56 (squash migrations) | code-review | sonnet | 62571 | 19 | 182s |
 | 27 | Merge PR #56 + PR #57 homolog | lt | sonnet | 56094 | 9 | 141s |
+| 28 | Code Review PR #57 (homolog) | code-review | sonnet | 31025 | 11 | 160s |
 
 ---
-*PR #57 (desenv→homolog) criado, consolidando squash de migrations + auto-migrate. Aguardando Code Review (2 camadas) antes da promoção e revalidação final do QA.*
+*PR #57 aprovado (2 camadas, 3a confirmacao independente de boot Docker limpo). Pronto para merge final em homolog e revalidacao do QA.*
