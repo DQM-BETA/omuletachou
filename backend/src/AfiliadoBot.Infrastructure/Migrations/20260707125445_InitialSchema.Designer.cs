@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AfiliadoBot.Infrastructure.Migrations
 {
     [DbContext(typeof(AfiliadoBotDbContext))]
-    [Migration("20260706131632_AddExternalIdToProduct")]
-    partial class AddExternalIdToProduct
+    [Migration("20260707125445_InitialSchema")]
+    partial class InitialSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -285,7 +285,6 @@ namespace AfiliadoBot.Infrastructure.Migrations
                         .HasColumnName("id");
 
                     b.Property<string>("AffiliateLink")
-                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("affiliate_link");
 
@@ -333,6 +332,19 @@ namespace AfiliadoBot.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("image_url");
 
+                    b.Property<string>("MediaLocalPath")
+                        .HasColumnType("text")
+                        .HasColumnName("media_local_path");
+
+                    b.Property<string>("MediaType")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("media_type");
+
+                    b.Property<string>("MediaUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("media_url");
+
                     b.Property<decimal>("OriginalPrice")
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("original_price");
@@ -350,6 +362,10 @@ namespace AfiliadoBot.Infrastructure.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)")
                         .HasColumnName("slug");
+
+                    b.Property<string>("SourceUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("source_url");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer")
