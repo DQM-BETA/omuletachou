@@ -297,6 +297,7 @@ aprovação postado na Issue #6. Relatório completo em `relatorio-qa.md`.
 | 28 | Code Review PR #57 (homolog) | code-review | sonnet | 31025 | 11 | 160s |
 | 29 | Merge final PR #57 homolog | lt | sonnet | 55269 | 6 | 134s |
 | 30 | QA (rodada final — aprovado) | qa | sonnet | 73273 | 28 | 353s |
+| 31 | PR release homolog→main | lt | sonnet | 46908 | 9 | 57s |
 
 ---
 *PR #58 (homolog->main) criado (2026-07-07). Aguardando aprovacao do Gerente no Gate 2.*
