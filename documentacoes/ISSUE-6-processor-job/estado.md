@@ -2,7 +2,7 @@
 issue: 6
 titulo: feat: Processor Job (Midia e Fila de Publicacao)
 rota: normal
-etapa_atual: Em Desenvolvimento (fix infra — squash migrations, autorizado pelo Gerente)
+etapa_atual: Code Review (fix consolidado — squash migrations + auto-migrate)
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-6-processor-job
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-6-processor-job
@@ -10,7 +10,7 @@ tech_stacks:
   - .NET 8
   - Hangfire
   - HttpClient
-ultimo_agente: lt
+ultimo_agente: dev-dotnet
 sub_issues:
   - "#47 (stack:dotnet, task_id:T-01) — LocalMediaStorage + Migration AddMediaLocalPathToProducts + CategoryDetector"
   - "#48 (stack:dotnet, task_id:T-02) — ProcessorJob.ExecuteAsync (orquestracao completa, depende de #47)"
@@ -22,7 +22,7 @@ pr_release: ~
 code_review_homolog_pr: 51 (aprovado apos fix, rodada 2) — PR #55 (fix infra) aprovado (2 camadas) e mergeado em homolog
 qa_status: reprovado (bug de config — connection string mismatch, fix em PR #54/#55, mergeado em homolog); pendente revalidacao apos resolver auto-migrate EF Core
 figma_url: ~
-blockers: PR #55 mergeado em homolog; squash de migrations autorizado pelo Gerente, implementacao pendente (Dev .NET) em feature/ISSUE-6-squash-migrations
+blockers: PR #56 (feature/ISSUE-6-squash-migrations -> desenv) aberto, aguardando Code Review (2 camadas)
 ---
 
 ## Contexto
@@ -225,6 +225,7 @@ Detalhes completos do diagnóstico em `.claude/melhorias/2026-07-06-devops-omule
 - 2026-07-06 — LT: merge squash do PR #54 (feature/ISSUE-6-fix-connection-string → desenv) concluído (`mergedAt: 2026-07-06T20:51:36Z`). `git pull origin desenv` confirmou fast-forward `50e5620..e8a8616`. Novo PR **#55** (desenv→homolog) criado consolidando o fix de infra, **não mergeado** — aguarda Code Review (2 camadas) antes da promoção e da revalidação do QA.
 - 2026-07-06 — Code Review (PR #55, fix connection string): aprovado (2 camadas). LT mergeou PR #55 (desenv→homolog) via merge commit (`gh pr merge 55 --merge`), commit `26efaba`. Confirmado: `gh pr view 55` retorna `state: MERGED`, `mergedAt: 2026-07-06T21:37:23Z`. `git log origin/homolog` confirma topo em `26efaba` ("Merge pull request #55 from DQM-BETA/desenv"). Falta ainda resolver migrations do EF Core não aplicadas automaticamente no startup do container Docker — encaminhado ao DevOps para diagnóstico.
 - 2026-07-07 — LT: recebida instrução para consolidar o histórico de migrations (squash em `InitialSchema` único), autorizado pelo Gerente após bloqueio da trava anti-loop. Instrução incluía passos de implementação (editar `Program.cs`, apagar/gerar migrations, ajustar testes, `dotnet build`/`dotnet test`, `docker compose up`) — **fora do escopo do LT** (sem `Edit`, não roda build/teste/docker de aplicação). Nenhum código foi alterado. `estado.md` atualizado com o escopo detalhado da implementação (opção b, decisão do Gerente) para o próximo Dev .NET executar em `feature/ISSUE-6-squash-migrations` (base `desenv`). Nenhuma branch nova criada pelo LT.
+- 2026-07-07 — Dev .NET: squash de migrations implementado em `feature/ISSUE-6-squash-migrations`. `Database.Migrate()` adicionado em `Program.cs` (guardado por `IsRelational()`). Todas as 6 migrations antigas apagadas (`InitialSchema`, `AddClaudeMinScoreFallbackSeed`, `AddExternalIdToProduct`, `AddMediaFieldsAndNullableAffiliateLink`, `AddMediaLocalPathToProducts`, `AddSourceUrlToProducts`) e substituídas por uma única migration nova `InitialSchema` (20260707125445), gerada via `dotnet ef migrations add` a partir do modelo atual — 5 tabelas (`products`, `app_settings`, `publication_queue`, `publication_logs`, `push_subscriptions`) e os 31 seeds de `app_settings`, com `.Designer.cs` completo. Criada `CustomWebApplicationFactory` (substitui `AfiliadoBotDbContext` por EF InMemory no host de teste) e `HealthCheckTests` migrado para usá-la, evitando que `Migrate()` tente conectar a Postgres real durante os testes. Build ok, suite completa **80/80 passando** (sem regressão). **Validação Docker obrigatória confirmada:** `docker compose down -v` + `docker compose up -d --build` em ambiente limpo — logs do container `afiliado_api` mostram a migration `InitialSchema` aplicada com sucesso (todas as `CREATE TABLE`, os 31 `INSERT INTO app_settings`, índices e `INSERT INTO __EFMigrationsHistory`), app iniciado sem exceção. `GET /health` → **200** (`{"status":"healthy",...}`). `POST /api/jobs/processor/trigger` → **200** (sem erro de schema/conexão — bloqueio original resolvido). PR **#56** (`feature/ISSUE-6-squash-migrations` → `desenv`) aberto. Melhoria `.claude/melhorias/2026-07-06-devops-omuletachou-ef-migrations-not-applied.md` marcada como `status: implementado`.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -253,6 +254,7 @@ Detalhes completos do diagnóstico em `.claude/melhorias/2026-07-06-devops-omule
 | 22 | Merge PR #55 homolog | lt | sonnet | 50031 | 9 | 154s |
 | 23 | DevOps diagnostico auto-migrate | devops | haiku | 23251 | 8 | 33s |
 | 24 | Dev fix auto-migrate (bloqueado) | dev-dotnet | sonnet | 103817 | 82 | 912s |
+| 25 | Dev squash migrations (PR #56) | dev-dotnet | sonnet | TBD | TBD | TBD |
 
 ---
-*Squash de migrations autorizado pelo Gerente — implementação pendente do Dev .NET em `feature/ISSUE-6-squash-migrations`.*
+*PR #56 (squash migrations + auto-migrate) aberto, aguardando Code Review (2 camadas).*
