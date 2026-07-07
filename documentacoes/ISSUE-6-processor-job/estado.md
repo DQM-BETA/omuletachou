@@ -270,7 +270,7 @@ anteriores (connection string mismatch, migrations não aplicadas) resolvidos e 
 | 26 | Code Review PR #56 (squash migrations) | code-review | sonnet | 62571 | 19 | 182s |
 | 27 | Merge PR #56 + PR #57 homolog | lt | sonnet | 56094 | 9 | 141s |
 | 28 | Code Review PR #57 (homolog) | code-review | sonnet | 31025 | 11 | 160s |
-| 29 | Merge final PR #57 homolog | lt | sonnet | 0 | 0 | 0s |
+| 29 | Merge final PR #57 homolog | lt | sonnet | 55269 | 6 | 134s |
 
 ---
 *PR #57 mergeado em homolog (merge commit 9d0d04c). Squash de migrations + auto-migrate confirmados em homolog. Pronto para QA revalidar o fluxo integrado final.*
