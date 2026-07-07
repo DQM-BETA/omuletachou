@@ -254,7 +254,7 @@ Detalhes completos do diagnóstico em `.claude/melhorias/2026-07-06-devops-omule
 | 22 | Merge PR #55 homolog | lt | sonnet | 50031 | 9 | 154s |
 | 23 | DevOps diagnostico auto-migrate | devops | haiku | 23251 | 8 | 33s |
 | 24 | Dev fix auto-migrate (bloqueado) | dev-dotnet | sonnet | 103817 | 82 | 912s |
-| 25 | Dev squash migrations (PR #56) | dev-dotnet | sonnet | TBD | TBD | TBD |
+| 25 | Dev squash migrations (PR #56) | dev-dotnet | sonnet | 65277 | 44 | 376s |
 
 ---
 *PR #56 (squash migrations + auto-migrate) aberto, aguardando Code Review (2 camadas).*
