@@ -2,7 +2,7 @@
 issue: 6
 titulo: feat: Processor Job (Midia e Fila de Publicacao)
 rota: normal
-etapa_atual: Code Review (fix infra, novo PR desenv->homolog)
+etapa_atual: Code Review (novo PR homolog — squash migrations)
 repo: omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-6-processor-job
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-6-processor-job
@@ -17,12 +17,12 @@ sub_issues:
   - "#52 (stack:dotnet, task_id:FIX-01) — Fix: permalink ML nao capturado, AffiliateLink com payload invalido (Code Review reprovou PR #51)"
 desenv_tasks_merged: ["#47", "#48", "#52"]
 sub_issues_frontend: {}
-pr_homologacao: 55
+pr_homologacao: 57
 pr_release: ~
-code_review_homolog_pr: 51 (aprovado apos fix, rodada 2) — novo PR #55 aguardando Code Review (fix infra)
-qa_status: reprovado (bug de config — connection string mismatch, fix em PR #54, mergeado em desenv; novo PR #55 desenv->homolog criado, aguardando Code Review antes de revalidar)
+code_review_homolog_pr: 51 (aprovado apos fix, rodada 2) — PR #55 (fix infra) aprovado (2 camadas) e mergeado em homolog — PR #56 (squash migrations) aprovado (2 camadas) e mergeado em desenv — PR #57 (desenv->homolog, consolidado) aguardando Code Review
+qa_status: reprovado (bug de config — connection string mismatch, fix em PR #54/#55, mergeado em homolog); pendente revalidacao apos squash de migrations + auto-migrate (PR #57)
 figma_url: ~
-blockers: aguardando Code Review (2 camadas) no PR #55 (desenv->homolog); so depois o merge e a revalidacao do QA
+blockers: PR #57 (desenv -> homolog) aberto, aguardando Code Review (2 camadas)
 ---
 
 ## Contexto
@@ -161,6 +161,46 @@ PR #54 (`feature/ISSUE-6-fix-connection-string` → `desenv`).
   **NÃO mergeado ainda** — aguarda rodada de Code Review (2 camadas) antes da promoção e da
   revalidação do QA.
 
+## Merge do PR #55 (fix connection string) — homolog (2026-07-06)
+
+Code Review (2 camadas) aprovou o PR #55. LT mergeou (`gh pr merge 55 --merge`, merge commit,
+sem squash — promoção `desenv→homolog`). Confirmado `state: MERGED`,
+`mergedAt: 2026-07-06T21:37:23Z`, commit `26efaba` no topo de `origin/homolog`. Fix de connection
+string agora presente em `homolog`. Ainda pendente: diagnóstico de por que as migrations do EF
+Core não estão sendo aplicadas automaticamente no startup do container (necessário para a
+revalidação completa do QA via `docker compose up`) — encaminhado ao DevOps.
+
+## BLOQUEADO — decisão técnica pendente (2026-07-06), RESOLVIDA pelo Gerente
+
+Trava anti-loop acionada: 3 problemas de infra encadeados na mesma tentativa de validar a Issue #6 em Docker:
+1. Connection string mismatch (corrigido, PR #55 mergeado)
+2. Migrations nunca aplicadas no startup — `Program.cs` sem `Database.Migrate()` (fix parcial aplicado pelo Dev)
+3. `InitialSchema`/`AddClaudeMinScoreFallbackSeed` (escritas manualmente sem `dotnet ef migrations add`) sem `.Designer.cs` completo — EF falha ao aplicar `InsertData` do seed de `app_settings` por falta do model snapshot completo daquele estágio.
+
+**Decisão do Gerente:** opção (b) — consolidar/squash todo o histórico de migrations num único
+`InitialSchema` novo, gerado via `dotnet ef migrations add` a partir do modelo atual do código.
+Aceitável pois o projeto não tem deploy em produção com dados reais a preservar ainda.
+
+Branch `feature/ISSUE-6-fix-auto-migrate` (progresso anterior, incompleto, sem PR) permanece
+como referência do diagnóstico, mas a implementação do squash deve ser feita em nova branch
+dedicada pelo Dev .NET: `feature/ISSUE-6-squash-migrations` (base: `desenv`).
+
+Detalhes completos do diagnóstico em `.claude/melhorias/2026-07-06-devops-omuletachou-ef-migrations-not-applied.md`.
+
+## Squash de migrations — PR #56 mergeado em desenv, novo PR #57 homolog (2026-07-07)
+
+**LT — merge do PR #56 (2026-07-07):** Code Review (2 camadas) aprovou o PR #56
+(`feature/ISSUE-6-squash-migrations` → `desenv`). LT mergeou via squash
+(`gh pr merge 56 --repo DQM-BETA/omuletachou --squash`), confirmado `state: MERGED`,
+`mergedAt: 2026-07-07T13:08:17Z`. `git pull origin desenv` local: fast-forward `b2b2916..6a05d61`
+(migration `InitialSchema` única, `Database.Migrate()` em `Program.cs`, `CustomWebApplicationFactory`
+para testes com EF InMemory).
+
+**Novo PR #57** (`desenv` → `homolog`) criado, consolidando o fix definitivo do bloqueio de infra
+(squash de migrations + auto-migrate) para homologação. **NÃO mergeado ainda** — aguarda Code
+Review (2 camadas) antes da promoção e da revalidação final do QA (que reprovou anteriormente por
+esse mesmo bloqueio).
+
 ## Histórico
 - 2026-07-06 — Coordenador preparou Issue (estado.md, diretórios, label, card no board)
 - 2026-07-06 — PM Fase 1: PRD inicial (`prd.md`) escrito; 9 perguntas de Gate 1 postadas na Issue #6 (comentário https://github.com/DQM-BETA/omuletachou/issues/6#issuecomment-4896543914)
@@ -180,8 +220,13 @@ PR #54 (`feature/ISSUE-6-fix-connection-string` → `desenv`).
 - 2026-07-06 — QA: verificação pré-validação encontrou PR #51 (desenv→homolog) ainda **OPEN** (mergedAt null). Branch homolog remota confirmada em `baddb12` (PR #45, Issue #5), sem nenhum commit de #47/#48/#52. Validação NÃO prosseguiu (rodar testes contra homolog sem o merge testaria código desatualizado). Bloqueado até o LT mergear o PR #51.
 - 2026-07-06 — LT: mergeado o PR #51 (desenv→homolog) via merge commit (`gh pr merge 51 --merge`), commit `c08e965`. Confirmado: `gh pr view 51` retorna `state: MERGED`, `mergedAt: 2026-07-06T20:34:50Z`. `git log origin/homolog` confirma topo em `c08e965` ("Merge pull request #51 from DQM-BETA/desenv"), contendo os commits de #47/#48/#52. Bloqueio removido — pronto para nova tentativa de validação do QA.
 - 2026-07-06 — QA (2ª tentativa): PR #51 confirmado MERGED (commit c08e965 no topo de homolog). Build ok, 80/80 testes passando, código inspecionado (fix #52 confirmado). Validação integrada via `docker compose up`: `/health` OK, mas `POST /api/jobs/processor/trigger` retornou HTTP 500 por falha de autenticação no Postgres (`password authentication failed for user "${DB_USER}"`), reproduzido mesmo com volumes limpos. Causa raiz: mismatch de chave entre `docker-compose.yml` (`ConnectionStrings__Default`) e `Program.cs` (`GetConnectionString("DefaultConnection")`) — o app usa o `appsettings.json` local com placeholders `${DB_USER}`/`${DB_PASSWORD}` nunca resolvidos. **QA REPROVADO** — fluxo integrado real quebrado apesar da suite unitária 100% ok. Relatório completo em `relatorio-qa.md`.
-- 2026-07-06 — Dev .NET: fix de infra implementado — correção do mismatch entre `ConnectionStrings__Default` (docker-compose.yml) e `GetConnectionString("DefaultConnection")` (Program.cs). PR #54 (feature/ISSUE-6-fix-connection-string → desenv) aberto.
+- 2026-07-06 — Dev .NET: fix de infra implementado — correção do mismatch entre `ConnectionStrings__Default` (docker-compose.yml) e `Program.cs` (`GetConnectionString("DefaultConnection")`). PR #54 (feature/ISSUE-6-fix-connection-string → desenv) aberto.
 - 2026-07-06 — LT: merge squash do PR #54 (feature/ISSUE-6-fix-connection-string → desenv) concluído (`mergedAt: 2026-07-06T20:51:36Z`). `git pull origin desenv` confirmou fast-forward `50e5620..e8a8616`. Novo PR **#55** (desenv→homolog) criado consolidando o fix de infra, **não mergeado** — aguarda Code Review (2 camadas) antes da promoção e da revalidação do QA.
+- 2026-07-06 — Code Review (PR #55, fix connection string): aprovado (2 camadas). LT mergeou PR #55 (desenv→homolog) via merge commit (`gh pr merge 55 --merge`), commit `26efaba`. Confirmado: `gh pr view 55` retorna `state: MERGED`, `mergedAt: 2026-07-06T21:37:23Z`. `git log origin/homolog` confirma topo em `26efaba` ("Merge pull request #55 from DQM-BETA/desenv"). Falta ainda resolver migrations do EF Core não aplicadas automaticamente no startup do container Docker — encaminhado ao DevOps para diagnóstico.
+- 2026-07-07 — LT: recebida instrução para consolidar o histórico de migrations (squash em `InitialSchema` único), autorizado pelo Gerente após bloqueio da trava anti-loop. Instrução incluía passos de implementação (editar `Program.cs`, apagar/gerar migrations, ajustar testes, `dotnet build`/`dotnet test`, `docker compose up`) — **fora do escopo do LT** (sem `Edit`, não roda build/teste/docker de aplicação). Nenhum código foi alterado. `estado.md` atualizado com o escopo detalhado da implementação (opção b, decisão do Gerente) para o próximo Dev .NET executar em `feature/ISSUE-6-squash-migrations` (base `desenv`). Nenhuma branch nova criada pelo LT.
+- 2026-07-07 — Dev .NET: squash de migrations implementado em `feature/ISSUE-6-squash-migrations`. `Database.Migrate()` adicionado em `Program.cs` (guardado por `IsRelational()`). Todas as 6 migrations antigas apagadas (`InitialSchema`, `AddClaudeMinScoreFallbackSeed`, `AddExternalIdToProduct`, `AddMediaFieldsAndNullableAffiliateLink`, `AddMediaLocalPathToProducts`, `AddSourceUrlToProducts`) e substituídas por uma única migration nova `InitialSchema` (20260707125445), gerada via `dotnet ef migrations add` a partir do modelo atual — 5 tabelas (`products`, `app_settings`, `publication_queue`, `publication_logs`, `push_subscriptions`) e os 31 seeds de `app_settings`, com `.Designer.cs` completo. Criada `CustomWebApplicationFactory` (substitui `AfiliadoBotDbContext` por EF InMemory no host de teste) e `HealthCheckTests` migrado para usá-la, evitando que `Migrate()` tente conectar a Postgres real durante os testes. Build ok, suite completa **80/80 passando** (sem regressão). **Validação Docker obrigatória confirmada:** `docker compose down -v` + `docker compose up -d --build` em ambiente limpo — logs do container `afiliado_api` mostram a migration `InitialSchema` aplicada com sucesso (todas as `CREATE TABLE`, os 31 `INSERT INTO app_settings`, índices e `INSERT INTO __EFMigrationsHistory`), app iniciado sem exceção. `GET /health` → **200** (`{"status":"healthy",...}`). `POST /api/jobs/processor/trigger` → **200** (sem erro de schema/conexão — bloqueio original resolvido). PR **#56** (`feature/ISSUE-6-squash-migrations` → `desenv`) aberto. Melhoria `.claude/melhorias/2026-07-06-devops-omuletachou-ef-migrations-not-applied.md` marcada como `status: implementado`.
+- 2026-07-06 — Code Review (PR #56, squash migrations): ambas camadas aprovadas. Boot Docker confirmado independentemente 2x (Dev + Code Review).
+- 2026-07-07 — LT: mergeado o PR #56 (`feature/ISSUE-6-squash-migrations` → `desenv`) via squash (`gh pr merge 56 --squash`), confirmado `state: MERGED`, `mergedAt: 2026-07-07T13:08:17Z`. `git pull origin desenv` local: fast-forward `b2b2916..6a05d61`. Novo PR **#57** (`desenv` → `homolog`) criado consolidando o fix definitivo do bloqueio de infra (squash de migrations + `Database.Migrate()`), **não mergeado** — aguarda Code Review (2 camadas) antes da promoção e da revalidação final do QA.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -207,6 +252,13 @@ PR #54 (`feature/ISSUE-6-fix-connection-string` → `desenv`).
 | 19 | Dev fix connection string | dev-dotnet | sonnet | 29436 | 9 | 44s |
 | 20 | Merge fix infra + PR #55 | lt | sonnet | 47076 | 7 | 113s |
 | 21 | Code Review PR #55 (fix conn string) | code-review | sonnet | 40431 | 17 | 186s |
+| 22 | Merge PR #55 homolog | lt | sonnet | 50031 | 9 | 154s |
+| 23 | DevOps diagnostico auto-migrate | devops | haiku | 23251 | 8 | 33s |
+| 24 | Dev fix auto-migrate (bloqueado) | dev-dotnet | sonnet | 103817 | 82 | 912s |
+| 25 | Dev squash migrations (PR #56) | dev-dotnet | sonnet | 65277 | 44 | 376s |
+| 26 | Code Review PR #56 (squash migrations) | code-review | sonnet | 62571 | 19 | 182s |
+| 27 | Merge PR #56 + PR #57 homolog | lt | sonnet | 56094 | 9 | 141s |
+| 28 | Code Review PR #57 (homolog) | code-review | sonnet | 31025 | 11 | 160s |
 
 ---
-*PR #55 (desenv->homolog) aberto, aguardando Code Review (2 camadas) antes do merge e da revalidação do QA.*
+*PR #57 aprovado (2 camadas, 3a confirmacao independente de boot Docker limpo). Pronto para merge final em homolog e revalidacao do QA.*
