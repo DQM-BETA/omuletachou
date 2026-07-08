@@ -5,14 +5,15 @@ issue: 8
 repo: omuletachou
 titulo: feat: Publisher YouTube Shorts
 rota: normal
-etapa_atual: PR #67 pronto para nova rodada de Code Review
+etapa_atual: Em Desenvolvimento — PR #71 (desenv→homolog) criado, aguardando novo Code Review
 docs_path: repos/omuletachou/documentacoes/ISSUE-8-publisher-youtube
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-8-publisher-youtube
 ultimo_agente: lt
 status_comment_id: 4914784828
-pr_homologacao: 67
+pr_homologacao: 71
 pr_release: ~
-qa_status: ~
+qa_status: reprovado (CA16) — 1ª reprovação — fix mergeado, aguardando revalidação
+code_review_homolog_pr: 71
 
 ## Contexto
 Stack: .NET 8, Google.Apis.YouTube.v3, OAuth2
@@ -90,9 +91,61 @@ Dependências: Issues #6 (ProcessorJob) e #7 (PublisherJob/Hangfire) — ambas e
 - PR #67 pronto para nova rodada de Code Review (build/boot/testes + checklist de veto).
 - **Pendência para o Coordenador:** atualizar comentário 📍 Status (id `4914784828`) para refletir "PR #67 aguardando nova rodada de Code Review" — não editado por este agente (fora do escopo do LT).
 
+**Code Review PR #67 — REVALIDAÇÃO APROVADA (rodada 2):**
+- Checkout limpo de `desenv` (HEAD `a63aa6a`, mesmo commit do PR #67 no momento da revalidação).
+- Build: `dotnet build` — sucesso, 0 erros, 1 warning pré-existente (não relacionado ao diff).
+- Testes: `dotnet test` — **128/128 aprovados**, 0 falhas, ~24s.
+- Os 6 testes novos do PR #68 (CA5/CA6/CA7/CA10/CA14/CA15) foram lidos linha a linha no diff e confirmados como cobertura real: parseiam o JSON de metadata enviado no POST de início do upload resumable e/ou capturam corretamente `InvalidOperationException` com mensagem batendo exatamente com o código de produção (`UploadChunksAsync`/`InitiateResumableUploadAsync`, mensagens "timeout de chunk (5 min)"/"timeout total (15 min)"). Rodados isoladamente via `--filter`: 7/7 passaram (incluindo CA19).
+- CA19 (regressão ProcessorJob) reconfirmado passando isolado e na suíte completa — nenhuma mudança de produção nesta rodada (PR #68 só tocou `YoutubePublisherTests.cs`).
+- Boot Docker: `docker compose up -d --build` — 4 containers subiram sem erro, migration `SeedYoutubeCredentials` aplicada, `/health`, `/api/jobs/processor/trigger`, `/api/jobs/publisher/trigger` todos HTTP 200, sem exception nos logs. Containers derrubados ao final (`docker compose down`, sem `-v`).
+- Checklist de veto: sem secrets hardcoded (migration semeia valores vazios, testes usam placeholders), sem teste-lixo, PR é backend-only (sem `.spec.ts` no diff, `.first()`/E2E não aplicável).
+- Evidência completa postada como comentário no PR #67 (https://github.com/DQM-BETA/omuletachou/pull/67#issuecomment-4918181794).
+- **PR #67 mergeado (desenv→homolog, merge commit, não-squash) com sucesso.**
+
+**QA (homolog) — REPROVADO — CA16 (1ª reprovação, comentário https://github.com/DQM-BETA/omuletachou/issues/8#issuecomment-4918299645):**
+- 19/20 CAs passaram, muitos validados end-to-end real (Docker + Postgres real + chamada HTTP real ao Google OAuth2, ver `relatorio-qa.md`).
+- **CA16 falhou na validação integrada real:** `PublisherJob.cs:62-63` sobrescreve incondicionalmente a `ErrorMessage` que `YoutubePublisher.FailPermanently` já havia setado especificamente para o fallback de segurança "sem vídeo", substituindo pela mensagem genérica `"Falha ao publicar (retorno negativo do publisher)."`. Causa raiz: `PublicationQueue.RegisterAttempt` (linhas 51-65) sempre sobrescreve `ErrorMessage` sem checar se o item já tinha uma mensagem mais específica. O teste unitário `PublishAsync_FalhaSemRetry_QuandoProdutoSemVideo` não pega isso porque chama `YoutubePublisher.PublishAsync` isoladamente, sem passar pelo `PublisherJob` real.
+- Relatório completo: `relatorio-qa.md`.
+
+**Mapeamento do fix (LT) — decisão de design e escopo:**
+
+**Design escolhido:** em `PublisherJob.ExecuteAsync`, capturar `item.RetryCount` **antes** de chamar `publisher.PublishAsync`. Após a chamada:
+- `success == true` → `item.RegisterAttempt(true)` (comportamento atual, inalterado).
+- `success == false` e `item.RetryCount` **não mudou** (o publisher não se auto-registrou, ex.: `TelegramPublisher`, que nunca toca `RegisterAttempt`) → `item.RegisterAttempt(false, "Falha ao publicar (retorno negativo do publisher).")` — comportamento atual preservado.
+- `success == false` e `item.RetryCount` **já mudou** (o publisher já se auto-registrou internamente antes de retornar `false`, caso `YoutubePublisher.FailPermanently`, usado tanto no CA16 quanto no CA12) → **não chamar `RegisterAttempt` de novo**, preservando a `ErrorMessage` específica já setada.
+
+**Alternativas avaliadas e descartadas:**
+- (a) *Mudar o contrato `ISocialPublisher.PublishAsync` para retornar um tipo mais rico (ex.: `PublishResult { bool Success, string? ErrorMessage }`)*: mais "correto" no papel, mas quebra o contrato de todos os publishers existentes (`TelegramPublisher`, já em produção desde a Issue #7) — exige alterar a assinatura da interface, o `TelegramPublisher`, o `YoutubePublisher` e todos os mocks em `PublisherJobTests.cs`/testes de publisher. Escopo desproporcional ao bug (troca de contrato para resolver uma sobrescrita indevida).
+- (b) *`YoutubePublisher` lançar exceção em vez de retornar `false`* (sugestão (b) do QA): o `catch` do `PublisherJob` já preserva `ex.Message` (linha 71), resolveria o CA16. Mas mudaria a semântica de "falha sem retry" para o caminho de exceção, que hoje é reservado para erros inesperados/de rede (retry padrão) — misturaria os dois conceitos (falha definitiva vs falha retryable) no mesmo mecanismo, exigindo revisar toda a lógica de retry do `PublisherJob` para não tratar essa exceção como retryable. Risco maior de regressão que a alternativa escolhida.
+- **Escolhida: verificação de `RetryCount` antes/depois.** Menor diff possível (1 arquivo de produção, `PublisherJob.cs`), não altera nenhum contrato existente, é compatível 1:1 com o comportamento atual do `TelegramPublisher` (que nunca se auto-registra) e do `YoutubePublisher` (que já se auto-registra via `FailPermanently` nos dois casos "sem retry"). Não introduz um novo conceito na interface — apenas faz o `PublisherJob` respeitar um efeito colateral que o `YoutubePublisher` já produzia.
+
+**Decisão de escopo: sub-issue formal (#69), não branch de fix direto.**
+Diferente do gap de cobertura do PR #68 (só testes, sem tocar código de produção — justificou branch de fix direto), este bug exige alterar código de produção já em produção (`PublisherJob.cs`), que é **compartilhado por todos os publishers**, incluindo `TelegramPublisher` (Issue #7, já em `main`). O risco de regressão no caminho do Telegram (que não se auto-registra) precisa de cobertura de teste explícita e rastreável via CA formal — não apenas um teste avulso numa branch de fix sem CA associado. Por isso: sub-issue formal com CA16 (revalidação) + CA21 (regressão Telegram/publishers que não se auto-registram) + CA22 (regressão sucesso), em vez de reaproveitar o padrão do PR #68.
+- `criterios-aceite.md` atualizado com CA21 e CA22.
+- `tasks.md` atualizado com T-02.
+- Sub-issue #69 criada: "[ISSUE-8] Sub: fix ErrorMessage sobrescrita no PublisherJob (CA16/CA21)" (label stack:dotnet), branch alvo `feature/8-69-fix-publisherjob-errormessage` (base desenv).
+
+**Dev .NET (sub-issue #69) concluído:**
+- Branch `feature/69-publisherjob-errormessage-fix` (base `desenv`) via worktree isolado.
+- TDD: testes de regressão CA16/CA21/CA22 escritos ANTES do fix em `PublisherJobTests.cs` (confirmado RED — o teste CA16 falhou exatamente como o QA relatou, `ErrorMessage` esperada "Produto sem mídia de vídeo, não aplicável ao YouTube" vs. obtida "Falha ao publicar (retorno negativo do publisher).").
+- Fix aplicado em `PublisherJob.ExecuteAsync` (único arquivo de produção alterado): captura `item.RetryCount` antes de `publisher.PublishAsync`; após a chamada, só registra a mensagem genérica via `RegisterAttempt(false, ...)` se o `RetryCount` não mudou (publisher não se auto-registrou); se mudou (publisher já se auto-registrou, ex. `YoutubePublisher.FailPermanently`), preserva a `ErrorMessage` específica sem chamar `RegisterAttempt` de novo. Sucesso continua chamando `RegisterAttempt(true)` incondicionalmente.
+- Testes novos: `ExecuteAsync_PreservaErrorMessageEspecifica_QuandoPublisherJaSeAutoRegistrou` (CA16), `ExecuteAsync_RegistraMensagemGenerica_QuandoPublisherNaoSeAutoRegistra` (CA21, regressão Telegram), `ExecuteAsync_RegistraSucesso_QuandoPublisherRetornaTrue` (CA22, regressão sucesso).
+- Suíte completa: 131/131 passando (128 pré-existentes + 3 novos), 0 falhas.
+- Gate de testes-dependentes: buscados todos os arquivos referenciando `PublisherJob`/`RegisterAttempt` (`PublisherJobTests.cs`, `PublicationQueueTests.cs`, `YoutubePublisher.cs`, `PublicationQueue.cs`, `Program.cs`) — nenhum precisou de ajuste (contrato `PublicationQueue.RegisterAttempt` e `ISocialPublisher` inalterados).
+- Boot Docker validado: `.env` local criado a partir de `.env.example` (não versionado) — 4/4 containers subiram, `GET /health` → 200, `POST /api/jobs/processor/trigger` → 200, `POST /api/jobs/publisher/trigger` → 200, logs sem exceção. Stack derrubada ao final (`docker compose down -v`).
+- PR #70 (`feature/69-publisherjob-errormessage-fix` → `desenv`) aberto e pronto para merge.
+- Worktree `.worktrees/feature-69-publisherjob-errormessage` removido ao final.
+
+**Merge LT (PR #70) concluído:**
+- PR #70 (`feature/69-publisherjob-errormessage-fix` → `desenv`) squash-merged com sucesso (merge commit `3de49e8`).
+- Sub-issue #69 fechada.
+- Todas as sub-issues (#65, #69) concluídas e mergeadas em `desenv`.
+- **PR #67 original (desenv→homolog) estava fechado** (já havia sido mergeado anteriormente, merge commit `a1a7496`) — não podia ser reaberto/reutilizado.
+- **PR #71 (`desenv` → `homolog`) criado**, trazendo o fix de CA16 para uma nova rodada de Code Review + QA em homolog.
+
 ## Sub-issues
-sub_issues: [#65 (stack:dotnet, task_id:T-01)]
-desenv_tasks_merged: [65]
+sub_issues: [#65 (stack:dotnet, task_id:T-01) — fechada, mergeada, #69 (stack:dotnet, task_id:T-02) — fechada, mergeada]
+desenv_tasks_merged: [65, 69]
 
 ## Historico de etapas
 | # | Etapa | Agente | Status |
@@ -108,6 +161,11 @@ desenv_tasks_merged: [65]
 | 9 | Mapear fix de cobertura | lt | concluido — branch fix/67-youtube-publisher-test-coverage mapeado, sem nova sub-issue |
 | 10 | Dev .NET (fix cobertura) | dev-dotnet | concluido — PR #68 aberto (fix/67 → desenv), 128/128 testes passando |
 | 11 | Merge PR #68 (fix cobertura) → desenv | lt | concluido — PR #68 squash-merged, PR #67 atualizado automaticamente e pronto para nova rodada de Code Review |
+| 12 | Code Review PR #67 (revalidação) | code-review | aprovado — 128/128 testes, boot Docker ok, gap de cobertura sanado, merge desenv→homolog concluido |
+| 13 | QA (homolog) | qa | reprovado — CA16 (ErrorMessage sobrescrita no PublisherJob), bug funcional real, 1ª reprovação |
+| 14 | Mapear fix CA16 | lt | concluido — sub-issue #69 criada (design: RetryCount antes/depois em PublisherJob), CA21/CA22 adicionados |
+| 15 | Dev .NET (#69) | dev-dotnet | concluido — PR #70 aberto (feature/69-publisherjob-errormessage-fix → desenv), 131/131 testes passando, boot Docker validado |
+| 16 | Merge PR #70 + PR release rodada 2 | lt | concluido — PR #70 squash-merged, sub-issue #69 fechada, PR #71 (desenv→homolog) criado (PR #67 original estava fechado, não reutilizável) |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -121,3 +179,10 @@ desenv_tasks_merged: [65]
 | 8 | Code Review PR #67 (reprovado — cobertura) | code-review | sonnet | 95702 | 23 | 265s |
 | 9 | Mapear fix cobertura testes | lt | sonnet | 55994 | 8 | 87s |
 | 10 | Dev .NET fix cobertura (PR #68) | dev-dotnet | sonnet | 104044 | 48 | 566s |
+| 11 | Merge PR #68 → desenv | lt | sonnet | 48147 | 16 | 160s |
+| 12 | Coordenador — atualizar 📍 Status | coordenador | haiku | 19147 | 3 | 30s |
+| 13 | Code Review PR #67 (revalidação — aprovado, merge homolog) | code-review | sonnet | 84901 | 43 | 686s |
+| 14 | QA (homolog) — reprovado (CA16) | qa | sonnet | 76226 | 50 | 518s |
+| 15 | LT mapear fix CA16 (sub-issue #69 criada) | lt | sonnet | 81707 | 24 | 274s |
+| 16 | Dev .NET fix CA16 (#69, PR #70) | dev-dotnet | sonnet | 83976 | 35 | 372s |
+| 17 | Merge PR #70 + PR release rodada 2 (PR #71) | lt | sonnet | TBD | TBD | TBD |

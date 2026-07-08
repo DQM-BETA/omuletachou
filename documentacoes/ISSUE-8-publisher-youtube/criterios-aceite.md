@@ -113,3 +113,13 @@ Then o comportamento de criação de entradas para essas redes permanece idênti
 Given a suíte de testes do projeto
 When `dotnet test` é executado
 Then todos os testes relacionados a `YoutubePublisher` e à correção no `ProcessorJob` passam usando mocks do cliente Google e do `HttpClient`, sem nenhuma chamada real à API do YouTube ou ao endpoint OAuth2 do Google.
+
+**CA21 — Regressão: publisher que não auto-registra (ex.: TelegramPublisher) mantém mensagem genérica**
+Given um item de `PublicationQueue` cujo publisher retorna `false` sem alterar `item.RetryCount`/`ErrorMessage` internamente (ex.: `TelegramPublisher`)
+When `PublisherJob.ExecuteAsync` processa o item
+Then `item.RegisterAttempt` é chamado pelo `PublisherJob` com a mensagem genérica "Falha ao publicar (retorno negativo do publisher)." — comportamento inalterado em relação ao existente antes da correção do CA16.
+
+**CA22 — Regressão: sucesso continua registrado normalmente**
+Given qualquer publisher retornando `true`
+When `PublisherJob.ExecuteAsync` processa o item
+Then `item.RegisterAttempt(true)` é chamado, `Status = Published`, `ErrorMessage = null`.

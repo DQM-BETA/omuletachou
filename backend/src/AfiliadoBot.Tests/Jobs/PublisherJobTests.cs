@@ -263,4 +263,91 @@ public class PublisherJobTests
         await act.Should().NotThrowAsync();
         telegram.Verify(p => p.PublishAsync(It.IsAny<PublicationQueue>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    // --- CA16/CA21/CA22 (Sub-issue #69 — fix ErrorMessage sobrescrita) ---
+
+    private const string MensagemEspecificaSemVideo = "Produto sem mídia de vídeo, não aplicável ao YouTube";
+    private const string MensagemGenerica = "Falha ao publicar (retorno negativo do publisher).";
+
+    [Fact]
+    public async Task ExecuteAsync_PreservaErrorMessageEspecifica_QuandoPublisherJaSeAutoRegistrou()
+    {
+        // CA16: simula YoutubePublisher.FailPermanently — o publisher mock se auto-registra
+        // (RegisterAttempt interno com mensagem especifica, RetryCount esgotado) antes de
+        // retornar false. PublisherJob NAO deve sobrescrever a ErrorMessage.
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto();
+        db.Products.Add(product);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow.AddHours(-1));
+        db.PublicationQueues.Add(item);
+        await db.SaveChangesAsync();
+
+        var youtube = new Mock<ISocialPublisher>();
+        youtube.SetupGet(p => p.Network).Returns(SocialNetwork.Youtube);
+        youtube.Setup(p => p.PublishAsync(It.IsAny<PublicationQueue>(), It.IsAny<CancellationToken>()))
+            .Callback<PublicationQueue, CancellationToken>((i, _) =>
+            {
+                // Simula FailPermanently: auto-registra 3x com a mensagem especifica,
+                // esgotando o RetryCount, antes de retornar false ao PublisherJob.
+                i.RegisterAttempt(false, MensagemEspecificaSemVideo);
+                i.RegisterAttempt(false, MensagemEspecificaSemVideo);
+                i.RegisterAttempt(false, MensagemEspecificaSemVideo);
+            })
+            .ReturnsAsync(false);
+
+        var job = CreateJob(db, new[] { youtube.Object });
+
+        await job.ExecuteAsync();
+
+        var updated = await db.PublicationQueues.FirstAsync(i => i.Id == item.Id);
+        updated.Status.Should().Be(PublicationStatus.Failed);
+        updated.ErrorMessage.Should().Be(MensagemEspecificaSemVideo);
+        updated.RetryCount.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_RegistraMensagemGenerica_QuandoPublisherNaoSeAutoRegistra()
+    {
+        // CA21 (regressao): publisher que apenas retorna false sem tocar o item
+        // (comportamento do TelegramPublisher hoje) — PublisherJob DEVE registrar a
+        // mensagem generica, comportamento inalterado.
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto();
+        db.Products.Add(product);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
+        db.PublicationQueues.Add(item);
+        await db.SaveChangesAsync();
+
+        var telegram = CreatePublisherMock(SocialNetwork.Telegram, success: false);
+        var job = CreateJob(db, new[] { telegram.Object });
+
+        await job.ExecuteAsync();
+
+        var updated = await db.PublicationQueues.FirstAsync(i => i.Id == item.Id);
+        updated.Status.Should().Be(PublicationStatus.Failed);
+        updated.ErrorMessage.Should().Be(MensagemGenerica);
+        updated.RetryCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_RegistraSucesso_QuandoPublisherRetornaTrue()
+    {
+        // CA22 (regressao): sucesso continua registrado normalmente, independente do
+        // comportamento de auto-registro do publisher.
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto();
+        db.Products.Add(product);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow.AddHours(-1));
+        db.PublicationQueues.Add(item);
+        await db.SaveChangesAsync();
+
+        var youtube = CreatePublisherMock(SocialNetwork.Youtube, success: true);
+        var job = CreateJob(db, new[] { youtube.Object });
+
+        await job.ExecuteAsync();
+
+        var updated = await db.PublicationQueues.FirstAsync(i => i.Id == item.Id);
+        updated.Status.Should().Be(PublicationStatus.Published);
+        updated.ErrorMessage.Should().BeNull();
+    }
 }

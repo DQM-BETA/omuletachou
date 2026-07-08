@@ -88,3 +88,48 @@ Sub-issue única. Ver corpo completo criado no GitHub (inclui critérios de acei
 - Todos os CA1-CA20 cobertos por teste e passando.
 - `dotnet test` verde na branch antes de abrir o PR.
 - PR único `feature/ISSUE-8-publisher-youtube` → `desenv`.
+
+## T-02 — Fix: ErrorMessage sobrescrita no PublisherJob (achado E2E do QA, CA16)
+
+Sub-issue #69. Bug funcional real (não lacuna de teste) encontrado pelo QA na validação
+end-to-end contra a aplicação real (Docker + Postgres real): `PublisherJob.ExecuteAsync`
+sobrescreve incondicionalmente a `ErrorMessage` que o `YoutubePublisher.FailPermanently`
+ja havia registrado especificamente (CA16: "Produto sem midia de video, nao aplicavel ao
+YouTube"), substituindo por uma mensagem generica.
+
+**Decisao do LT — fix consistente com o padrao existente (ver `estado.md` para
+justificativa completa da escolha de design vs alternativas descartadas):**
+
+Em `PublisherJob.ExecuteAsync`, capturar `item.RetryCount` antes de `publisher.PublishAsync`.
+Apos a chamada, so chamar `item.RegisterAttempt(false, mensagemGenerica)` quando o
+`RetryCount` NAO mudou (ou seja, o publisher nao se auto-registrou). Quando o publisher ja
+auto-registrou (RetryCount mudou, caso `YoutubePublisher.FailPermanently`), nao chamar
+`RegisterAttempt` de novo — preserva a mensagem especifica. Sucesso continua chamando
+`RegisterAttempt(true)` incondicionalmente.
+
+Nao altera `ISocialPublisher` (contrato `Task<bool> PublishAsync`), nem
+`PublicationQueue.RegisterAttempt`, nem `YoutubePublisher` — unico arquivo de producao
+alterado: `PublisherJob.cs`. Compativel com `TelegramPublisher` (nunca se auto-registra,
+comportamento inalterado).
+
+**Escopo formal (sub-issue, nao branch de fix direto) — motivo:** ao contrario do gap de
+cobertura do PR #68 (so testes, sem tocar codigo de producao), este fix altera codigo de
+producao ja em producao (`PublisherJob.cs`, compartilhado por TODAS as redes, inclusive
+Telegram/Issue #7 que ja esta em main). Risco de regressao em publisher que nao
+auto-registra (Telegram) exige cobertura de teste explicita e rastreavel via CA formal
+(CA21), nao apenas um teste avulso numa branch de fix. Justifica sub-issue.
+
+**Criterios de aceite:** CA16 (revalidacao, ver criterios-aceite.md), CA21 (novo — regressao
+Telegram/publishers que nao auto-registram), CA22 (novo — sucesso inalterado).
+
+**Testes obrigatorios em `PublisherJobTests.cs`:**
+- CA16: mock de `ISocialPublisher` que simula `FailPermanently` (chama `RegisterAttempt`
+  internamente 3x com mensagem especifica antes de retornar `false`) — `PublisherJob` NAO
+  deve sobrescrever a `ErrorMessage`.
+- CA21: mock de `ISocialPublisher` que retorna `false` sem tocar o item (como
+  `TelegramPublisher` hoje) — `PublisherJob` DEVE registrar a mensagem generica (regressao).
+- CA22: mock retornando `true` — `Status=Published`, `ErrorMessage=null` (regressao).
+
+**Definicao de pronto:** CA16/CA21/CA22 cobertos por teste e passando, suite completa
+(128 + novos) sem regressao, `dotnet test` verde, boot Docker validado, PR unico
+`feature/8-69-fix-publisherjob-errormessage` -> `desenv`.
