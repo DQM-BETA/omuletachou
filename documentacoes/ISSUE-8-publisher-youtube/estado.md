@@ -5,7 +5,7 @@ issue: 8
 repo: omuletachou
 titulo: feat: Publisher YouTube Shorts
 rota: normal
-etapa_atual: PM Fase 1 — aguardando resposta Gate 1 (Gerente)
+etapa_atual: PM Fase 2
 docs_path: repos/omuletachou/documentacoes/ISSUE-8-publisher-youtube
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-8-publisher-youtube
 ultimo_agente: pm
@@ -39,3 +39,5 @@ desenv_tasks_merged: []
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
 |---|---|---|---|---|---|---|
+| 1 | Preparacao | coordenador | haiku | 50607 | 21 | 129s |
+| 2 | PM Fase 1 | pm | sonnet | 40770 | 16 | 107s |
