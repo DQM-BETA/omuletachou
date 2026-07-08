@@ -5,10 +5,10 @@ issue: 7
 repo: omuletachou
 titulo: feat: Publisher Telegram + Hangfire Scheduler
 rota: normal
-etapa_atual: LT — merge feature/59 → desenv (PR #61 aberto); depois Dev pode iniciar T-02 #60
+etapa_atual: Dev — aguardando spawn T-02 (#60)
 docs_path: repos/omuletachou/documentacoes/ISSUE-7-publisher-telegram
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-7-publisher-telegram
-ultimo_agente: dev-dotnet
+ultimo_agente: lt
 status_comment_id: 4913934382
 
 ## Contexto
@@ -46,9 +46,12 @@ Decisão de particionamento: 2 sub-issues sequenciais, ambas stack `dotnet`:
 - **T-01 (#59)**: Hangfire (config, dashboard, HangfireAuthFilter, migration seed `hangfire.dashboard_password`) + fix do bug de DI (achado do PM — registrar ML/Shopee também como `IPlatformCollector`) + `CollectorJob` (orquestração + encadeamento `ProcessorJob`) + endpoints de collector.
 - **T-02 (#60)**: depende de T-01 mergeado em `desenv`. `TelegramPublisher` + `PublisherJob` (retry, ordenação, fallback de mídia) + registro do recurring job do `PublisherJob` + endpoint `/api/jobs/publisher/trigger` + validação end-to-end (CA26).
 
+### Líder Técnico — merge T-01 (#59) concluído (2026-07-08)
+PR #61 (feature/59-collectorjob-hangfire → desenv) mergeado via squash. Sub-issue #59 fechada. Aguardando T-02 (#60) para depois criar PR desenv→homolog conjunto (as duas sub-issues compõem a mesma issue-pai #7).
+
 ## Sub-issues
-sub_issues: [59 (T-01, stack:dotnet), 60 (T-02, stack:dotnet, depende de #59)]
-desenv_tasks_merged: []
+sub_issues: [59 (T-01, stack:dotnet) — concluída/mergeada, 60 (T-02, stack:dotnet, depende de #59) — pendente]
+desenv_tasks_merged: [59]
 
 ## Historico de etapas
 | # | Etapa | Agente | Status |
@@ -59,6 +62,7 @@ desenv_tasks_merged: []
 | 4 | PM Fase 2 | pm | concluido — PRD consolidado, criterios-aceite.md criado, sem ambiguidade arquitetural, segue para LT |
 | 5 | Refinamento LT | lt | concluido — tasks.md criado, sub-issues #59 (T-01) e #60 (T-02) criadas no GitHub |
 | 6 | Dev T-01 (#59) | dev-dotnet | concluido — PR #61 (feature/59-collectorjob-hangfire → desenv) aberto, aguardando merge do LT |
+| 7 | Merge T-01 (#59) | lt | concluido — PR #61 mergeado (squash) em desenv, sub-issue #59 fechada; aguardando spawn de Dev para T-02 (#60) |
 
 ### Dev T-01 (#59) — implementacao concluida (2026-07-08)
 - Fix DI: `MercadoLivreCollector`/`ShopeeCollector` agora resolviveis via `IPlatformCollector` (alem do tipo concreto); `AmazonCollector` ganhou registro concreto adicional para o endpoint isolado.
@@ -70,7 +74,7 @@ desenv_tasks_merged: []
 - Testes novos: `CollectorJobTests` (4 casos — orquestracao, resiliencia a falha parcial, encadeamento condicional) e `HangfireAuthFilterTests` (4 casos — bloqueia senha vazia/nao configurada/incorreta, autoriza senha correta). Total 88/88 passando (80 pre-existentes + 8 novos).
 - Nota tecnica de infra (documentada no PR, nao bloqueou): Hangfire e desligado nos testes de integracao via env var de processo (`Hangfire__Enabled=false`, setada no `static ctor` de `CustomWebApplicationFactory`) — `AddHangfire`/`UsePostgreSqlStorage` conecta de forma sincrona ao Postgres para preparar o schema, o que quebraria o host de teste (EF InMemory, sem Postgres real). Quando desligado, um `IBackgroundJobClient` no-op e registrado para o `CollectorJob` continuar resolvivel via DI.
 - Boot Docker validado: `docker compose up -d --build` limpo, `/health` 200, `/hangfire` 401 (bloqueado, senha vazia por padrao — esperado), `POST /api/jobs/collector/trigger` 200 (3 collectors chamados via DI, falha de credenciais ausentes logada isoladamente por plataforma, `ProcessorJob` corretamente NAO enfileirado por falha total).
-- PR: https://github.com/DQM-BETA/omuletachou/pull/61 (feature/59-collectorjob-hangfire → desenv).
+- PR: https://github.com/DQM-BETA/omuletachou/pull/61 (feature/59-collectorjob-hangfire → desenv) — MERGEADO em 2026-07-08 (squash).
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
