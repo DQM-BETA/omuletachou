@@ -68,7 +68,8 @@ public class AppSettingConfiguration : IEntityTypeConfiguration<AppSetting>
             new { Id = 28, Key = "networks.instagram.enabled", Value = "true", UpdatedAt = now },
             new { Id = 29, Key = "networks.tiktok.enabled", Value = "true", UpdatedAt = now },
             new { Id = 30, Key = "networks.facebook.enabled", Value = "true", UpdatedAt = now },
-            new { Id = 31, Key = "claude.min_score_fallback", Value = "5", UpdatedAt = now }
+            new { Id = 31, Key = "claude.min_score_fallback", Value = "5", UpdatedAt = now },
+            new { Id = 32, Key = "hangfire.dashboard_password", Value = "", UpdatedAt = now }
         );
     }
 }
