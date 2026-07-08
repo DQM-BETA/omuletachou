@@ -5,10 +5,10 @@ issue: 7
 repo: omuletachou
 titulo: feat: Publisher Telegram + Hangfire Scheduler
 rota: normal
-etapa_atual: Dev — aguardando spawn T-01
+etapa_atual: LT — merge feature/59 → desenv (PR #61 aberto); depois Dev pode iniciar T-02 #60
 docs_path: repos/omuletachou/documentacoes/ISSUE-7-publisher-telegram
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-7-publisher-telegram
-ultimo_agente: lt
+ultimo_agente: dev-dotnet
 status_comment_id: 4913934382
 
 ## Contexto
@@ -58,6 +58,19 @@ desenv_tasks_merged: []
 | 3 | Gate 1 | Gerente | concluido — respostas postadas em 2026-07-08 |
 | 4 | PM Fase 2 | pm | concluido — PRD consolidado, criterios-aceite.md criado, sem ambiguidade arquitetural, segue para LT |
 | 5 | Refinamento LT | lt | concluido — tasks.md criado, sub-issues #59 (T-01) e #60 (T-02) criadas no GitHub |
+| 6 | Dev T-01 (#59) | dev-dotnet | concluido — PR #61 (feature/59-collectorjob-hangfire → desenv) aberto, aguardando merge do LT |
+
+### Dev T-01 (#59) — implementacao concluida (2026-07-08)
+- Fix DI: `MercadoLivreCollector`/`ShopeeCollector` agora resolviveis via `IPlatformCollector` (alem do tipo concreto); `AmazonCollector` ganhou registro concreto adicional para o endpoint isolado.
+- Hangfire configurado: storage Postgres (`UsePostgreSqlStorage`), `AddHangfireServer(WorkerCount=2)`, dashboard `/hangfire` protegido por `HangfireAuthFilter` (nega acesso com senha vazia/incorreta, loga `Warning` na inicializacao se vazia).
+- Migration `SeedHangfireDashboardPassword` (Id=32, seed vazio) aplicada e validada em Docker.
+- `CollectorJob` criado (`AfiliadoBot.Application/Jobs/CollectorJob.cs`): orquestra os 3 collectors via `IEnumerable<IPlatformCollector>`, falha isolada por collector (log `Error`, nao interrompe os demais), encadeia `ProcessorJob` via `IBackgroundJobClient.Enqueue` se ao menos 1 sucesso.
+- Recurring job do `CollectorJob` registrado via `IRecurringJobManager` (nao a API estatica `RecurringJob` — esta depende de `JobStorage.Current`, que so inicializa quando o DI resolve `JobStorage` pela 1a vez; usar a API estatica direto no `Program.cs` quebrava o boot com `InvalidOperationException`).
+- Endpoints: `/api/jobs/collector/trigger` (unificado, `CollectorJob` completo) + `/api/jobs/collector/amazon/trigger` (novo) + ML/Shopee/processor mantidos.
+- Testes novos: `CollectorJobTests` (4 casos — orquestracao, resiliencia a falha parcial, encadeamento condicional) e `HangfireAuthFilterTests` (4 casos — bloqueia senha vazia/nao configurada/incorreta, autoriza senha correta). Total 88/88 passando (80 pre-existentes + 8 novos).
+- Nota tecnica de infra (documentada no PR, nao bloqueou): Hangfire e desligado nos testes de integracao via env var de processo (`Hangfire__Enabled=false`, setada no `static ctor` de `CustomWebApplicationFactory`) — `AddHangfire`/`UsePostgreSqlStorage` conecta de forma sincrona ao Postgres para preparar o schema, o que quebraria o host de teste (EF InMemory, sem Postgres real). Quando desligado, um `IBackgroundJobClient` no-op e registrado para o `CollectorJob` continuar resolvivel via DI.
+- Boot Docker validado: `docker compose up -d --build` limpo, `/health` 200, `/hangfire` 401 (bloqueado, senha vazia por padrao — esperado), `POST /api/jobs/collector/trigger` 200 (3 collectors chamados via DI, falha de credenciais ausentes logada isoladamente por plataforma, `ProcessorJob` corretamente NAO enfileirado por falha total).
+- PR: https://github.com/DQM-BETA/omuletachou/pull/61 (feature/59-collectorjob-hangfire → desenv).
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -66,3 +79,4 @@ desenv_tasks_merged: []
 | 2 | PM Fase 1 | pm | sonnet | 42520 | 16 | 123s |
 | 4 | PM Fase 2 | pm | sonnet | 57788 | 22 | 188s |
 | 5 | Refinamento LT | lt | sonnet | 65434 | 17 | 158s |
+| 6 | Dev T-01 #59 | dev-dotnet | sonnet | 167767 | 122 | 1015s |
