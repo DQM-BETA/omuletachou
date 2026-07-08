@@ -60,6 +60,9 @@ builder.Services.AddScoped<CollectorJob>();
 // Publishers (Issue #7 / #60)
 builder.Services.AddHttpClient<ISocialPublisher, TelegramPublisher>();
 
+// Publishers (Issue #8 / #65)
+builder.Services.AddHttpClient<ISocialPublisher, YoutubePublisher>();
+
 // PublisherJob (Issue #7 / #60)
 builder.Services.AddScoped<PublisherJob>();
 

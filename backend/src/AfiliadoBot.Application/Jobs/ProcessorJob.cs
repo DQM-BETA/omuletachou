@@ -27,7 +27,7 @@ public class ProcessorJob
     private static readonly (SocialNetwork Network, string EnabledKey, string[] CredentialKeys)[] NetworkSettings =
     {
         (SocialNetwork.Telegram, "networks.telegram.enabled", new[] { "telegram.bot_token", "telegram.channel_id" }),
-        (SocialNetwork.Youtube, "networks.youtube.enabled", new[] { "youtube.access_token" }),
+        (SocialNetwork.Youtube, "networks.youtube.enabled", new[] { "youtube.client_id", "youtube.client_secret", "youtube.refresh_token" }),
         (SocialNetwork.Instagram, "networks.instagram.enabled", new[] { "instagram.access_token", "instagram.page_id" }),
         (SocialNetwork.TikTok, "networks.tiktok.enabled", new[] { "tiktok.access_token" }),
         (SocialNetwork.Facebook, "networks.facebook.enabled", new[] { "facebook.access_token", "facebook.page_id" }),
@@ -241,6 +241,17 @@ public class ProcessorJob
                 continue;
             }
 
+            // Fix retroativo (Issue #8 / #65): Youtube exige video disponivel — produto sem
+            // MediaType="video" (ou sem MediaLocalPath/MediaUrl) nunca e enfileirado para essa
+            // rede. Demais redes seguem a regra atual, inalterada (CA17-CA19).
+            if (network == SocialNetwork.Youtube && !HasVideoAvailable(product))
+            {
+                _logger.LogInformation(
+                    "ProcessorJob: produto {ProductId} sem midia de video disponivel. Rede Youtube nao sera enfileirada.",
+                    product.Id);
+                continue;
+            }
+
             await _aiService.GenerateCaptionAsync(product, network, ct);
 
             var entry = new PublicationQueue(product.Id, network, scheduledAt);
@@ -250,6 +261,16 @@ public class ProcessorJob
 
             _dbContext.PublicationQueues.Add(entry);
         }
+    }
+
+    /// <summary>
+    /// Youtube exige video disponivel (Issue #8 / #65, CA17): considera "com video" quando
+    /// MediaType == "video" e ao menos uma das fontes (MediaLocalPath ou MediaUrl) esta preenchida.
+    /// </summary>
+    private static bool HasVideoAvailable(Product product)
+    {
+        return string.Equals(product.MediaType, "video", StringComparison.OrdinalIgnoreCase) &&
+               (!string.IsNullOrWhiteSpace(product.MediaLocalPath) || !string.IsNullOrWhiteSpace(product.MediaUrl));
     }
 
     private static bool IsTrue(IReadOnlyDictionary<string, string> settingsMap, string key)
