@@ -106,3 +106,4 @@ Todas as sub-issues de #7 (T-01 #59, T-02 #60) mergeadas em `desenv`. PR #63 (de
 | 7 | Merge T-01 (#59) | lt | sonnet | 41660 | 14 | 85s |
 | 8 | Dev T-02 #60 | dev-dotnet | sonnet | 127642 | 68 | 428s |
 | 9 | Merge T-02 + PR homolog | lt | sonnet | 44973 | 13 | 141s |
+| 10 | Code Review PR #63 | code-review | sonnet | 101400 | 27 | 259s |
