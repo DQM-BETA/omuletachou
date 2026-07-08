@@ -5,10 +5,10 @@ issue: 8
 repo: omuletachou
 titulo: feat: Publisher YouTube Shorts
 rota: normal
-etapa_atual: Dev — aguardando spawn
+etapa_atual: LT — merge feature/65 → desenv, depois PR desenv→homolog
 docs_path: repos/omuletachou/documentacoes/ISSUE-8-publisher-youtube
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-8-publisher-youtube
-ultimo_agente: lt
+ultimo_agente: dev-dotnet
 status_comment_id: 4914784828
 pr_homologacao: ~
 pr_release: ~
@@ -45,6 +45,17 @@ Dependências: Issues #6 (ProcessorJob) e #7 (PublisherJob/Hangfire) — ambas e
 - Sub-issue #65 criada: "[ISSUE-8] Sub: YoutubePublisher + fix retroativo no ProcessorJob" (label stack:dotnet).
 - Comentário de resumo técnico postado na Issue #8.
 
+**Dev .NET (sub-issue #65) concluído:**
+- `YoutubePublisher : ISocialPublisher` criado (`backend/src/AfiliadoBot.Infrastructure/Integrations/Social/YoutubePublisher.cs`): upload resumable em chunks de 8MB (timeout 5min/chunk, 15min total), OAuth2 com renovação de access_token via refresh_token, categoria mapeada por `Product.Category` (dicionário estático + fallback "22"), fallback de mídia `MediaLocalPath` → `MediaUrl` (via `IMediaStorage.DownloadAsync`), fallback de segurança sem vídeo (CA16) e falha de refresh_token (CA12) implementados via `FailPermanently` (esgota `RetryCount` para impedir reprocessamento).
+- Decisão de implementação registrada no PR: chamadas HTTP diretas via `HttpClient` em vez do SDK `Google.Apis.YouTube.v3` (controle fino do chunking exigido pelos CAs).
+- Fix retroativo no `ProcessorJob.CreatePublicationQueueEntriesAsync`: filtro `HasVideoAvailable` isolado para `SocialNetwork.Youtube` (CA17-CA19).
+- Fix `NetworkSettings`: credencial Youtube trocada de `youtube.access_token` para `client_id`/`client_secret`/`refresh_token`.
+- Seed de `app_settings` (`youtube.client_id`, `youtube.client_secret`, `youtube.refresh_token`) adicionado via migration `SeedYoutubeCredentials`.
+- Registrado no DI (`Program.cs`, `AddHttpClient<ISocialPublisher, YoutubePublisher>()`).
+- Testes: 122/122 passando (104 pré-existentes + 4 novos em `ProcessorJobTests` + 14 novos em `YoutubePublisherTests`, incluindo CA19 de regressão explícita).
+- Boot Docker validado: `/health`, `/api/jobs/processor/trigger`, `/api/jobs/publisher/trigger` todos HTTP 200, sem erro de DI/infra.
+- PR #66 (`feature/65-youtube-publisher` → `desenv`) aberto e pronto para merge.
+
 ## Sub-issues
 sub_issues: [#65 (stack:dotnet, task_id:T-01)]
 desenv_tasks_merged: []
@@ -57,6 +68,7 @@ desenv_tasks_merged: []
 | 3 | Gate 1 | Gerente | concluido — 6 perguntas respondidas |
 | 4 | PM Fase 2 | pm | concluido — sem escalada ao Arquiteto |
 | 5 | Refinamento técnico | lt | concluido — sub-issue #65 criada |
+| 6 | Dev .NET (#65) | dev-dotnet | concluido — PR #66 aberto (feature/65 → desenv) |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
