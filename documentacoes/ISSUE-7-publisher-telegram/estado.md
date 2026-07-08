@@ -5,11 +5,12 @@ issue: 7
 repo: omuletachou
 titulo: feat: Publisher Telegram + Hangfire Scheduler
 rota: normal
-etapa_atual: LT — merge feature/60 → desenv, depois PR desenv→homolog (todas sub-issues prontas)
+etapa_atual: Code Review
 docs_path: repos/omuletachou/documentacoes/ISSUE-7-publisher-telegram
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-7-publisher-telegram
-ultimo_agente: dev-dotnet
+ultimo_agente: lt
 status_comment_id: 4913934382
+pr_homologacao: 63
 
 ## Contexto
 Stack: .NET 8, Hangfire.PostgreSql, Telegram Bot API
@@ -49,9 +50,12 @@ Decisão de particionamento: 2 sub-issues sequenciais, ambas stack `dotnet`:
 ### Líder Técnico — merge T-01 (#59) concluído (2026-07-08)
 PR #61 (feature/59-collectorjob-hangfire → desenv) mergeado via squash. Sub-issue #59 fechada. Aguardando T-02 (#60) para depois criar PR desenv→homolog conjunto (as duas sub-issues compõem a mesma issue-pai #7).
 
+### Líder Técnico — merge T-02 (#60) concluído (2026-07-08)
+PR #62 (feature/60-telegram-publisher → desenv) mergeado via squash. Sub-issue #60 fechada. Todas as sub-issues de #7 concluídas — PR desenv→homolog #63 criado (release conjunta T-01+T-02).
+
 ## Sub-issues
-sub_issues: [59 (T-01, stack:dotnet) — concluída/mergeada, 60 (T-02, stack:dotnet, depende de #59) — implementada, PR #62 aberto]
-desenv_tasks_merged: [59]
+sub_issues: [59 (T-01, stack:dotnet) — concluída/mergeada, 60 (T-02, stack:dotnet, depende de #59) — concluída/mergeada]
+desenv_tasks_merged: [59, 60]
 
 ## Historico de etapas
 | # | Etapa | Agente | Status |
@@ -64,6 +68,7 @@ desenv_tasks_merged: [59]
 | 6 | Dev T-01 (#59) | dev-dotnet | concluido — PR #61 (feature/59-collectorjob-hangfire → desenv) aberto, aguardando merge do LT |
 | 7 | Merge T-01 (#59) | lt | concluido — PR #61 mergeado (squash) em desenv, sub-issue #59 fechada; aguardando spawn de Dev para T-02 (#60) |
 | 8 | Dev T-02 (#60) | dev-dotnet | concluido — PR #62 (feature/60-telegram-publisher → desenv) aberto, aguardando merge do LT |
+| 9 | Merge T-02 (#60) + PR release | lt | concluido — PR #62 mergeado (squash) em desenv, sub-issue #60 fechada; PR #63 (desenv→homolog) criado |
 
 ### Dev T-01 (#59) — implementacao concluida (2026-07-08)
 - Fix DI: `MercadoLivreCollector`/`ShopeeCollector` agora resolviveis via `IPlatformCollector` (alem do tipo concreto); `AmazonCollector` ganhou registro concreto adicional para o endpoint isolado.
@@ -85,7 +90,10 @@ desenv_tasks_merged: [59]
 - DI: `AddHttpClient<ISocialPublisher, TelegramPublisher>()` e `AddScoped<PublisherJob>()`.
 - Testes novos: `PublisherJobTests` (10 casos — selecao Scheduled/Failed, ordenacao, ManualPending ignorado, sucesso/falha/retry esgotado, nenhum item pendente) e `TelegramPublisherTests` (6 casos — video/foto/texto, fallback MediaLocalPath→MediaUrl, credenciais ausentes). Total 104/104 passando (88 pre-existentes + 16 novos).
 - Boot Docker validado: `docker compose up -d --build` limpo, `/health` 200, logs confirmam leitura de `schedule.publisher_cron` e registro do recurring job `publisher-job`, `POST /api/jobs/publisher/trigger` 200 (fila vazia, sem erro).
-- PR: https://github.com/DQM-BETA/omuletachou/pull/62 (feature/60-telegram-publisher → desenv) — aberto, aguardando merge do LT (ultima sub-issue de #7 — LT deve tambem criar PR desenv→homolog apos o merge).
+- PR: https://github.com/DQM-BETA/omuletachou/pull/62 (feature/60-telegram-publisher → desenv) — MERGEADO em 2026-07-08 (squash).
+
+### Líder Técnico — PR release desenv→homolog #63 criado (2026-07-08)
+Todas as sub-issues de #7 (T-01 #59, T-02 #60) mergeadas em `desenv`. PR #63 (desenv→homolog) criado consolidando as duas entregas (Hangfire + CollectorJob + TelegramPublisher + PublisherJob). Aguardando Code Review (2 camadas: `/code-review` plugin + agente Code Review).
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
