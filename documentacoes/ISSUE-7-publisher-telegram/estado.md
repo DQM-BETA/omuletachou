@@ -117,4 +117,4 @@ Sincronizado `homolog` (commit `bd09557` confirmado no topo). `dotnet build` suc
 | 9 | Merge T-02 + PR homolog | lt | sonnet | 44973 | 13 | 141s |
 | 10 | Code Review PR #63 | code-review | sonnet | 101400 | 27 | 259s |
 | 11 | Merge PR #63 desenv->homolog | lt | sonnet | 44738 | 11 | 116s |
-| 12 | QA | qa | sonnet | (ver usage no HANDOFF) | - | - |
+| 12 | QA | qa | sonnet | 86783 | 37 | 504s |
