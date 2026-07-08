@@ -5,14 +5,15 @@ issue: 8
 repo: omuletachou
 titulo: feat: Publisher YouTube Shorts
 rota: normal
-etapa_atual: PR #67 pronto para nova rodada de Code Review
+etapa_atual: Code Review PR #67 aprovado — merge desenv→homolog concluido — proximo: QA
 docs_path: repos/omuletachou/documentacoes/ISSUE-8-publisher-youtube
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-8-publisher-youtube
-ultimo_agente: lt
+ultimo_agente: code-review
 status_comment_id: 4914784828
 pr_homologacao: 67
 pr_release: ~
 qa_status: ~
+code_review_homolog_pr: 67
 
 ## Contexto
 Stack: .NET 8, Google.Apis.YouTube.v3, OAuth2
@@ -90,6 +91,17 @@ Dependências: Issues #6 (ProcessorJob) e #7 (PublisherJob/Hangfire) — ambas e
 - PR #67 pronto para nova rodada de Code Review (build/boot/testes + checklist de veto).
 - **Pendência para o Coordenador:** atualizar comentário 📍 Status (id `4914784828`) para refletir "PR #67 aguardando nova rodada de Code Review" — não editado por este agente (fora do escopo do LT).
 
+**Code Review PR #67 — REVALIDAÇÃO APROVADA (rodada 2):**
+- Checkout limpo de `desenv` (HEAD `a63aa6a`, mesmo commit do PR #67 no momento da revalidação).
+- Build: `dotnet build` — sucesso, 0 erros, 1 warning pré-existente (não relacionado ao diff).
+- Testes: `dotnet test` — **128/128 aprovados**, 0 falhas, ~24s.
+- Os 6 testes novos do PR #68 (CA5/CA6/CA7/CA10/CA14/CA15) foram lidos linha a linha no diff e confirmados como cobertura real: parseiam o JSON de metadata enviado no POST de início do upload resumable e/ou capturam corretamente `InvalidOperationException` com mensagem batendo exatamente com o código de produção (`UploadChunksAsync`/`InitiateResumableUploadAsync`, mensagens "timeout de chunk (5 min)"/"timeout total (15 min)"). Rodados isoladamente via `--filter`: 7/7 passaram (incluindo CA19).
+- CA19 (regressão ProcessorJob) reconfirmado passando isolado e na suíte completa — nenhuma mudança de produção nesta rodada (PR #68 só tocou `YoutubePublisherTests.cs`).
+- Boot Docker: `docker compose up -d --build` — 4 containers subiram sem erro, migration `SeedYoutubeCredentials` aplicada, `/health`, `/api/jobs/processor/trigger`, `/api/jobs/publisher/trigger` todos HTTP 200, sem exception nos logs. Containers derrubados ao final (`docker compose down`, sem `-v`).
+- Checklist de veto: sem secrets hardcoded (migration semeia valores vazios, testes usam placeholders), sem teste-lixo, PR é backend-only (sem `.spec.ts` no diff, `.first()`/E2E não aplicável).
+- Evidência completa postada como comentário no PR #67 (https://github.com/DQM-BETA/omuletachou/pull/67#issuecomment-4918181794).
+- **PR #67 mergeado (desenv→homolog, merge commit, não-squash) com sucesso.**
+
 ## Sub-issues
 sub_issues: [#65 (stack:dotnet, task_id:T-01)]
 desenv_tasks_merged: [65]
@@ -108,6 +120,7 @@ desenv_tasks_merged: [65]
 | 9 | Mapear fix de cobertura | lt | concluido — branch fix/67-youtube-publisher-test-coverage mapeado, sem nova sub-issue |
 | 10 | Dev .NET (fix cobertura) | dev-dotnet | concluido — PR #68 aberto (fix/67 → desenv), 128/128 testes passando |
 | 11 | Merge PR #68 (fix cobertura) → desenv | lt | concluido — PR #68 squash-merged, PR #67 atualizado automaticamente e pronto para nova rodada de Code Review |
+| 12 | Code Review PR #67 (revalidação) | code-review | aprovado — 128/128 testes, boot Docker ok, gap de cobertura sanado, merge desenv→homolog concluido |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -121,3 +134,5 @@ desenv_tasks_merged: [65]
 | 8 | Code Review PR #67 (reprovado — cobertura) | code-review | sonnet | 95702 | 23 | 265s |
 | 9 | Mapear fix cobertura testes | lt | sonnet | 55994 | 8 | 87s |
 | 10 | Dev .NET fix cobertura (PR #68) | dev-dotnet | sonnet | 104044 | 48 | 566s |
+| 11 | Merge PR #68 → desenv | lt | sonnet | 48147 | 16 | 160s |
+| 12 | Coordenador — atualizar 📍 Status | coordenador | haiku | 19147 | 3 | 30s |
