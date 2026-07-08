@@ -84,3 +84,4 @@ desenv_tasks_merged: [59]
 | 4 | PM Fase 2 | pm | sonnet | 57788 | 22 | 188s |
 | 5 | Refinamento LT | lt | sonnet | 65434 | 17 | 158s |
 | 6 | Dev T-01 #59 | dev-dotnet | sonnet | 167767 | 122 | 1015s |
+| 7 | Merge T-01 (#59) | lt | sonnet | 41660 | 14 | 85s |
