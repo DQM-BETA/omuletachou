@@ -103,4 +103,4 @@ desenv_tasks_merged: [65]
 | 6 | Dev #65 | dev-dotnet | sonnet | 162965 | 81 | 891s |
 | 7 | Merge desenv + PR homolog | lt | sonnet | 40922 | 13 | 102s |
 | 8 | Code Review PR #67 (reprovado — cobertura) | code-review | sonnet | 95702 | 23 | 265s |
-| 9 | Mapear fix cobertura testes | lt | sonnet | ~ | ~ | ~ |
+| 9 | Mapear fix cobertura testes | lt | sonnet | 55994 | 8 | 87s |
