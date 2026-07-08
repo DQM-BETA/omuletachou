@@ -5,10 +5,10 @@ issue: 8
 repo: omuletachou
 titulo: feat: Publisher YouTube Shorts
 rota: normal
-etapa_atual: Líder Técnico — refinamento técnico
+etapa_atual: Dev — aguardando spawn
 docs_path: repos/omuletachou/documentacoes/ISSUE-8-publisher-youtube
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-8-publisher-youtube
-ultimo_agente: pm
+ultimo_agente: lt
 status_comment_id: 4914784828
 pr_homologacao: ~
 pr_release: ~
@@ -38,8 +38,15 @@ Dependências: Issues #6 (ProcessorJob) e #7 (PublisherJob/Hangfire) — ambas e
   - Download sob demanda de `MediaUrl` para stream temporário (fallback quando `MediaLocalPath` é nulo): avaliado como detalhe de implementação, não decisão arquitetural — não introduz nova dependência de infraestrutura/storage além do que já existe (`IMediaStorage`/`HttpClient`). Registrado no PRD para o LT decidir se reaproveita `IMediaStorage.DownloadAsync` ou implementa localmente ao publisher, como parte do task breakdown.
 - Comentário de sumário do PRD postado na Issue #8. Comentário 📍 Status atualizado para "Líder Técnico — refinamento técnico".
 
+**Refinamento técnico (LT) concluído:**
+- `tasks.md` criado com decisão de escopo: **1 sub-issue única** (T-01) cobrindo YoutubePublisher + fix retroativo no ProcessorJob — ver justificativa completa em `tasks.md` (coesão do comportamento "sem vídeo nunca publica no YouTube" em 2 camadas, risco já avaliado BAIXO pelo PM, escopo pequeno o suficiente para um PR único, mitigação via teste de regressão obrigatório CA19).
+- Reavaliação adicional do LT: `ProcessorJob.NetworkSettings` usa `youtube.access_token` como credencial de habilitação, desalinhado com as credenciais estáveis reais do publisher (`youtube.client_id`/`client_secret`/`refresh_token`) — corrigido como parte da mesma sub-issue (mesmo método/tabela estática, sem escopo adicional).
+- Decisão de reaproveitar `IMediaStorage.DownloadAsync` (já usado pelo ProcessorJob) para o fallback de `MediaUrl` no YoutubePublisher, em vez de implementar um segundo caminho de download.
+- Sub-issue #65 criada: "[ISSUE-8] Sub: YoutubePublisher + fix retroativo no ProcessorJob" (label stack:dotnet).
+- Comentário de resumo técnico postado na Issue #8.
+
 ## Sub-issues
-sub_issues: []
+sub_issues: [#65 (stack:dotnet, task_id:T-01)]
 desenv_tasks_merged: []
 
 ## Historico de etapas
@@ -49,6 +56,7 @@ desenv_tasks_merged: []
 | 2 | PM Fase 1 | pm | concluido — aguardando Gate 1 |
 | 3 | Gate 1 | Gerente | concluido — 6 perguntas respondidas |
 | 4 | PM Fase 2 | pm | concluido — sem escalada ao Arquiteto |
+| 5 | Refinamento técnico | lt | concluido — sub-issue #65 criada |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
