@@ -5,10 +5,10 @@ issue: 8
 repo: omuletachou
 titulo: feat: Publisher YouTube Shorts
 rota: normal
-etapa_atual: LT — merge fix cobertura → desenv, atualizar PR #67
+etapa_atual: PR #67 pronto para nova rodada de Code Review
 docs_path: repos/omuletachou/documentacoes/ISSUE-8-publisher-youtube
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-8-publisher-youtube
-ultimo_agente: dev-dotnet
+ultimo_agente: lt
 status_comment_id: 4914784828
 pr_homologacao: 67
 pr_release: ~
@@ -84,6 +84,12 @@ Dependências: Issues #6 (ProcessorJob) e #7 (PublisherJob/Hangfire) — ambas e
 - Boot Docker validado (`docker compose up`, `.env` local criado a partir de `.env.example` — não versionado): `/health`, `/api/jobs/processor/trigger`, `/api/jobs/publisher/trigger` todos HTTP 200, sem erro de DI/infra.
 - PR #68 (`fix/67-youtube-publisher-test-coverage` → `desenv`) aberto e pronto para merge.
 
+**Merge PR #68 concluído (LT):**
+- PR #68 (`fix/67-youtube-publisher-test-coverage` → `desenv`) squash-merged com sucesso (merge commit `53b7600`).
+- PR #67 (`desenv` → `homolog`) confirmado atualizado automaticamente com o novo commit (mesma base `desenv`, sem necessidade de re-emendar): 23 commits, último = "test(ISSUE-67): cobertura de testes CA5/CA6/CA7/CA10/CA14/CA15 do YoutubePublisher", `mergeable: MERGEABLE`, +2289/-3.
+- PR #67 pronto para nova rodada de Code Review (build/boot/testes + checklist de veto).
+- **Pendência para o Coordenador:** atualizar comentário 📍 Status (id `4914784828`) para refletir "PR #67 aguardando nova rodada de Code Review" — não editado por este agente (fora do escopo do LT).
+
 ## Sub-issues
 sub_issues: [#65 (stack:dotnet, task_id:T-01)]
 desenv_tasks_merged: [65]
@@ -101,6 +107,7 @@ desenv_tasks_merged: [65]
 | 8 | Code Review PR #67 | code-review | reprovado — cobertura incompleta (CA5/6/7/10/14/15), não bug funcional |
 | 9 | Mapear fix de cobertura | lt | concluido — branch fix/67-youtube-publisher-test-coverage mapeado, sem nova sub-issue |
 | 10 | Dev .NET (fix cobertura) | dev-dotnet | concluido — PR #68 aberto (fix/67 → desenv), 128/128 testes passando |
+| 11 | Merge PR #68 (fix cobertura) → desenv | lt | concluido — PR #68 squash-merged, PR #67 atualizado automaticamente e pronto para nova rodada de Code Review |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -113,3 +120,4 @@ desenv_tasks_merged: [65]
 | 7 | Merge desenv + PR homolog | lt | sonnet | 40922 | 13 | 102s |
 | 8 | Code Review PR #67 (reprovado — cobertura) | code-review | sonnet | 95702 | 23 | 265s |
 | 9 | Mapear fix cobertura testes | lt | sonnet | 55994 | 8 | 87s |
+| 10 | Dev .NET fix cobertura (PR #68) | dev-dotnet | sonnet | 104044 | 48 | 566s |
