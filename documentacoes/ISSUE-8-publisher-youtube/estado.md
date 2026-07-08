@@ -5,7 +5,7 @@ issue: 8
 repo: omuletachou
 titulo: feat: Publisher YouTube Shorts
 rota: normal
-etapa_atual: LT — mapear falhas (Code Review reprovou por cobertura de testes)
+etapa_atual: Dev — aguardando spawn (fix cobertura testes YoutubePublisher)
 docs_path: repos/omuletachou/documentacoes/ISSUE-8-publisher-youtube
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-8-publisher-youtube
 ultimo_agente: lt
@@ -62,6 +62,20 @@ Dependências: Issues #6 (ProcessorJob) e #7 (PublisherJob/Hangfire) — ambas e
 - Única sub-issue da Issue #8 → todas as tasks concluídas.
 - PR #67 (`desenv` → `homolog`) criado: "release(ISSUE-8): Publisher YouTube Shorts".
 
+**Code Review PR #67 — REPROVADO (cobertura de testes, não bug funcional):**
+- Build, 122/122 testes existentes e boot Docker (health + triggers processor/publisher) passaram sem erro.
+- CA19 (não-regressão nas demais redes) confirmado coberto e aprovado.
+- Gap: `YoutubePublisher.cs` implementa corretamente CA5 (title truncado a 100 chars, `BuildMetadataJson` linha 254), CA6 (description = `Product.AiCaption`, linha 255), CA7 (tags fixas `["oferta","desconto","promocao","youtube"]`, linha 264), CA10 (`privacyStatus="public"`, linha 269), CA14 (timeout 5min/chunk, `ChunkTimeout` linhas 31/333-334) e CA15 (timeout total 15min, `TotalTimeout` linhas 32/119-120) — mas `YoutubePublisherTests.cs` (8 métodos) não tem assert dedicado para nenhum desses 6 critérios. O único teste que inspeciona o corpo da requisição (`PublishAsync_MapeiaCategoriaCorreta_PorCategoriaDoProduto`) verifica apenas `categoryId`.
+- Confirmado por leitura direta do LT: lógica existe no código, cobertura de teste realmente ausente para os 6 CAs listados. Não é bug — é lacuna de cobertura em relação à definição de pronto do `tasks.md` ("Todos os CA1-CA20 cobertos por teste e passando").
+- **Decisão do LT:** correção via branch de fix direto `fix/67-youtube-publisher-test-coverage` (base: desenv), sem nova sub-issue formal — escopo mínimo (adicionar testes, sem alterar código de produção), continuação direta do trabalho da sub-issue #65. PR resultante deve ser mergeado em desenv e re-emendado ao PR #67 (ou #67 atualizado) antes de nova rodada de Code Review.
+- Testes a adicionar em `YoutubePublisherTests.cs`:
+  - CA5: título > 100 chars é truncado no metadata JSON enviado.
+  - CA6: `description` no metadata JSON = `Product.AiCaption`.
+  - CA7: `tags` no metadata JSON = `["oferta","desconto","promocao","youtube"]`.
+  - CA10: `status.privacyStatus` no metadata JSON = `"public"`.
+  - CA14: timeout de chunk (5min) aciona `InvalidOperationException` com mensagem de timeout de chunk (simular handler que atrasa/cancela).
+  - CA15: timeout total (15min) aciona `InvalidOperationException` com mensagem de timeout total.
+
 ## Sub-issues
 sub_issues: [#65 (stack:dotnet, task_id:T-01)]
 desenv_tasks_merged: [65]
@@ -76,6 +90,8 @@ desenv_tasks_merged: [65]
 | 5 | Refinamento técnico | lt | concluido — sub-issue #65 criada |
 | 6 | Dev .NET (#65) | dev-dotnet | concluido — PR #66 aberto (feature/65 → desenv) |
 | 7 | Merge desenv + PR homolog | lt | concluido — PR #66 mergeado, sub-issue #65 fechada, PR #67 (desenv→homolog) criado |
+| 8 | Code Review PR #67 | code-review | reprovado — cobertura incompleta (CA5/6/7/10/14/15), não bug funcional |
+| 9 | Mapear fix de cobertura | lt | concluido — branch fix/67-youtube-publisher-test-coverage mapeado, sem nova sub-issue |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -87,3 +103,4 @@ desenv_tasks_merged: [65]
 | 6 | Dev #65 | dev-dotnet | sonnet | 162965 | 81 | 891s |
 | 7 | Merge desenv + PR homolog | lt | sonnet | 40922 | 13 | 102s |
 | 8 | Code Review PR #67 (reprovado — cobertura) | code-review | sonnet | 95702 | 23 | 265s |
+| 9 | Mapear fix cobertura testes | lt | sonnet | ~ | ~ | ~ |
