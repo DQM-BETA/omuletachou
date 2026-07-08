@@ -96,3 +96,4 @@ desenv_tasks_merged: [59]
 | 5 | Refinamento LT | lt | sonnet | 65434 | 17 | 158s |
 | 6 | Dev T-01 #59 | dev-dotnet | sonnet | 167767 | 122 | 1015s |
 | 7 | Merge T-01 (#59) | lt | sonnet | 41660 | 14 | 85s |
+| 8 | Dev T-02 #60 | dev-dotnet | sonnet | 127642 | 68 | 428s |
