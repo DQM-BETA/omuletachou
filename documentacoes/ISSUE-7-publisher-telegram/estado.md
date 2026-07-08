@@ -111,4 +111,4 @@ Code Review (2 camadas) aprovado, boot Docker validado 2x, 104/104 testes. Geren
 | 8 | Dev T-02 #60 | dev-dotnet | sonnet | 127642 | 68 | 428s |
 | 9 | Merge T-02 + PR homolog | lt | sonnet | 44973 | 13 | 141s |
 | 10 | Code Review PR #63 | code-review | sonnet | 101400 | 27 | 259s |
-| 11 | Merge PR #63 desenv->homolog | lt | sonnet | 0 | 0 | 0s |
+| 11 | Merge PR #63 desenv->homolog | lt | sonnet | 44738 | 11 | 116s |
