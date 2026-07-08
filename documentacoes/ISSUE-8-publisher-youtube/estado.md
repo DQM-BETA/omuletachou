@@ -5,15 +5,15 @@ issue: 8
 repo: omuletachou
 titulo: feat: Publisher YouTube Shorts
 rota: normal
-etapa_atual: Em Desenvolvimento — sub-issue #69 criada (fix CA16), aguardando Dev .NET
+etapa_atual: Em Desenvolvimento — PR #71 (desenv→homolog) criado, aguardando novo Code Review
 docs_path: repos/omuletachou/documentacoes/ISSUE-8-publisher-youtube
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-8-publisher-youtube
 ultimo_agente: lt
 status_comment_id: 4914784828
-pr_homologacao: 67
+pr_homologacao: 71
 pr_release: ~
-qa_status: reprovado (CA16) — 1ª reprovação
-code_review_homolog_pr: 67
+qa_status: reprovado (CA16) — 1ª reprovação — fix mergeado, aguardando revalidação
+code_review_homolog_pr: 71
 
 ## Contexto
 Stack: .NET 8, Google.Apis.YouTube.v3, OAuth2
@@ -125,9 +125,27 @@ Diferente do gap de cobertura do PR #68 (só testes, sem tocar código de produ�
 - `tasks.md` atualizado com T-02.
 - Sub-issue #69 criada: "[ISSUE-8] Sub: fix ErrorMessage sobrescrita no PublisherJob (CA16/CA21)" (label stack:dotnet), branch alvo `feature/8-69-fix-publisherjob-errormessage` (base desenv).
 
+**Dev .NET (sub-issue #69) concluído:**
+- Branch `feature/69-publisherjob-errormessage-fix` (base `desenv`) via worktree isolado.
+- TDD: testes de regressão CA16/CA21/CA22 escritos ANTES do fix em `PublisherJobTests.cs` (confirmado RED — o teste CA16 falhou exatamente como o QA relatou, `ErrorMessage` esperada "Produto sem mídia de vídeo, não aplicável ao YouTube" vs. obtida "Falha ao publicar (retorno negativo do publisher).").
+- Fix aplicado em `PublisherJob.ExecuteAsync` (único arquivo de produção alterado): captura `item.RetryCount` antes de `publisher.PublishAsync`; após a chamada, só registra a mensagem genérica via `RegisterAttempt(false, ...)` se o `RetryCount` não mudou (publisher não se auto-registrou); se mudou (publisher já se auto-registrou, ex. `YoutubePublisher.FailPermanently`), preserva a `ErrorMessage` específica sem chamar `RegisterAttempt` de novo. Sucesso continua chamando `RegisterAttempt(true)` incondicionalmente.
+- Testes novos: `ExecuteAsync_PreservaErrorMessageEspecifica_QuandoPublisherJaSeAutoRegistrou` (CA16), `ExecuteAsync_RegistraMensagemGenerica_QuandoPublisherNaoSeAutoRegistra` (CA21, regressão Telegram), `ExecuteAsync_RegistraSucesso_QuandoPublisherRetornaTrue` (CA22, regressão sucesso).
+- Suíte completa: 131/131 passando (128 pré-existentes + 3 novos), 0 falhas.
+- Gate de testes-dependentes: buscados todos os arquivos referenciando `PublisherJob`/`RegisterAttempt` (`PublisherJobTests.cs`, `PublicationQueueTests.cs`, `YoutubePublisher.cs`, `PublicationQueue.cs`, `Program.cs`) — nenhum precisou de ajuste (contrato `PublicationQueue.RegisterAttempt` e `ISocialPublisher` inalterados).
+- Boot Docker validado: `.env` local criado a partir de `.env.example` (não versionado) — 4/4 containers subiram, `GET /health` → 200, `POST /api/jobs/processor/trigger` → 200, `POST /api/jobs/publisher/trigger` → 200, logs sem exceção. Stack derrubada ao final (`docker compose down -v`).
+- PR #70 (`feature/69-publisherjob-errormessage-fix` → `desenv`) aberto e pronto para merge.
+- Worktree `.worktrees/feature-69-publisherjob-errormessage` removido ao final.
+
+**Merge LT (PR #70) concluído:**
+- PR #70 (`feature/69-publisherjob-errormessage-fix` → `desenv`) squash-merged com sucesso (merge commit `3de49e8`).
+- Sub-issue #69 fechada.
+- Todas as sub-issues (#65, #69) concluídas e mergeadas em `desenv`.
+- **PR #67 original (desenv→homolog) estava fechado** (já havia sido mergeado anteriormente, merge commit `a1a7496`) — não podia ser reaberto/reutilizado.
+- **PR #71 (`desenv` → `homolog`) criado**, trazendo o fix de CA16 para uma nova rodada de Code Review + QA em homolog.
+
 ## Sub-issues
-sub_issues: [#65 (stack:dotnet, task_id:T-01) — fechada, mergeada, #69 (stack:dotnet, task_id:T-02) — aberta, aguardando Dev .NET]
-desenv_tasks_merged: [65]
+sub_issues: [#65 (stack:dotnet, task_id:T-01) — fechada, mergeada, #69 (stack:dotnet, task_id:T-02) — fechada, mergeada]
+desenv_tasks_merged: [65, 69]
 
 ## Historico de etapas
 | # | Etapa | Agente | Status |
@@ -146,6 +164,8 @@ desenv_tasks_merged: [65]
 | 12 | Code Review PR #67 (revalidação) | code-review | aprovado — 128/128 testes, boot Docker ok, gap de cobertura sanado, merge desenv→homolog concluido |
 | 13 | QA (homolog) | qa | reprovado — CA16 (ErrorMessage sobrescrita no PublisherJob), bug funcional real, 1ª reprovação |
 | 14 | Mapear fix CA16 | lt | concluido — sub-issue #69 criada (design: RetryCount antes/depois em PublisherJob), CA21/CA22 adicionados |
+| 15 | Dev .NET (#69) | dev-dotnet | concluido — PR #70 aberto (feature/69-publisherjob-errormessage-fix → desenv), 131/131 testes passando, boot Docker validado |
+| 16 | Merge PR #70 + PR release rodada 2 | lt | concluido — PR #70 squash-merged, sub-issue #69 fechada, PR #71 (desenv→homolog) criado (PR #67 original estava fechado, não reutilizável) |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -163,4 +183,6 @@ desenv_tasks_merged: [65]
 | 12 | Coordenador — atualizar 📍 Status | coordenador | haiku | 19147 | 3 | 30s |
 | 13 | Code Review PR #67 (revalidação — aprovado, merge homolog) | code-review | sonnet | 84901 | 43 | 686s |
 | 14 | QA (homolog) — reprovado (CA16) | qa | sonnet | 76226 | 50 | 518s |
-</content>
+| 15 | LT mapear fix CA16 (sub-issue #69 criada) | lt | sonnet | 81707 | 24 | 274s |
+| 16 | Dev .NET fix CA16 (#69, PR #70) | dev-dotnet | sonnet | 83976 | 35 | 372s |
+| 17 | Merge PR #70 + PR release rodada 2 (PR #71) | lt | sonnet | TBD | TBD | TBD |
