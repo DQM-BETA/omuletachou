@@ -381,6 +381,97 @@ public class ProcessorJobTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_NaoCriaEntradaYoutube_QuandoProdutoSemVideo()
+    {
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto(mediaUrl: null);
+        db.Products.Add(product);
+        await SeedNetworkAsync(db, "youtube", true,
+            ("youtube.client_id", "cid"), ("youtube.client_secret", "csecret"), ("youtube.refresh_token", "rtoken"));
+        await db.SaveChangesAsync();
+
+        var aiMock = CreateAiServiceMock();
+        var job = CreateJob(db, aiService: aiMock);
+        await job.ExecuteAsync();
+
+        var entries = await db.PublicationQueues.Where(q => q.ProductId == product.Id).ToListAsync();
+        entries.Should().NotContain(q => q.SocialNetwork == SocialNetwork.Youtube);
+        aiMock.Verify(a => a.GenerateCaptionAsync(It.IsAny<Product>(), SocialNetwork.Youtube, It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CriaEntradaYoutube_QuandoProdutoComVideo()
+    {
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto(mediaUrl: "https://cdn.com/video.mp4");
+        db.Products.Add(product);
+        await SeedNetworkAsync(db, "youtube", true,
+            ("youtube.client_id", "cid"), ("youtube.client_secret", "csecret"), ("youtube.refresh_token", "rtoken"));
+        await db.SaveChangesAsync();
+
+        var mediaMock = CreateMediaStorageMock("/app/media/video.mp4", "video");
+        var aiMock = CreateAiServiceMock();
+        var job = CreateJob(db, mediaStorage: mediaMock, aiService: aiMock);
+        await job.ExecuteAsync();
+
+        var entries = await db.PublicationQueues.Where(q => q.ProductId == product.Id).ToListAsync();
+        entries.Should().ContainSingle(q => q.SocialNetwork == SocialNetwork.Youtube);
+        entries.Single(q => q.SocialNetwork == SocialNetwork.Youtube).ScheduledAt.Hour.Should().Be(9);
+        aiMock.Verify(a => a.GenerateCaptionAsync(It.IsAny<Product>(), SocialNetwork.Youtube, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NaoAfetaDemaisRedes_QuandoYoutubeFiltrado()
+    {
+        // CA19 (regressao, nao-negociavel): produto sem video, elegivel para Telegram/Instagram/
+        // TikTok/Facebook (com credenciais) — o filtro adicional do Youtube nao pode afetar as
+        // demais redes, que devem se comportar exatamente como antes da correcao.
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto(mediaUrl: null); // sem video
+        db.Products.Add(product);
+        await SeedNetworkAsync(db, "youtube", true,
+            ("youtube.client_id", "cid"), ("youtube.client_secret", "csecret"), ("youtube.refresh_token", "rtoken"));
+        await SeedNetworkAsync(db, "telegram", true, ("telegram.bot_token", "abc"), ("telegram.channel_id", "123"));
+        await SeedNetworkAsync(db, "instagram", true, ("instagram.access_token", "tok"), ("instagram.page_id", "1"));
+        await SeedNetworkAsync(db, "tiktok", true, ("tiktok.access_token", "tok"));
+        await SeedNetworkAsync(db, "facebook", true, ("facebook.access_token", "tok"), ("facebook.page_id", "1"));
+        await db.SaveChangesAsync();
+
+        var job = CreateJob(db);
+        await job.ExecuteAsync();
+
+        var entries = await db.PublicationQueues.Where(q => q.ProductId == product.Id).ToListAsync();
+
+        entries.Should().NotContain(q => q.SocialNetwork == SocialNetwork.Youtube);
+        entries.Should().ContainSingle(q => q.SocialNetwork == SocialNetwork.Telegram);
+        entries.Should().ContainSingle(q => q.SocialNetwork == SocialNetwork.Instagram);
+        entries.Should().ContainSingle(q => q.SocialNetwork == SocialNetwork.TikTok);
+        entries.Should().ContainSingle(q => q.SocialNetwork == SocialNetwork.Facebook);
+        entries.Single(q => q.SocialNetwork == SocialNetwork.Facebook).Status.Should().Be(PublicationStatus.ManualPending);
+        entries.Should().HaveCount(4);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_VerificaCredenciaisYoutubeCorretas()
+    {
+        // NetworkSettings.CredentialKeys da linha Youtube deve exigir client_id/client_secret/
+        // refresh_token — access_token isolado (chave antiga) nao deve mais habilitar a rede.
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto(mediaUrl: "https://cdn.com/video.mp4");
+        db.Products.Add(product);
+        await SeedNetworkAsync(db, "youtube", true, ("youtube.access_token", "old-token-only"));
+        await db.SaveChangesAsync();
+
+        var mediaMock = CreateMediaStorageMock("/app/media/video.mp4", "video");
+        var job = CreateJob(db, mediaStorage: mediaMock);
+        await job.ExecuteAsync();
+
+        var entries = await db.PublicationQueues.Where(q => q.ProductId == product.Id).ToListAsync();
+        entries.Should().NotContain(q => q.SocialNetwork == SocialNetwork.Youtube,
+            "youtube.access_token isolado nao e mais uma credencial de configuracao valida");
+    }
+
+    [Fact]
     public async Task ExecuteAsync_NaoChamaApiML_QuandoAffiliateLinkJaPreenchido()
     {
         using var db = CreateInMemoryContext();
