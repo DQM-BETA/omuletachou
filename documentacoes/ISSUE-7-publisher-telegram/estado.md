@@ -5,10 +5,10 @@ issue: 7
 repo: omuletachou
 titulo: feat: Publisher Telegram + Hangfire Scheduler
 rota: normal
-etapa_atual: Líder Técnico — refinamento técnico
+etapa_atual: Dev — aguardando spawn T-01
 docs_path: repos/omuletachou/documentacoes/ISSUE-7-publisher-telegram
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-7-publisher-telegram
-ultimo_agente: pm
+ultimo_agente: lt
 status_comment_id: 4913934382
 
 ## Contexto
@@ -39,8 +39,15 @@ PRD consolidado em `documentacoes/ISSUE-7-publisher-telegram/prd.md` e critério
 - Nenhum risco de regressão identificado nos collectors/ProcessorJob já em produção: `CollectorJob` só orquestra chamadas existentes; encadeamento ao `ProcessorJob` é aditivo (enfileiramento Hangfire), sem alterar lógica interna desses componentes.
 - Segue direto para o Líder Técnico (refinamento técnico + task breakdown), sem passar pelo Arquiteto.
 
+### Líder Técnico — refinamento concluído (2026-07-08)
+Task breakdown documentado em `documentacoes/ISSUE-7-publisher-telegram/tasks.md`. Sem UI — pipeline segue direto para os Devs (sem UX/UI).
+
+Decisão de particionamento: 2 sub-issues sequenciais, ambas stack `dotnet`:
+- **T-01 (#59)**: Hangfire (config, dashboard, HangfireAuthFilter, migration seed `hangfire.dashboard_password`) + fix do bug de DI (achado do PM — registrar ML/Shopee também como `IPlatformCollector`) + `CollectorJob` (orquestração + encadeamento `ProcessorJob`) + endpoints de collector.
+- **T-02 (#60)**: depende de T-01 mergeado em `desenv`. `TelegramPublisher` + `PublisherJob` (retry, ordenação, fallback de mídia) + registro do recurring job do `PublisherJob` + endpoint `/api/jobs/publisher/trigger` + validação end-to-end (CA26).
+
 ## Sub-issues
-sub_issues: []
+sub_issues: [59 (T-01, stack:dotnet), 60 (T-02, stack:dotnet, depende de #59)]
 desenv_tasks_merged: []
 
 ## Historico de etapas
@@ -50,6 +57,7 @@ desenv_tasks_merged: []
 | 2 | PM Fase 1 | pm | concluido — perguntas Gate 1 postadas |
 | 3 | Gate 1 | Gerente | concluido — respostas postadas em 2026-07-08 |
 | 4 | PM Fase 2 | pm | concluido — PRD consolidado, criterios-aceite.md criado, sem ambiguidade arquitetural, segue para LT |
+| 5 | Refinamento LT | lt | concluido — tasks.md criado, sub-issues #59 (T-01) e #60 (T-02) criadas no GitHub |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
