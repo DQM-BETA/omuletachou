@@ -5,12 +5,12 @@ issue: 8
 repo: omuletachou
 titulo: feat: Publisher YouTube Shorts
 rota: normal
-etapa_atual: LT — merge feature/65 → desenv, depois PR desenv→homolog
+etapa_atual: Code Review
 docs_path: repos/omuletachou/documentacoes/ISSUE-8-publisher-youtube
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-8-publisher-youtube
-ultimo_agente: dev-dotnet
+ultimo_agente: lt
 status_comment_id: 4914784828
-pr_homologacao: ~
+pr_homologacao: 67
 pr_release: ~
 qa_status: ~
 
@@ -56,9 +56,15 @@ Dependências: Issues #6 (ProcessorJob) e #7 (PublisherJob/Hangfire) — ambas e
 - Boot Docker validado: `/health`, `/api/jobs/processor/trigger`, `/api/jobs/publisher/trigger` todos HTTP 200, sem erro de DI/infra.
 - PR #66 (`feature/65-youtube-publisher` → `desenv`) aberto e pronto para merge.
 
+**Merge LT concluído:**
+- PR #66 (`feature/65-youtube-publisher` → `desenv`) squash-merged com sucesso.
+- Sub-issue #65 fechada.
+- Única sub-issue da Issue #8 → todas as tasks concluídas.
+- PR #67 (`desenv` → `homolog`) criado: "release(ISSUE-8): Publisher YouTube Shorts".
+
 ## Sub-issues
 sub_issues: [#65 (stack:dotnet, task_id:T-01)]
-desenv_tasks_merged: []
+desenv_tasks_merged: [65]
 
 ## Historico de etapas
 | # | Etapa | Agente | Status |
@@ -69,6 +75,7 @@ desenv_tasks_merged: []
 | 4 | PM Fase 2 | pm | concluido — sem escalada ao Arquiteto |
 | 5 | Refinamento técnico | lt | concluido — sub-issue #65 criada |
 | 6 | Dev .NET (#65) | dev-dotnet | concluido — PR #66 aberto (feature/65 → desenv) |
+| 7 | Merge desenv + PR homolog | lt | concluido — PR #66 mergeado, sub-issue #65 fechada, PR #67 (desenv→homolog) criado |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
