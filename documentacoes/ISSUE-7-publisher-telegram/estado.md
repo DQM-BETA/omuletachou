@@ -5,7 +5,7 @@ issue: 7
 repo: omuletachou
 titulo: feat: Publisher Telegram + Hangfire Scheduler
 rota: normal
-etapa_atual: PM Fase 1 — aguardando resposta Gate 1 (Gerente)
+etapa_atual: PM Fase 2
 docs_path: repos/omuletachou/documentacoes/ISSUE-7-publisher-telegram
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-7-publisher-telegram
 ultimo_agente: pm
@@ -45,4 +45,5 @@ desenv_tasks_merged: []
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
 |---|---|---|---|---|---|---|
-| 1 | Preparacao | Coordenador | haiku-4-5 | — | — | — |
+| 1 | Preparacao | coordenador | haiku | 46902 | 23 | 115s |
+| 2 | PM Fase 1 | pm | sonnet | 42520 | 16 | 123s |
