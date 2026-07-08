@@ -5,10 +5,10 @@ issue: 7
 repo: omuletachou
 titulo: feat: Publisher Telegram + Hangfire Scheduler
 rota: normal
-etapa_atual: Dev — aguardando spawn T-02 (#60)
+etapa_atual: LT — merge feature/60 → desenv, depois PR desenv→homolog (todas sub-issues prontas)
 docs_path: repos/omuletachou/documentacoes/ISSUE-7-publisher-telegram
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-7-publisher-telegram
-ultimo_agente: lt
+ultimo_agente: dev-dotnet
 status_comment_id: 4913934382
 
 ## Contexto
@@ -50,7 +50,7 @@ Decisão de particionamento: 2 sub-issues sequenciais, ambas stack `dotnet`:
 PR #61 (feature/59-collectorjob-hangfire → desenv) mergeado via squash. Sub-issue #59 fechada. Aguardando T-02 (#60) para depois criar PR desenv→homolog conjunto (as duas sub-issues compõem a mesma issue-pai #7).
 
 ## Sub-issues
-sub_issues: [59 (T-01, stack:dotnet) — concluída/mergeada, 60 (T-02, stack:dotnet, depende de #59) — pendente]
+sub_issues: [59 (T-01, stack:dotnet) — concluída/mergeada, 60 (T-02, stack:dotnet, depende de #59) — implementada, PR #62 aberto]
 desenv_tasks_merged: [59]
 
 ## Historico de etapas
@@ -63,6 +63,7 @@ desenv_tasks_merged: [59]
 | 5 | Refinamento LT | lt | concluido — tasks.md criado, sub-issues #59 (T-01) e #60 (T-02) criadas no GitHub |
 | 6 | Dev T-01 (#59) | dev-dotnet | concluido — PR #61 (feature/59-collectorjob-hangfire → desenv) aberto, aguardando merge do LT |
 | 7 | Merge T-01 (#59) | lt | concluido — PR #61 mergeado (squash) em desenv, sub-issue #59 fechada; aguardando spawn de Dev para T-02 (#60) |
+| 8 | Dev T-02 (#60) | dev-dotnet | concluido — PR #62 (feature/60-telegram-publisher → desenv) aberto, aguardando merge do LT |
 
 ### Dev T-01 (#59) — implementacao concluida (2026-07-08)
 - Fix DI: `MercadoLivreCollector`/`ShopeeCollector` agora resolviveis via `IPlatformCollector` (alem do tipo concreto); `AmazonCollector` ganhou registro concreto adicional para o endpoint isolado.
@@ -75,6 +76,16 @@ desenv_tasks_merged: [59]
 - Nota tecnica de infra (documentada no PR, nao bloqueou): Hangfire e desligado nos testes de integracao via env var de processo (`Hangfire__Enabled=false`, setada no `static ctor` de `CustomWebApplicationFactory`) — `AddHangfire`/`UsePostgreSqlStorage` conecta de forma sincrona ao Postgres para preparar o schema, o que quebraria o host de teste (EF InMemory, sem Postgres real). Quando desligado, um `IBackgroundJobClient` no-op e registrado para o `CollectorJob` continuar resolvivel via DI.
 - Boot Docker validado: `docker compose up -d --build` limpo, `/health` 200, `/hangfire` 401 (bloqueado, senha vazia por padrao — esperado), `POST /api/jobs/collector/trigger` 200 (3 collectors chamados via DI, falha de credenciais ausentes logada isoladamente por plataforma, `ProcessorJob` corretamente NAO enfileirado por falha total).
 - PR: https://github.com/DQM-BETA/omuletachou/pull/61 (feature/59-collectorjob-hangfire → desenv) — MERGEADO em 2026-07-08 (squash).
+
+### Dev T-02 (#60) — implementacao concluida (2026-07-08)
+- `TelegramPublisher` criado (`AfiliadoBot.Infrastructure/Integrations/Social/TelegramPublisher.cs`), implementa `ISocialPublisher`: le `telegram.bot_token`/`telegram.channel_id` de `app_settings`, lanca `InvalidOperationException` se ausentes (capturada pelo `PublisherJob`). Detecta midia por `Product.MediaType` (`video`→`sendVideo`, senao `sendPhoto`); fallback `MediaLocalPath` (multipart via arquivo local) → `MediaUrl` (URL direta no campo de midia do multipart) → sem midia (`sendMessage` com `text=caption`, log `Warning`). `caption`=`Product.AiCaption`, `parse_mode=HTML`.
+- `PublisherJob` criado (`AfiliadoBot.Application/Jobs/PublisherJob.cs`): busca `PublicationQueue` com `(Status=Scheduled && ScheduledAt<=UtcNow) || (Status=Failed && RetryCount<3)`, ordenado por `ScheduledAt ASC, CreatedAt ASC` (query explicita, `CanRetry` computada nao usada em LINQ-to-SQL). Resolve `ISocialPublisher` via `IEnumerable<ISocialPublisher>` filtrado por `Network==item.SocialNetwork`. Sucesso/falha delegados a `item.RegisterAttempt(...)` (regra de status/retry ja na entidade, nao duplicada no job). `SaveChangesAsync` por item.
+- Recurring job do `PublisherJob` registrado via `IRecurringJobManager` em `Program.cs` (mesmo padrao do `CollectorJob`, T-01), cron de `schedule.publisher_cron` (default `0 9,12,15,18,20 * * *`).
+- Endpoint `POST /api/jobs/publisher/trigger` adicionado.
+- DI: `AddHttpClient<ISocialPublisher, TelegramPublisher>()` e `AddScoped<PublisherJob>()`.
+- Testes novos: `PublisherJobTests` (10 casos — selecao Scheduled/Failed, ordenacao, ManualPending ignorado, sucesso/falha/retry esgotado, nenhum item pendente) e `TelegramPublisherTests` (6 casos — video/foto/texto, fallback MediaLocalPath→MediaUrl, credenciais ausentes). Total 104/104 passando (88 pre-existentes + 16 novos).
+- Boot Docker validado: `docker compose up -d --build` limpo, `/health` 200, logs confirmam leitura de `schedule.publisher_cron` e registro do recurring job `publisher-job`, `POST /api/jobs/publisher/trigger` 200 (fila vazia, sem erro).
+- PR: https://github.com/DQM-BETA/omuletachou/pull/62 (feature/60-telegram-publisher → desenv) — aberto, aguardando merge do LT (ultima sub-issue de #7 — LT deve tambem criar PR desenv→homolog apos o merge).
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
