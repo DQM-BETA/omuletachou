@@ -5,7 +5,7 @@ issue: 8
 repo: omuletachou
 titulo: feat: Publisher YouTube Shorts
 rota: normal
-etapa_atual: Code Review
+etapa_atual: LT — mapear falhas (Code Review reprovou por cobertura de testes)
 docs_path: repos/omuletachou/documentacoes/ISSUE-8-publisher-youtube
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-8-publisher-youtube
 ultimo_agente: lt
@@ -86,3 +86,4 @@ desenv_tasks_merged: [65]
 | 5 | Refinamento LT | lt | sonnet | 63630 | 17 | 148s |
 | 6 | Dev #65 | dev-dotnet | sonnet | 162965 | 81 | 891s |
 | 7 | Merge desenv + PR homolog | lt | sonnet | 40922 | 13 | 102s |
+| 8 | Code Review PR #67 (reprovado — cobertura) | code-review | sonnet | 95702 | 23 | 265s |
