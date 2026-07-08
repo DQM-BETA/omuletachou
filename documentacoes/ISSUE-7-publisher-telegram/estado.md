@@ -123,3 +123,4 @@ QA aprovado. PR #64 (homolog→main) criado consolidando a release completa (Han
 | 10 | Code Review PR #63 | code-review | sonnet | 101400 | 27 | 259s |
 | 11 | Merge PR #63 desenv->homolog | lt | sonnet | 44738 | 11 | 116s |
 | 12 | QA | qa | sonnet | 86783 | 37 | 504s |
+| 13 | PR release homolog->main | lt | sonnet | 43592 | 5 | 81s |
