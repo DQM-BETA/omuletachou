@@ -64,3 +64,4 @@ desenv_tasks_merged: []
 | 1 | Preparacao | coordenador | haiku | 50607 | 21 | 129s |
 | 2 | PM Fase 1 | pm | sonnet | 40770 | 16 | 107s |
 | 4 | PM Fase 2 | pm | sonnet | 55775 | 14 | 140s |
+| 5 | Refinamento LT | lt | sonnet | 63630 | 17 | 148s |
