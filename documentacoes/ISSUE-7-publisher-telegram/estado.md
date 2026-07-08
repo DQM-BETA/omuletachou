@@ -5,7 +5,7 @@ issue: 7
 repo: omuletachou
 titulo: feat: Publisher Telegram + Hangfire Scheduler
 rota: normal
-etapa_atual: Code Review
+etapa_atual: QA
 docs_path: repos/omuletachou/documentacoes/ISSUE-7-publisher-telegram
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-7-publisher-telegram
 ultimo_agente: lt
@@ -69,6 +69,7 @@ desenv_tasks_merged: [59, 60]
 | 7 | Merge T-01 (#59) | lt | concluido — PR #61 mergeado (squash) em desenv, sub-issue #59 fechada; aguardando spawn de Dev para T-02 (#60) |
 | 8 | Dev T-02 (#60) | dev-dotnet | concluido — PR #62 (feature/60-telegram-publisher → desenv) aberto, aguardando merge do LT |
 | 9 | Merge T-02 (#60) + PR release | lt | concluido — PR #62 mergeado (squash) em desenv, sub-issue #60 fechada; PR #63 (desenv→homolog) criado |
+| 10 | Merge PR #63 desenv->homolog | lt | concluido — PR #63 mergeado (merge commit) em homolog, autorizado pelo Gerente; pronto para QA |
 
 ### Dev T-01 (#59) — implementacao concluida (2026-07-08)
 - Fix DI: `MercadoLivreCollector`/`ShopeeCollector` agora resolviveis via `IPlatformCollector` (alem do tipo concreto); `AmazonCollector` ganhou registro concreto adicional para o endpoint isolado.
@@ -95,6 +96,9 @@ desenv_tasks_merged: [59, 60]
 ### Líder Técnico — PR release desenv→homolog #63 criado (2026-07-08)
 Todas as sub-issues de #7 (T-01 #59, T-02 #60) mergeadas em `desenv`. PR #63 (desenv→homolog) criado consolidando as duas entregas (Hangfire + CollectorJob + TelegramPublisher + PublisherJob). Aguardando Code Review (2 camadas: `/code-review` plugin + agente Code Review).
 
+### Líder Técnico — merge PR #63 desenv→homolog concluído (2026-07-08)
+Code Review (2 camadas) aprovado, boot Docker validado 2x, 104/104 testes. Gerente autorizou explicitamente o merge no chat da sessão principal. PR #63 mergeado via merge commit (NUNCA squash) em `homolog` (commit bd09557, `9d0d04c..bd09557`). Pronto para QA validar em homolog.
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
 |---|---|---|---|---|---|---|
@@ -107,3 +111,4 @@ Todas as sub-issues de #7 (T-01 #59, T-02 #60) mergeadas em `desenv`. PR #63 (de
 | 8 | Dev T-02 #60 | dev-dotnet | sonnet | 127642 | 68 | 428s |
 | 9 | Merge T-02 + PR homolog | lt | sonnet | 44973 | 13 | 141s |
 | 10 | Code Review PR #63 | code-review | sonnet | 101400 | 27 | 259s |
+| 11 | Merge PR #63 desenv->homolog | lt | sonnet | 0 | 0 | 0s |
