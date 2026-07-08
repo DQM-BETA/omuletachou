@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using AfiliadoBot.Domain.Entities;
 using AfiliadoBot.Domain.Enums;
 using AfiliadoBot.Domain.Interfaces;
@@ -77,7 +78,9 @@ public class YoutubePublisherTests
     private static (HttpClient Client, List<HttpRequestMessage> Requests) CreateHttpClient(
         bool refreshFails = false,
         bool initiateFails = false,
-        string accessToken = "new-access-token")
+        string accessToken = "new-access-token",
+        bool initiateThrowsCanceled = false,
+        bool chunkThrowsCanceled = false)
     {
         var requests = new List<HttpRequestMessage>();
         var handlerMock = new Mock<HttpMessageHandler>();
@@ -113,6 +116,16 @@ public class YoutubePublisherTests
                     if (initiateFails)
                         return new HttpResponseMessage(HttpStatusCode.InternalServerError);
 
+                    // CA15: simula o timeout total (15min) sendo atingido durante o POST de
+                    // inicio do upload resumable — o proprio SDK/HttpClient lanca
+                    // OperationCanceledException quando o CancellationToken (totalCts.Token no
+                    // codigo de producao) e cancelado nesse ponto. `InitiateResumableUploadAsync`
+                    // usa totalCts.Token diretamente (nunca chunkCts), entao esse e exatamente o
+                    // caminho de codigo real percorrido quando o timeout TOTAL estoura antes do
+                    // primeiro chunk.
+                    if (initiateThrowsCanceled)
+                        throw new TaskCanceledException("Simulacao: timeout total atingido durante o POST de inicio do upload.");
+
                     var response = new HttpResponseMessage(HttpStatusCode.OK);
                     response.Headers.Location = new Uri(UploadUrl);
                     return response;
@@ -120,6 +133,17 @@ public class YoutubePublisherTests
 
                 if (req.RequestUri.ToString().StartsWith(UploadUrl))
                 {
+                    // CA14: simula o timeout de chunk (5min) sendo atingido durante o PUT de um
+                    // chunk — caminho de codigo real percorrido por `UploadChunksAsync` quando o
+                    // chunkCts (linkado ao totalCts, porem com seu proprio CancelAfter(5min))
+                    // cancela antes do totalCts. Nao esperamos os 5 minutos reais: o
+                    // OperationCanceledException lancado aqui e identico, do ponto de vista do
+                    // codigo de producao, ao lancado organicamente pelo CancellationTokenSource
+                    // quando o timeout realmente decorre — o codigo de producao nao distingue a
+                    // origem, apenas inspeciona `ct.IsCancellationRequested`/`totalCts.IsCancellationRequested`.
+                    if (chunkThrowsCanceled)
+                        throw new TaskCanceledException("Simulacao: timeout de chunk atingido durante o PUT de um chunk.");
+
                     var contentRange = req.Content!.Headers.ContentRange!;
                     var isLastChunk = contentRange.To == contentRange.Length!.Value - 1;
 
@@ -140,6 +164,17 @@ public class YoutubePublisherTests
         mock.Setup(m => m.DownloadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((localPath, mediaType));
         return mock;
+    }
+
+    /// <summary>
+    /// Parseia o corpo (JSON) da requisicao de inicio do upload resumable (POST
+    /// uploadType=resumable) — usado pelos testes de metadata (CA5/CA6/CA7/CA10).
+    /// </summary>
+    private static async Task<JsonDocument> ParseMetadataAsync(List<HttpRequestMessage> requests)
+    {
+        var initiateRequest = requests.First(r => r.RequestUri!.ToString().Contains("uploadType=resumable"));
+        var body = await initiateRequest.Content!.ReadAsStringAsync();
+        return JsonDocument.Parse(body);
     }
 
     [Fact]
@@ -387,6 +422,231 @@ public class YoutubePublisherTests
             chunkRequests.Should().HaveCount(2, "arquivo de 8MB+1KB deve ser enviado em 2 chunks");
             chunkRequests[0].Content!.Headers.ContentLength.Should().Be(chunkSize);
             chunkRequests[1].Content!.Headers.ContentLength.Should().Be(1024);
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+                File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task PublishAsync_TruncaTitulo_Para100CaracteresNoMetadata()
+    {
+        using var db = CreateInMemoryContext();
+        await SeedCredentialsAsync(db);
+
+        var tempFile = CreateTempVideoFile();
+        try
+        {
+            var tituloLongo = string.Concat(Enumerable.Range(0, 15).Select(i => $"Palavra{i:D2}-")); // > 100 chars
+            tituloLongo.Length.Should().BeGreaterThan(100);
+
+            var product = CriarProduto(mediaLocalPath: tempFile, mediaUrl: null, mediaType: "video", title: tituloLongo);
+            db.Products.Add(product);
+            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow);
+            db.PublicationQueues.Add(item);
+            await db.SaveChangesAsync();
+
+            var (httpClient, requests) = CreateHttpClient();
+            var mediaStorage = CreateMediaStorageMock(null);
+            var publisher = new YoutubePublisher(httpClient, db, mediaStorage.Object, NullLogger<YoutubePublisher>.Instance);
+
+            var result = await publisher.PublishAsync(item);
+
+            result.Should().BeTrue();
+
+            using var metadata = await ParseMetadataAsync(requests);
+            var title = metadata.RootElement.GetProperty("snippet").GetProperty("title").GetString();
+
+            title.Should().Be(tituloLongo[..100]);
+            title!.Length.Should().Be(100);
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+                File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task PublishAsync_DescricaoNoMetadata_IgualAoAiCaption()
+    {
+        using var db = CreateInMemoryContext();
+        await SeedCredentialsAsync(db);
+
+        var tempFile = CreateTempVideoFile();
+        try
+        {
+            var product = CriarProduto(mediaLocalPath: tempFile, mediaUrl: null, mediaType: "video");
+            db.Products.Add(product);
+            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow);
+            db.PublicationQueues.Add(item);
+            await db.SaveChangesAsync();
+
+            var (httpClient, requests) = CreateHttpClient();
+            var mediaStorage = CreateMediaStorageMock(null);
+            var publisher = new YoutubePublisher(httpClient, db, mediaStorage.Object, NullLogger<YoutubePublisher>.Instance);
+
+            var result = await publisher.PublishAsync(item);
+
+            result.Should().BeTrue();
+            product.AiCaption.Should().NotBeNullOrWhiteSpace();
+
+            using var metadata = await ParseMetadataAsync(requests);
+            var description = metadata.RootElement.GetProperty("snippet").GetProperty("description").GetString();
+
+            description.Should().Be(product.AiCaption);
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+                File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task PublishAsync_TagsNoMetadata_ContemValoresFixosEsperados()
+    {
+        using var db = CreateInMemoryContext();
+        await SeedCredentialsAsync(db);
+
+        var tempFile = CreateTempVideoFile();
+        try
+        {
+            var product = CriarProduto(mediaLocalPath: tempFile, mediaUrl: null, mediaType: "video");
+            db.Products.Add(product);
+            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow);
+            db.PublicationQueues.Add(item);
+            await db.SaveChangesAsync();
+
+            var (httpClient, requests) = CreateHttpClient();
+            var mediaStorage = CreateMediaStorageMock(null);
+            var publisher = new YoutubePublisher(httpClient, db, mediaStorage.Object, NullLogger<YoutubePublisher>.Instance);
+
+            var result = await publisher.PublishAsync(item);
+
+            result.Should().BeTrue();
+
+            using var metadata = await ParseMetadataAsync(requests);
+            var tags = metadata.RootElement.GetProperty("snippet").GetProperty("tags")
+                .EnumerateArray()
+                .Select(t => t.GetString())
+                .ToArray();
+
+            tags.Should().BeEquivalentTo(new[] { "oferta", "desconto", "promocao", "youtube" }, options => options.WithStrictOrdering());
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+                File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task PublishAsync_PrivacyStatusNoMetadata_SempreIgualAPublic()
+    {
+        using var db = CreateInMemoryContext();
+        await SeedCredentialsAsync(db);
+
+        var tempFile = CreateTempVideoFile();
+        try
+        {
+            var product = CriarProduto(mediaLocalPath: tempFile, mediaUrl: null, mediaType: "video");
+            db.Products.Add(product);
+            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow);
+            db.PublicationQueues.Add(item);
+            await db.SaveChangesAsync();
+
+            var (httpClient, requests) = CreateHttpClient();
+            var mediaStorage = CreateMediaStorageMock(null);
+            var publisher = new YoutubePublisher(httpClient, db, mediaStorage.Object, NullLogger<YoutubePublisher>.Instance);
+
+            var result = await publisher.PublishAsync(item);
+
+            result.Should().BeTrue();
+
+            using var metadata = await ParseMetadataAsync(requests);
+            var privacyStatus = metadata.RootElement.GetProperty("status").GetProperty("privacyStatus").GetString();
+
+            privacyStatus.Should().Be("public");
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+                File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task PublishAsync_TimeoutDeChunk_LancaInvalidOperationExceptionComMensagemDeChunk()
+    {
+        // CA14: simula o timeout de chunk (5min) sendo atingido — ver comentario em
+        // CreateHttpClient(chunkThrowsCanceled) para a justificativa de nao esperar os 5
+        // minutos reais. `UploadChunksAsync` (codigo de producao) captura a
+        // OperationCanceledException lancada pelo HttpClient e, como `ct` (CancellationToken
+        // externo, aqui default/None) nunca foi cancelado e o `totalCts` interno tambem nao foi
+        // realmente cancelado, cai exatamente no branch "timeout de chunk" (nao "timeout
+        // total") — o mesmo branch percorrido quando o `ChunkTimeout` de 5min realmente estoura
+        // antes do `TotalTimeout` de 15min.
+        using var db = CreateInMemoryContext();
+        await SeedCredentialsAsync(db);
+
+        var tempFile = CreateTempVideoFile();
+        try
+        {
+            var product = CriarProduto(mediaLocalPath: tempFile, mediaUrl: null, mediaType: "video");
+            db.Products.Add(product);
+            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow);
+            db.PublicationQueues.Add(item);
+            await db.SaveChangesAsync();
+
+            var (httpClient, _) = CreateHttpClient(chunkThrowsCanceled: true);
+            var mediaStorage = CreateMediaStorageMock(null);
+            var publisher = new YoutubePublisher(httpClient, db, mediaStorage.Object, NullLogger<YoutubePublisher>.Instance);
+
+            var act = async () => await publisher.PublishAsync(item);
+
+            var assertion = await act.Should().ThrowAsync<InvalidOperationException>();
+            assertion.Which.Message.Should().Contain("timeout de chunk");
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+                File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task PublishAsync_TimeoutTotal_LancaInvalidOperationExceptionComMensagemDeTimeoutTotal()
+    {
+        // CA15: simula o timeout total (15min) sendo atingido durante o POST de inicio do
+        // upload resumable — ver comentario em CreateHttpClient(initiateThrowsCanceled) para a
+        // justificativa de nao esperar os 15 minutos reais. `InitiateResumableUploadAsync`
+        // (codigo de producao) usa `totalCts.Token` diretamente (nunca `chunkCts`), entao a
+        // OperationCanceledException lancada aqui cai, de forma incondicional, no branch
+        // "timeout total" — o mesmo branch percorrido quando o `TotalTimeout` de 15min
+        // realmente estoura antes de qualquer chunk ser enviado.
+        using var db = CreateInMemoryContext();
+        await SeedCredentialsAsync(db);
+
+        var tempFile = CreateTempVideoFile();
+        try
+        {
+            var product = CriarProduto(mediaLocalPath: tempFile, mediaUrl: null, mediaType: "video");
+            db.Products.Add(product);
+            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow);
+            db.PublicationQueues.Add(item);
+            await db.SaveChangesAsync();
+
+            var (httpClient, _) = CreateHttpClient(initiateThrowsCanceled: true);
+            var mediaStorage = CreateMediaStorageMock(null);
+            var publisher = new YoutubePublisher(httpClient, db, mediaStorage.Object, NullLogger<YoutubePublisher>.Instance);
+
+            var act = async () => await publisher.PublishAsync(item);
+
+            var assertion = await act.Should().ThrowAsync<InvalidOperationException>();
+            assertion.Which.Message.Should().Contain("timeout total");
         }
         finally
         {
