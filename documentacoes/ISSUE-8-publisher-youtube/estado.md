@@ -5,14 +5,14 @@ issue: 8
 repo: omuletachou
 titulo: feat: Publisher YouTube Shorts
 rota: normal
-etapa_atual: Em Desenvolvimento — PR #71 (desenv→homolog) criado, aguardando novo Code Review
+etapa_atual: Em Desenvolvimento — Code Review PR #71 aprovado, merge desenv→homolog concluído — aguardando QA (homolog)
 docs_path: repos/omuletachou/documentacoes/ISSUE-8-publisher-youtube
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-8-publisher-youtube
-ultimo_agente: lt
+ultimo_agente: code-review
 status_comment_id: 4914784828
 pr_homologacao: 71
 pr_release: ~
-qa_status: reprovado (CA16) — 1ª reprovação — fix mergeado, aguardando revalidação
+qa_status: aguardando revalidação (fix CA16 mergeado em homolog via PR #71)
 code_review_homolog_pr: 71
 
 ## Contexto
@@ -143,6 +143,18 @@ Diferente do gap de cobertura do PR #68 (só testes, sem tocar código de produ�
 - **PR #67 original (desenv→homolog) estava fechado** (já havia sido mergeado anteriormente, merge commit `a1a7496`) — não podia ser reaberto/reutilizado.
 - **PR #71 (`desenv` → `homolog`) criado**, trazendo o fix de CA16 para uma nova rodada de Code Review + QA em homolog.
 
+**Code Review PR #71 — APROVADO (revalidação do fix CA16, rodada 2 de homolog):**
+- Diff mínimo confirmado: único arquivo de produção alterado é `PublisherJob.cs` (captura `RetryCount` antes/depois de `PublishAsync`); demais mudanças são docs e 3 testes novos em `PublisherJobTests.cs`.
+- Build: `dotnet build` — sucesso, 0 erros, 1 warning pré-existente (Hangfire, não relacionado).
+- Suíte completa: `dotnet test` — **131/131 aprovados**, 0 falhas, ~23s.
+- Os 3 testes novos confirmados por leitura + execução isolada (`--filter`, 3/3 passaram): `ExecuteAsync_PreservaErrorMessageEspecifica_QuandoPublisherJaSeAutoRegistrou` (CA16), `ExecuteAsync_RegistraMensagemGenerica_QuandoPublisherNaoSeAutoRegistra` (CA21, regressão Telegram), `ExecuteAsync_RegistraSucesso_QuandoPublisherRetornaTrue` (CA22, regressão sucesso) — cobrem exatamente os 3 cenários do design (auto-registro/não-auto-registro/sucesso).
+- **Validação E2E real do CA16 (repetição do caminho usado pelo QA):** `docker compose up -d --build` (4/4 containers), produto sem vídeo + entrada manual em `publication_queue` (Youtube) inseridos direto no Postgres, credenciais Youtube fake não-vazias (para passar o guard de credenciais e alcançar o guard de mídia), `POST /api/jobs/publisher/trigger` → 200. Log confirmou o fallback de segurança acionado. `SELECT` no Postgres confirmou `status=2` (Failed), `retry_count=3` e **`error_message = 'Produto sem mídia de vídeo, não aplicável ao YouTube'`** — a mensagem específica exigida pelo CA16, não mais a genérica que o QA havia reportado. Bug confirmado corrigido no caminho real de produção (não só no teste unitário).
+- Boot Docker padrão reconfirmado: `GET /health` → 200, `POST /api/jobs/processor/trigger` → 200, `POST /api/jobs/publisher/trigger` → 200, 4/4 containers up. Único evento nos logs foi um retry transitório de conexão ao Postgres durante o boot inicial (app ainda subindo antes do `db` aceitar conexões) — resolvido automaticamente pelo retry do Npgsql/EF Core, não é regressão desta mudança. `docker compose down -v` ao final.
+- Checklist de veto: sem secrets commitados (migration seed com valores vazios; credenciais fake usadas na validação foram inseridas manualmente via SQL, não commitadas), sem teste-lixo (3 testes com asserts específicos de `Status`/`ErrorMessage`/`RetryCount` para cenários distintos), PR 100% backend (sem `.spec.ts`/Playwright, `.first()` não aplicável), diff mínimo sem nova superfície de ataque.
+- Nenhum comentário do plugin `/code-review` (Anthropic) encontrado no PR (`gh pr view 71 --json comments` → vazio) — nada a incorporar.
+- Evidência completa postada como comentário no PR #71 (https://github.com/DQM-BETA/omuletachou/pull/71#issuecomment-4918488468).
+- **PR #71 mergeado (desenv→homolog, merge commit `2e399f8`, não-squash) com sucesso.**
+
 ## Sub-issues
 sub_issues: [#65 (stack:dotnet, task_id:T-01) — fechada, mergeada, #69 (stack:dotnet, task_id:T-02) — fechada, mergeada]
 desenv_tasks_merged: [65, 69]
@@ -166,6 +178,7 @@ desenv_tasks_merged: [65, 69]
 | 14 | Mapear fix CA16 | lt | concluido — sub-issue #69 criada (design: RetryCount antes/depois em PublisherJob), CA21/CA22 adicionados |
 | 15 | Dev .NET (#69) | dev-dotnet | concluido — PR #70 aberto (feature/69-publisherjob-errormessage-fix → desenv), 131/131 testes passando, boot Docker validado |
 | 16 | Merge PR #70 + PR release rodada 2 | lt | concluido — PR #70 squash-merged, sub-issue #69 fechada, PR #71 (desenv→homolog) criado (PR #67 original estava fechado, não reutilizável) |
+| 17 | Code Review PR #71 (revalidação CA16, rodada 2 homolog) | code-review | aprovado — 131/131 testes, CA16 confirmado corrigido via validação E2E real (Docker+Postgres, mesmo caminho do QA), merge desenv→homolog concluído (merge commit 2e399f8) |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -185,4 +198,5 @@ desenv_tasks_merged: [65, 69]
 | 14 | QA (homolog) — reprovado (CA16) | qa | sonnet | 76226 | 50 | 518s |
 | 15 | LT mapear fix CA16 (sub-issue #69 criada) | lt | sonnet | 81707 | 24 | 274s |
 | 16 | Dev .NET fix CA16 (#69, PR #70) | dev-dotnet | sonnet | 83976 | 35 | 372s |
-| 17 | Merge PR #70 + PR release rodada 2 (PR #71) | lt | sonnet | TBD | TBD | TBD |
+| 17 | Merge PR #70 → desenv + novo PR #71 homolog | lt | sonnet | 58212 | 17 | 261s |
+| 18 | Code Review PR #71 (revalidação CA16, aprovado, merge homolog) | code-review | sonnet | TBD | TBD | TBD |
