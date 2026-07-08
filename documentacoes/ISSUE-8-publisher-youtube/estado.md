@@ -199,4 +199,5 @@ desenv_tasks_merged: [65, 69]
 | 15 | LT mapear fix CA16 (sub-issue #69 criada) | lt | sonnet | 81707 | 24 | 274s |
 | 16 | Dev .NET fix CA16 (#69, PR #70) | dev-dotnet | sonnet | 83976 | 35 | 372s |
 | 17 | Merge PR #70 → desenv + novo PR #71 homolog | lt | sonnet | 58212 | 17 | 261s |
-| 18 | Code Review PR #71 (revalidação CA16, aprovado, merge homolog) | code-review | sonnet | TBD | TBD | TBD |
+| 18 | Code Review PR #71 (revalidação CA16, aprovado, merge homolog) | code-review | sonnet | 111320 | 49 | 608s |
+| 19 | QA revalidação CA16 (homolog) — aprovado | qa | sonnet | 69188 | 41 | 406s |

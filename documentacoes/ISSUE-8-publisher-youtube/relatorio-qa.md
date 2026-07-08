@@ -130,3 +130,143 @@ end-to-end real contra a aplicação rodando via Docker + Postgres real + chamad
 Google OAuth2), mas o **CA16 falha na validação integrada real**: a `ErrorMessage` persistida
 não corresponde ao valor literal exigido pelo critério. É defeito de implementação (não
 ambiguidade de requisito) — retorna ao Líder Técnico para mapear e ao(s) Dev(s) para correção.
+
+---
+
+# Revalidação — rodada 2
+
+**Status: APROVADO**
+
+PR validado: #71 (desenv→homolog), merge commit `2e399f8` — confirmado presente em `homolog`
+(`git fetch origin && git checkout homolog && git pull origin homolog` → fast-forward
+`a1a7496..2e399f8`; `git log --oneline -8` mostra `2e399f8 Merge pull request #71 from
+DQM-BETA/desenv` no topo).
+
+## Contexto
+
+Fix da sub-issue #69 (Dev, PR #70) + revalidação do Code Review (PR #71, merge commit `2e399f8`)
+para o defeito de CA16 reportado na rodada 1: `PublisherJob.cs` sobrescrevia incondicionalmente
+a `ErrorMessage` específica do `YoutubePublisher` com a mensagem genérica. Esta rodada revalida
+especificamente o cenário que motivou a reprovação, mais os critérios de regressão adjacentes
+(CA21, CA22) e uma checagem rápida de regressão geral.
+
+## Análise do fix
+
+`PublisherJob.cs` (linhas 60-78) agora captura `retryCountAntes = item.RetryCount` antes de
+chamar `publisher.PublishAsync`. Após o retorno:
+- Se `success == true` → `RegisterAttempt(true)` (comportamento inalterado, CA22).
+- Se `success == false` **e** `item.RetryCount == retryCountAntes` (publisher não se
+  auto-registrou, ex. `TelegramPublisher`) → `RegisterAttempt(false, "Falha ao publicar (retorno
+  negativo do publisher).")` — mensagem genérica preservada (CA21).
+- Se `success == false` **e** `item.RetryCount` mudou (publisher já chamou
+  `FailPermanently`/`RegisterAttempt` internamente, ex. `YoutubePublisher`) → **não chama
+  `RegisterAttempt` de novo**, preservando a `ErrorMessage` específica já setada (CA16).
+
+Essa é exatamente a opção (a) sugerida no relatório da rodada 1.
+
+## Ambiente de validação
+
+- `git fetch origin && git checkout homolog && git pull origin homolog` — commit `2e399f8`
+  confirmado no topo.
+- `dotnet test` (unitários, filtro `PublisherJobTests`): **13/13 aprovados** (1s).
+- `dotnet test` (suíte completa): **131/131 aprovados**, 0 falhas (23s) — sem regressão.
+- `docker compose up -d --build db api`: containers `afiliado_db` e `afiliado_api` subiram com
+  sucesso, migrações aplicadas, `GET /health` → `200 {"status":"healthy",...}`.
+
+## Revalidação do CA16 (cenário exato da reprovação anterior)
+
+Repetido o mesmo cenário que motivou a reprovação na rodada 1, direto no Postgres real via
+`docker exec`:
+
+```sql
+-- Produto sem vídeo (media_type='image', media_url=NULL, media_local_path=NULL)
+INSERT INTO products (..., media_type, media_local_path, ...)
+VALUES (..., 'image', NULL, ...);
+
+-- Item de fila para Youtube, Scheduled, vencido
+INSERT INTO publication_queue (id, product_id, social_network, status, scheduled_at, retry_count, error_message, created_at)
+VALUES ('2222...', '1111...', 1 /*Youtube*/, 0 /*Scheduled*/, now() - interval '5 minutes', 0, NULL, now());
+```
+
+Credenciais dummy do YouTube foram seedadas em `app_settings` (`youtube.client_id`,
+`youtube.client_secret`, `youtube.refresh_token`) para o fluxo passar da checagem de credenciais
+e chegar ao fallback de segurança de mídia (mesma técnica usada na rodada 1).
+
+```
+POST /api/jobs/publisher/trigger → 200
+
+Log da aplicação (real, não mock):
+warn: AfiliadoBot.Infrastructure.Integrations.Social.YoutubePublisher[0]
+      YoutubePublisher: produto 11111111-1111-1111-1111-111111111111 sem midia de video
+      (MediaType=image). Fallback de seguranca acionado.
+
+SELECT id, social_network, status, retry_count, error_message FROM publication_queue
+WHERE id='22222222-2222-2222-2222-222222222222';
+
+                  id                  | social_network | status | retry_count |                    error_message
+--------------------------------------+----------------+--------+-------------+------------------------------------------------------
+ 22222222-2222-2222-2222-222222222222 |              1 |      2 |           3 | Produto sem mídia de vídeo, não aplicável ao YouTube
+```
+
+**Resultado: CA16 PASSA.** `status=2` (Failed), `retry_count=3` (sem retry, `CanRetry=false`),
+`error_message` **exatamente** `"Produto sem mídia de vídeo, não aplicável ao YouTube"` —
+idêntico ao literal exigido pelo critério. A mensagem genérica anterior
+(`"Falha ao publicar (retorno negativo do publisher)."`) não aparece mais.
+
+## Revalidação do CA21 (Telegram/publisher que não se auto-registra — não afetado pelo fix)
+
+Validado via teste unitário dedicado (mock de `ISocialPublisher` retornando `false` sem alterar
+`RetryCount`/`ErrorMessage`, simulando `TelegramPublisher`):
+
+```
+ExecuteAsync_RegistraMensagemGenerica_QuandoPublisherNaoSeAutoRegistra → Aprovado
+```
+
+Confirma que `item.RegisterAttempt` é chamado pelo `PublisherJob` com a mensagem genérica
+`"Falha ao publicar (retorno negativo do publisher)."` quando `RetryCount` não muda dentro do
+`PublishAsync` — comportamento idêntico ao pré-fix. **CA21 PASSA, sem regressão.**
+
+## Revalidação do CA22 (sucesso continua registrado normalmente)
+
+Validado via testes unitários dedicados:
+
+```
+ExecuteAsync_RegistraSucesso_QuandoPublisherRetornaTrue → Aprovado
+ExecuteAsync_MarcaPublished_QuandoSucesso → Aprovado
+```
+
+Confirma `item.RegisterAttempt(true)` chamado, `Status = Published`, `ErrorMessage = null`
+quando o publisher retorna `true` — comportamento idêntico ao pré-fix. **CA22 PASSA, sem
+regressão.**
+
+## Checagem rápida de regressão (demais CAs da rodada 1)
+
+- Suíte completa `dotnet test`: 131/131 aprovados (128 da rodada 1 + 3 novos testes de
+  `PublisherJobTests` cobrindo o fix da #69/CA16), 0 falhas — nenhuma regressão detectada nos
+  testes automatizados.
+- Stack sobe normalmente via Docker Compose (`db` + `api`), migrações aplicadas sem erro,
+  `/health` responde 200 — nenhuma regressão de boot/infra introduzida pelo fix.
+- Fluxo básico de trigger (`POST /api/jobs/publisher/trigger`) processa a fila corretamente e
+  persiste o resultado esperado no Postgres real, como confirmado acima.
+- Não foi necessário re-auditar CA1-CA15 e CA17-CA20 em profundidade (escopo do fix foi
+  estritamente `PublisherJob.cs`, sem tocar `YoutubePublisher.cs`/`ProcessorJob.cs`); a
+  cobertura de testes desses critérios permanece intacta (128 testes originais continuam
+  passando).
+
+## Gate visual (UI)
+
+N/A — issue é 100% backend, sem alteração em `dashboard`/`website`. Inalterado desde a rodada 1.
+`E2E/screenshots: N/A (issue sem UI)`.
+
+## Limpeza pós-validação
+
+Dados de teste (`products`/`publication_queue`) removidos do banco via `DELETE` após a
+validação; `docker compose down` executado ao final (containers e rede removidos).
+
+## Conclusão da rodada 2
+
+QA **aprovado** — CA16 revalidado com sucesso no cenário exato que motivou a reprovação
+anterior (E2E real, banco Postgres real, `ErrorMessage` persistida idêntica ao literal exigido).
+CA21 e CA22 confirmados sem regressão. Suíte completa (131/131) e stack sobem normalmente.
+**20/20 critérios de aceite agora passam.** Segue para o Líder Técnico criar o PR
+homolog→main (Gate 2: Gerente).
