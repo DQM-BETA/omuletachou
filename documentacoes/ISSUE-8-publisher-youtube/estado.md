@@ -5,10 +5,10 @@ issue: 8
 repo: omuletachou
 titulo: feat: Publisher YouTube Shorts
 rota: normal
-etapa_atual: Dev — aguardando spawn (fix cobertura testes YoutubePublisher)
+etapa_atual: LT — merge fix cobertura → desenv, atualizar PR #67
 docs_path: repos/omuletachou/documentacoes/ISSUE-8-publisher-youtube
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-8-publisher-youtube
-ultimo_agente: lt
+ultimo_agente: dev-dotnet
 status_comment_id: 4914784828
 pr_homologacao: 67
 pr_release: ~
@@ -76,6 +76,14 @@ Dependências: Issues #6 (ProcessorJob) e #7 (PublisherJob/Hangfire) — ambas e
   - CA14: timeout de chunk (5min) aciona `InvalidOperationException` com mensagem de timeout de chunk (simular handler que atrasa/cancela).
   - CA15: timeout total (15min) aciona `InvalidOperationException` com mensagem de timeout total.
 
+**Dev .NET (fix cobertura) concluído:**
+- Branch `fix/67-youtube-publisher-test-coverage` (base `desenv`) via worktree — nenhum código de produção alterado, apenas `YoutubePublisherTests.cs`.
+- 6 testes novos adicionados: `PublishAsync_TruncaTitulo_Para100CaracteresNoMetadata` (CA5), `PublishAsync_DescricaoNoMetadata_IgualAoAiCaption` (CA6), `PublishAsync_TagsNoMetadata_ContemValoresFixosEsperados` (CA7), `PublishAsync_PrivacyStatusNoMetadata_SempreIgualAPublic` (CA10), `PublishAsync_TimeoutDeChunk_LancaInvalidOperationExceptionComMensagemDeChunk` (CA14), `PublishAsync_TimeoutTotal_LancaInvalidOperationExceptionComMensagemDeTimeoutTotal` (CA15). Todos capturam/parseiam o JSON do corpo da requisição de início do upload resumable via `HttpMessageHandler` mockado (mesmo padrão dos 8 testes pré-existentes).
+- Nota técnica CA14/CA15: `ChunkTimeout`/`TotalTimeout` são campos privados estáticos não parametrizáveis via construtor — reflection para reduzi-los foi tentada e rejeitada (`.NET` lança `FieldAccessException` em `initonly static field` após inicialização do tipo). Abordagem final: o mock de `HttpMessageHandler` lança `OperationCanceledException` diretamente no ponto de chamada relevante (PUT do chunk para CA14; POST de início do upload para CA15) — o código de produção não distingue a origem da exceção, apenas inspeciona `ct.IsCancellationRequested`/`totalCts.IsCancellationRequested`, então os testes exercitam exatamente os mesmos branches percorridos quando o timeout real decorre, sem esperar 5/15 minutos reais e sem alterar produção.
+- Testes: 128/128 passando (122 pré-existentes + 6 novos), sem regressão.
+- Boot Docker validado (`docker compose up`, `.env` local criado a partir de `.env.example` — não versionado): `/health`, `/api/jobs/processor/trigger`, `/api/jobs/publisher/trigger` todos HTTP 200, sem erro de DI/infra.
+- PR #68 (`fix/67-youtube-publisher-test-coverage` → `desenv`) aberto e pronto para merge.
+
 ## Sub-issues
 sub_issues: [#65 (stack:dotnet, task_id:T-01)]
 desenv_tasks_merged: [65]
@@ -92,6 +100,7 @@ desenv_tasks_merged: [65]
 | 7 | Merge desenv + PR homolog | lt | concluido — PR #66 mergeado, sub-issue #65 fechada, PR #67 (desenv→homolog) criado |
 | 8 | Code Review PR #67 | code-review | reprovado — cobertura incompleta (CA5/6/7/10/14/15), não bug funcional |
 | 9 | Mapear fix de cobertura | lt | concluido — branch fix/67-youtube-publisher-test-coverage mapeado, sem nova sub-issue |
+| 10 | Dev .NET (fix cobertura) | dev-dotnet | concluido — PR #68 aberto (fix/67 → desenv), 128/128 testes passando |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
