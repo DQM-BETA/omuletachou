@@ -3,6 +3,7 @@ using AfiliadoBot.Application.Jobs;
 using AfiliadoBot.Domain.Interfaces;
 using AfiliadoBot.Infrastructure.Data;
 using AfiliadoBot.Infrastructure.Integrations.Platforms;
+using AfiliadoBot.Infrastructure.Integrations.Social;
 using AfiliadoBot.Infrastructure.Services;
 using AfiliadoBot.Infrastructure.Storage;
 using global::Hangfire;
@@ -56,6 +57,12 @@ builder.Services.AddHttpClient<ProcessorJob>();
 // CollectorJob (Issue #7 / #59)
 builder.Services.AddScoped<CollectorJob>();
 
+// Publishers (Issue #7 / #60)
+builder.Services.AddHttpClient<ISocialPublisher, TelegramPublisher>();
+
+// PublisherJob (Issue #7 / #60)
+builder.Services.AddScoped<PublisherJob>();
+
 // Hangfire (Issue #7 / #59)
 if (hangfireEnabled)
 {
@@ -107,6 +114,16 @@ using (var scope = app.Services.CreateScope())
                 "collector-job",
                 j => j.ExecuteAsync(CancellationToken.None),
                 string.IsNullOrWhiteSpace(collectorCron) ? "0 6 * * *" : collectorCron);
+
+            var publisherCron = db.AppSettings
+                .Where(s => s.Key == "schedule.publisher_cron")
+                .Select(s => s.Value)
+                .FirstOrDefault();
+
+            recurringJobManager.AddOrUpdate<PublisherJob>(
+                "publisher-job",
+                j => j.ExecuteAsync(CancellationToken.None),
+                string.IsNullOrWhiteSpace(publisherCron) ? "0 9,12,15,18,20 * * *" : publisherCron);
         }
     }
 }
@@ -146,6 +163,12 @@ app.MapPost("/api/jobs/collector/shopee/trigger", async (ShopeeCollector collect
 });
 
 app.MapPost("/api/jobs/processor/trigger", async (ProcessorJob job, CancellationToken ct) =>
+{
+    await job.ExecuteAsync(ct);
+    return Results.Ok();
+});
+
+app.MapPost("/api/jobs/publisher/trigger", async (PublisherJob job, CancellationToken ct) =>
 {
     await job.ExecuteAsync(ct);
     return Results.Ok();
