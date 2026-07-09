@@ -69,7 +69,12 @@ public class AppSettingConfiguration : IEntityTypeConfiguration<AppSetting>
             new { Id = 29, Key = "networks.tiktok.enabled", Value = "true", UpdatedAt = now },
             new { Id = 30, Key = "networks.facebook.enabled", Value = "true", UpdatedAt = now },
             new { Id = 31, Key = "claude.min_score_fallback", Value = "5", UpdatedAt = now },
-            new { Id = 32, Key = "hangfire.dashboard_password", Value = "", UpdatedAt = now }
+            new { Id = 32, Key = "hangfire.dashboard_password", Value = "", UpdatedAt = now },
+            // Youtube (Issue #8 / #65): credenciais estaveis de configuracao (client_id/client_secret/
+            // refresh_token) — access_token e renovado em runtime e nao e semeado aqui.
+            new { Id = 33, Key = "youtube.client_id", Value = "", UpdatedAt = now },
+            new { Id = 34, Key = "youtube.client_secret", Value = "", UpdatedAt = now },
+            new { Id = 35, Key = "youtube.refresh_token", Value = "", UpdatedAt = now }
         );
     }
 }

@@ -59,8 +59,22 @@ public class PublisherJob
 
             try
             {
+                var retryCountAntes = item.RetryCount;
                 var success = await publisher.PublishAsync(item, ct);
-                item.RegisterAttempt(success, success ? null : "Falha ao publicar (retorno negativo do publisher).");
+
+                if (success)
+                {
+                    // Sucesso sempre registrado incondicionalmente.
+                    item.RegisterAttempt(true);
+                }
+                else if (item.RetryCount == retryCountAntes)
+                {
+                    // Publisher NAO se auto-registrou (ex.: TelegramPublisher) — registra a
+                    // falha com a mensagem generica, comportamento inalterado (CA21).
+                    item.RegisterAttempt(false, "Falha ao publicar (retorno negativo do publisher).");
+                }
+                // Senao: publisher ja se auto-registrou (ex.: YoutubePublisher.FailPermanently,
+                // RetryCount mudou) — preserva a ErrorMessage especifica ja setada (CA16).
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
