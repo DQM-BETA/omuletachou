@@ -213,4 +213,5 @@ desenv_tasks_merged: [65, 69]
 | 17 | Merge PR #70 → desenv + novo PR #71 homolog | lt | sonnet | 58212 | 17 | 261s |
 | 18 | Code Review PR #71 (revalidação CA16, aprovado, merge homolog) | code-review | sonnet | 111320 | 49 | 608s |
 | 19 | QA revalidação CA16 (homolog) — aprovado | qa | sonnet | 69188 | 41 | 406s |
+| 20 | Merge LT + PR release #72 (homolog→main) | lt | sonnet | N/D (sessão interrompida por limite de API; PR #72 e docs confirmados manualmente pela sessão principal) | N/D | N/D |
 </content>
