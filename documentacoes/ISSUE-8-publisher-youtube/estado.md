@@ -5,14 +5,14 @@ issue: 8
 repo: omuletachou
 titulo: feat: Publisher YouTube Shorts
 rota: normal
-etapa_atual: Em Desenvolvimento — Code Review PR #71 aprovado, merge desenv→homolog concluído — aguardando QA (homolog)
+etapa_atual: Aguardando Aprovação — PR release #72 (homolog→main) criado, aguardando Gate 2 do Gerente
 docs_path: repos/omuletachou/documentacoes/ISSUE-8-publisher-youtube
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-8-publisher-youtube
-ultimo_agente: code-review
+ultimo_agente: lt
 status_comment_id: 4914784828
 pr_homologacao: 71
-pr_release: ~
-qa_status: aguardando revalidação (fix CA16 mergeado em homolog via PR #71)
+pr_release: 72
+qa_status: aprovado (revalidação CA16/CA21/CA22 concluída, 20/20 CAs, 131/131 testes)
 code_review_homolog_pr: 71
 
 ## Contexto
@@ -155,6 +155,16 @@ Diferente do gap de cobertura do PR #68 (só testes, sem tocar código de produ�
 - Evidência completa postada como comentário no PR #71 (https://github.com/DQM-BETA/omuletachou/pull/71#issuecomment-4918488468).
 - **PR #71 mergeado (desenv→homolog, merge commit `2e399f8`, não-squash) com sucesso.**
 
+**QA (homolog) — REVALIDAÇÃO APROVADA (CA16/CA21/CA22):**
+- 20/20 CAs aprovados, validação end-to-end real (Docker + Postgres real).
+- CA16 confirmado corrigido no caminho real de produção (não só no teste unitário) — mesma validação repetida pelo Code Review na rodada de aprovação do PR #71.
+- Suíte completa: 131/131 testes passando.
+- Relatório atualizado: `relatorio-qa.md`.
+
+**Merge LT (PR release) concluído:**
+- Mudanças pendentes de docs (`estado.md`, `relatorio-qa.md`) commitadas em `desenv` e pushadas (commit `ed2ec93`).
+- **PR #72 (`homolog` → `main`) criado**: "[ISSUE-8] Release: Publisher YouTube Shorts" — aguardando Gate 2 do Gerente.
+
 ## Sub-issues
 sub_issues: [#65 (stack:dotnet, task_id:T-01) — fechada, mergeada, #69 (stack:dotnet, task_id:T-02) — fechada, mergeada]
 desenv_tasks_merged: [65, 69]
@@ -179,6 +189,8 @@ desenv_tasks_merged: [65, 69]
 | 15 | Dev .NET (#69) | dev-dotnet | concluido — PR #70 aberto (feature/69-publisherjob-errormessage-fix → desenv), 131/131 testes passando, boot Docker validado |
 | 16 | Merge PR #70 + PR release rodada 2 | lt | concluido — PR #70 squash-merged, sub-issue #69 fechada, PR #71 (desenv→homolog) criado (PR #67 original estava fechado, não reutilizável) |
 | 17 | Code Review PR #71 (revalidação CA16, rodada 2 homolog) | code-review | aprovado — 131/131 testes, CA16 confirmado corrigido via validação E2E real (Docker+Postgres, mesmo caminho do QA), merge desenv→homolog concluído (merge commit 2e399f8) |
+| 18 | QA revalidação CA16/CA21/CA22 (homolog) | qa | aprovado — 20/20 CAs, 131/131 testes |
+| 19 | Merge LT + PR release | lt | concluido — docs commitados em desenv (ed2ec93), PR #72 (homolog→main) criado, aguardando Gate 2 |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -201,3 +213,4 @@ desenv_tasks_merged: [65, 69]
 | 17 | Merge PR #70 → desenv + novo PR #71 homolog | lt | sonnet | 58212 | 17 | 261s |
 | 18 | Code Review PR #71 (revalidação CA16, aprovado, merge homolog) | code-review | sonnet | 111320 | 49 | 608s |
 | 19 | QA revalidação CA16 (homolog) — aprovado | qa | sonnet | 69188 | 41 | 406s |
+</content>
