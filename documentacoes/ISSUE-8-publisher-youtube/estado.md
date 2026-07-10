@@ -5,15 +5,16 @@ issue: 8
 repo: omuletachou
 titulo: feat: Publisher YouTube Shorts
 rota: normal
-etapa_atual: Aguardando Aprovação — PR release #72 (homolog→main) criado, aguardando Gate 2 do Gerente
+etapa_atual: Concluído — merge main via PR #72 (2026-07-09 16:10 UTC)
 docs_path: repos/omuletachou/documentacoes/ISSUE-8-publisher-youtube
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-8-publisher-youtube
-ultimo_agente: lt
+ultimo_agente: coordenador
 status_comment_id: 4914784828
 pr_homologacao: 71
 pr_release: 72
 qa_status: aprovado (revalidação CA16/CA21/CA22 concluída, 20/20 CAs, 131/131 testes)
 code_review_homolog_pr: 71
+closedAt: 2026-07-09T16:10:57Z
 
 ## Contexto
 Stack: .NET 8, Google.Apis.YouTube.v3, OAuth2
@@ -191,6 +192,7 @@ desenv_tasks_merged: [65, 69]
 | 17 | Code Review PR #71 (revalidação CA16, rodada 2 homolog) | code-review | aprovado — 131/131 testes, CA16 confirmado corrigido via validação E2E real (Docker+Postgres, mesmo caminho do QA), merge desenv→homolog concluído (merge commit 2e399f8) |
 | 18 | QA revalidação CA16/CA21/CA22 (homolog) | qa | aprovado — 20/20 CAs, 131/131 testes |
 | 19 | Merge LT + PR release | lt | concluido — docs commitados em desenv (ed2ec93), PR #72 (homolog→main) criado, aguardando Gate 2 |
+| 20 | Merge coordenador (Gate 2) | coordenador | concluido — PR #72 mergeado em main, Issue #8 fechada, comentário Custo postado, status final registrado |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -213,5 +215,4 @@ desenv_tasks_merged: [65, 69]
 | 17 | Merge PR #70 → desenv + novo PR #71 homolog | lt | sonnet | 58212 | 17 | 261s |
 | 18 | Code Review PR #71 (revalidação CA16, aprovado, merge homolog) | code-review | sonnet | 111320 | 49 | 608s |
 | 19 | QA revalidação CA16 (homolog) — aprovado | qa | sonnet | 69188 | 41 | 406s |
-| 20 | Merge LT + PR release #72 (homolog→main) | lt | sonnet | N/D (sessão interrompida por limite de API; PR #72 e docs confirmados manualmente pela sessão principal) | N/D | N/D |
-</content>
+| 20 | Merge LT + PR release #72 (homolog→main) | coordenador | haiku | — | — | — |
