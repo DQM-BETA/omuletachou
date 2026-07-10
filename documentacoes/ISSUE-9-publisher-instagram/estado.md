@@ -5,17 +5,19 @@ issue: 9
 repo: omuletachou
 titulo: feat: Publisher Instagram (Meta Graph API)
 rota: normal
-etapa_atual: Em Desenvolvimento (Dev .NET)
+etapa_atual: Dev concluido — aguardando merge feature->desenv (Lider Tecnico)
 docs_path: repos/omuletachou/documentacoes/ISSUE-9-publisher-instagram
 openspec_path: repos/omuletachou/openspec/changes/issue-9-publisher-instagram
 openspec_change: repos/omuletachou/openspec/changes/issue-9-publisher-instagram
-ultimo_agente: lider-tecnico
+ultimo_agente: dev-dotnet
 status_comment_id: 4927227668
+pr_feature: 74 (feature/73-instagram-publisher -> desenv)
 pr_homologacao: ~
 pr_release: ~
 qa_status: ~
 code_review_homolog_pr: ~
 closedAt: ~
+ca20_pendente: true — validacao em conta real do Instagram bloqueante apenas para o Gate 2 (credenciais reais ainda nao fornecidas pelo Gerente)
 
 ## Contexto
 Stack: .NET 8, Meta Graph API (instagram-graph-api), OAuth2
@@ -59,7 +61,7 @@ Entregáveis desta fase:
 - Comentário 📍 Status atualizado para "Em Desenvolvimento": https://github.com/DQM-BETA/omuletachou/issues/9#issuecomment-4927227668
 
 ## Sub-issues
-sub_issues: [#73 (stack:dotnet, task_id:T-01) — "InstagramPublisher + fix retroativo no ProcessorJob"]
+sub_issues: [#73 (stack:dotnet, task_id:T-01) — "InstagramPublisher + fix retroativo no ProcessorJob" — PR #74 aberto (feature->desenv), aguardando merge do LT]
 desenv_tasks_merged: []
 
 ## Historico de etapas
@@ -69,6 +71,7 @@ desenv_tasks_merged: []
 | 2 | PM Fase 1 | pm-analista-negocios | concluido — perguntas de levantamento postadas na Issue #9, comentario 📍 Status atualizado para Gate 1, aguardando resposta do Gerente |
 | 3 | PM Fase 2 | pm-analista-negocios | concluido — respostas do Gerente incorporadas, openspec change criado, prd.md + criterios-aceite.md (CA1-CA20) escritos, sem ambiguidade arquitetural, encaminhado ao Líder Técnico |
 | 4 | Refinamento Técnico | lider-tecnico | concluido — design.md + especificacao-tecnica.md escritos, sub-issue única #73 criada (InstagramPublisher + fix ProcessorJob + UseStaticFiles), tasks.md com decisão de escopo/disclosure/CA20 documentada, comentário de resumo e status atualizados, encaminhado ao Dev .NET |
+| 5 | Dev .NET (sub-issue #73) | dev-dotnet | concluido — `InstagramPublisher` implementado (3 etapas, renovação de token, disclosure determinístico), fix retroativo `ProcessorJob.HasVideoAvailable` generalizado p/ Instagram, `UseStaticFiles` adicionado em `Program.cs`, migration `SeedInstagramCredentials` (app_settings placeholders), 156/156 testes passando (CA1-CA19). Docker Desktop indisponível no sandbox (engine não iniciou após ~10min) — boot do DI validado via `WebApplicationFactory<Program>` (`JobsTriggerTests.cs`, 3 novos testes de boot/trigger). PR #74 aberto (feature/73-instagram-publisher → desenv). **CA20 pendente** (validação em conta real), bloqueante apenas para o Gate 2. |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -77,3 +80,4 @@ desenv_tasks_merged: []
 | 2 | PM Fase 1 | pm | sonnet | 30402 | 9 | 82s |
 | 3 | PM Fase 2 | pm | sonnet | 62057 | 26 | 271s |
 | 4 | Refinamento LT | lt | sonnet | 81511 | 33 | 251s |
+| 5 | Dev #73 (PR #74) | dev-dotnet | sonnet | 184449 | 91 | 1785s |
