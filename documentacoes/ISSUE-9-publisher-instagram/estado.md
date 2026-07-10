@@ -100,5 +100,6 @@ desenv_tasks_merged: [#73]
 | 4 | Refinamento LT | lt | sonnet | 81511 | 33 | 251s |
 | 5 | Dev #73 (PR #74) | dev-dotnet | sonnet | 184449 | 91 | 1785s |
 | 6 | Merge PR #74 + PR release #75 | lt | sonnet | 43278 | 11 | 113s |
+| 7 | Code Review PR #75 (bloqueado — infra Docker) | code-review | sonnet | 94747 | 45 | 1359s |
 | 6 | Merge #73 + PR release #75 | lt | sonnet | PENDENTE_USAGE | PENDENTE_TOOLS | PENDENTE_TEMPO |
 | 7 | Code Review PR #75 (bloqueado — infra Docker) | code-review | sonnet | PENDENTE_USAGE | PENDENTE_TOOLS | PENDENTE_TEMPO |
