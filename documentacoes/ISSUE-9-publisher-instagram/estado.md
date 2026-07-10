@@ -5,17 +5,17 @@ issue: 9
 repo: omuletachou
 titulo: feat: Publisher Instagram (Meta Graph API)
 rota: normal
-etapa_atual: PR release desenv->homolog criado — aguardando Code Review (build/boot/testes) antes do QA
+etapa_atual: Code Review BLOQUEADO — boot Docker real não validável no ambiente (infra), escalar via DevOps antes de nova tentativa
 docs_path: repos/omuletachou/documentacoes/ISSUE-9-publisher-instagram
 openspec_path: repos/omuletachou/openspec/changes/issue-9-publisher-instagram
 openspec_change: repos/omuletachou/openspec/changes/issue-9-publisher-instagram
-ultimo_agente: lider-tecnico
+ultimo_agente: code-review
 status_comment_id: 4927227668
 pr_feature: 74 (feature/73-instagram-publisher -> desenv) — MERGED (squash) 2026-07-10T18:28:30Z
-pr_homologacao: 75 (desenv -> homolog) — OPEN, aguardando Code Review
+pr_homologacao: 75 (desenv -> homolog) — OPEN, Code Review executado, status BLOQUEADO (não reprovado por código — infra Docker)
 pr_release: ~ (será criado após QA aprovar, PR homolog -> main)
 qa_status: ~
-code_review_homolog_pr: ~
+code_review_homolog_pr: 75 — build/testes validados por execução própria (156/156), boot Docker NÃO validado (infra indisponível)
 closedAt: ~
 ca20_pendente: true — validacao em conta real do Instagram (credenciais reais ainda nao fornecidas pelo Gerente). NAO bloqueia o merge desenv->homolog, mas E BLOQUEANTE PARA O GATE 2 (release homolog->main). Reforçando novamente para não se perder no histórico.
 
@@ -67,6 +67,15 @@ Entregáveis desta fase:
 - Única sub-issue da Issue #9 → todas concluídas (`desenv_tasks_merged` = `sub_issues`). PR de release criado: **#75** (`desenv` → `homolog`), corpo do PR documenta testes, pendência de boot Docker e CA20.
 - **CA20 (validação em conta real do Instagram) segue pendente** — não bloqueia este merge desenv→homolog, mas é bloqueante para o Gate 2 (release homolog→main). Repetido aqui e no campo `ca20_pendente` acima para não se perder no histórico.
 
+## Code Review — PR #75 (BLOQUEADO — infra Docker, não código)
+- Diff revisado via `gh pr diff 75` + leitura de `InstagramPublisher.cs`, `ProcessorJob.cs`, `Program.cs`, `AppSettingConfiguration.cs`, migrations, `LocalMediaStorage.cs` e testes (`InstagramPublisherTests.cs`, `ProcessorJobTests.cs`, `JobsTriggerTests.cs`). Sem achados bloqueantes de segurança/correção: sem secrets hardcoded (migration semeia valores vazios), `FailPermanently` vs. `RegisterAttempt` simples aplicados corretamente (CA5 vs CA14/CA15), disclosure determinístico (regex, não depende do LLM), fix retroativo do `ProcessorJob` com cobertura de regressão (CA16-CA18) revisada.
+- **Build + suíte executados nativamente (fora do Docker), por execução própria:** checkout do PR em worktree isolado (`git fetch origin pull/75/head` + `git worktree add`). `dotnet build`: compilação com êxito, 0 erros (1 warning pré-existente, não relacionado). `dotnet test`: **156/156 aprovados**, confirmando o número reportado pelo Dev com evidência própria (não apenas leitura do PR).
+- **Boot Docker real: TENTATIVA ATIVA REALIZADA, FALHOU por motivo de infra (não código).** `.env` criado a partir de `.env.example`, `docker compose build api` executado no worktree do PR. Docker Desktop (Windows) não conseguiu subir o engine Linux (WSL2 backend) neste ambiente, mesmo após 2 tentativas de iniciar `Docker Desktop.exe` e ~20 minutos de polling em `docker info`. Diagnóstico: `wsl -l -v` mostra `docker-desktop`/`docker-desktop-data` permanentemente `Stopped`; serviço Windows `com.docker.service` está `Stopped` e `Start-Service` retorna erro de permissão. Erro final consistente: `error during connect: ... open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.` **Não foi possível validar** `/health`, `/api/jobs/processor/trigger`, `/api/jobs/publisher/trigger` e `GET /media/{arquivo}` contra Postgres real via `docker compose`.
+- **Mitigação parcial já presente no PR:** `JobsTriggerTests.cs` (WebApplicationFactory + InMemory DB, dentro dos 156 testes validados) cobre os 3 endpoints, incluindo o teste específico de que `GET /media/arquivo-inexistente.mp4` retorna 404 (não 500), confirmando que o middleware `UseStaticFiles`/`PhysicalFileProvider` não lança exceção no boot do DI. Isso cobre o *código*, mas não o *ambiente* real (Postgres real, volumes Docker reais).
+- **Esta é a 3ª tentativa consecutiva de boot Docker fracassada nesta Issue** (Dev: Docker Desktop indisponível no sandbox dele; LT: sem permissão de execução no papel; Code Review: tentativa ativa e diagnosticada, falhou por infra do sandbox). Conforme CLAUDE.md da squad (trava anti-loop), recomenda-se escalar como infra transversal via DevOps antes de nova tentativa, em vez de repetir a mesma falha com outro agente.
+- Achados detalhados e evidências completas postados no PR: https://github.com/DQM-BETA/omuletachou/pull/75#issuecomment-4938523342
+- **Merge NÃO executado** (não é aprovação — status bloqueado, aguardando resolução do bloqueio de infra antes de reavaliar).
+
 ## Sub-issues
 sub_issues: [#73 (stack:dotnet, task_id:T-01) — "InstagramPublisher + fix retroativo no ProcessorJob" — PR #74 MERGED (squash) em desenv]
 desenv_tasks_merged: [#73]
@@ -80,6 +89,7 @@ desenv_tasks_merged: [#73]
 | 4 | Refinamento Técnico | lider-tecnico | concluido — design.md + especificacao-tecnica.md escritos, sub-issue única #73 criada (InstagramPublisher + fix ProcessorJob + UseStaticFiles), tasks.md com decisão de escopo/disclosure/CA20 documentada, comentário de resumo e status atualizados, encaminhado ao Dev .NET |
 | 5 | Dev .NET (sub-issue #73) | dev-dotnet | concluido — `InstagramPublisher` implementado (3 etapas, renovação de token, disclosure determinístico), fix retroativo `ProcessorJob.HasVideoAvailable` generalizado p/ Instagram, `UseStaticFiles` adicionado em `Program.cs`, migration `SeedInstagramCredentials` (app_settings placeholders), 156/156 testes passando (CA1-CA19). Docker Desktop indisponível no sandbox (engine não iniciou após ~10min) — boot do DI validado via `WebApplicationFactory<Program>` (`JobsTriggerTests.cs`, 3 novos testes de boot/trigger). PR #74 aberto (feature/73-instagram-publisher → desenv). **CA20 pendente** (validação em conta real), bloqueante apenas para o Gate 2. |
 | 6 | Merge sub-issue #73 + PR release | lider-tecnico | concluido — PR #74 revisado e merged (squash) em desenv (`mergedAt: 2026-07-10T18:28:30Z`), sub-issue #73 fechada. Validação de boot Docker NÃO realizada (fora do escopo de ferramentas do LT — sem permissão para rodar código/infra); registrado como pendência obrigatória para o Code Review. Única sub-issue concluída → PR de release #75 (desenv→homolog) criado. CA20 segue pendente, bloqueante apenas para o Gate 2. |
+| 7 | Code Review (PR #75) | code-review | **bloqueado** — build/suíte validados por execução própria (156/156, sem Docker). Boot Docker real tentado ativamente (~20min, 2 tentativas de start, diagnóstico completo via wsl/services) e falhou por infra do sandbox (WSL2/serviço Docker indisponível), não por código do PR. Sem achados de segurança/correção bloqueantes no diff. Merge NÃO executado — recomenda escalar via DevOps antes de nova tentativa (3ª falha consecutiva de boot Docker nesta Issue). |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -91,3 +101,4 @@ desenv_tasks_merged: [#73]
 | 5 | Dev #73 (PR #74) | dev-dotnet | sonnet | 184449 | 91 | 1785s |
 | 6 | Merge PR #74 + PR release #75 | lt | sonnet | 43278 | 11 | 113s |
 | 6 | Merge #73 + PR release #75 | lt | sonnet | PENDENTE_USAGE | PENDENTE_TOOLS | PENDENTE_TEMPO |
+| 7 | Code Review PR #75 (bloqueado — infra Docker) | code-review | sonnet | PENDENTE_USAGE | PENDENTE_TOOLS | PENDENTE_TEMPO |
