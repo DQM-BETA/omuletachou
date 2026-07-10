@@ -74,7 +74,15 @@ public class AppSettingConfiguration : IEntityTypeConfiguration<AppSetting>
             // refresh_token) — access_token e renovado em runtime e nao e semeado aqui.
             new { Id = 33, Key = "youtube.client_id", Value = "", UpdatedAt = now },
             new { Id = 34, Key = "youtube.client_secret", Value = "", UpdatedAt = now },
-            new { Id = 35, Key = "youtube.refresh_token", Value = "", UpdatedAt = now }
+            new { Id = 35, Key = "youtube.refresh_token", Value = "", UpdatedAt = now },
+            // Instagram (Issue #9 / #73): instagram.access_token (Id 16) e instagram.page_id
+            // (Id 17) ja seeded desde a Issue #2 — completando com as chaves adicionais exigidas
+            // pelo fluxo de renovacao de token (fb_exchange_token) e pela URL publica de midia.
+            new { Id = 36, Key = "instagram.app_id", Value = "", UpdatedAt = now },
+            new { Id = 37, Key = "instagram.app_secret", Value = "", UpdatedAt = now },
+            new { Id = 38, Key = "instagram.token_expires_at", Value = "", UpdatedAt = now },
+            new { Id = 39, Key = "instagram.token_invalid", Value = "false", UpdatedAt = now },
+            new { Id = 40, Key = "api.public_base_url", Value = "", UpdatedAt = now }
         );
     }
 }
