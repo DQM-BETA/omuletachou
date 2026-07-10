@@ -89,4 +89,5 @@ desenv_tasks_merged: [#73]
 | 3 | PM Fase 2 | pm | sonnet | 62057 | 26 | 271s |
 | 4 | Refinamento LT | lt | sonnet | 81511 | 33 | 251s |
 | 5 | Dev #73 (PR #74) | dev-dotnet | sonnet | 184449 | 91 | 1785s |
+| 6 | Merge PR #74 + PR release #75 | lt | sonnet | 43278 | 11 | 113s |
 | 6 | Merge #73 + PR release #75 | lt | sonnet | PENDENTE_USAGE | PENDENTE_TOOLS | PENDENTE_TEMPO |
