@@ -5,11 +5,11 @@ issue: 9
 repo: omuletachou
 titulo: feat: Publisher Instagram (Meta Graph API)
 rota: normal
-etapa_atual: Refinamento Técnico (Líder Técnico)
+etapa_atual: Em Desenvolvimento (Dev .NET)
 docs_path: repos/omuletachou/documentacoes/ISSUE-9-publisher-instagram
 openspec_path: repos/omuletachou/openspec/changes/issue-9-publisher-instagram
 openspec_change: repos/omuletachou/openspec/changes/issue-9-publisher-instagram
-ultimo_agente: pm-analista-negocios
+ultimo_agente: lider-tecnico
 status_comment_id: 4927227668
 pr_homologacao: ~
 pr_release: ~
@@ -47,8 +47,19 @@ Entregáveis desta fase:
 
 **Avaliação de ambiguidade arquitetural: SEM ambiguidade.** Stack (.NET 8 + Meta Graph API + HttpClient), protocolo de integração e padrão de credenciais já definidos na Issue e nas respostas do Gate 1. O fluxo de polling (create → poll → publish) é equivalente em natureza ao upload em chunks do YouTube (Issue #8) — sequência de chamadas HTTP contra API externa já definida, sem nova dependência de infraestrutura/storage/fila. Segue direto para o Líder Técnico, sem escalar ao Arquiteto.
 
+## Líder Técnico — refinamento técnico (concluído)
+- `design.md` (resumido, PM não escalou ao Arquiteto) escrito em `openspec/changes/issue-9-publisher-instagram/design.md`.
+- `especificacao-tecnica.md` escrito em `documentacoes/ISSUE-9-publisher-instagram/especificacao-tecnica.md`: contratos de API da Meta Graph (create container, polling, publish, fb_exchange_token), schema de dados (reaproveita `app_settings`/`Product`/`PublicationQueue`, sem migration nova), padrões obrigatórios (`FailPermanently` vs. `RegisterAttempt` simples no timeout, resolução de URL pública sem download, `UseStaticFiles` ausente hoje em `Program.cs`), decisão de disclosure e fix retroativo no `ProcessorJob`.
+- **Decisão de escopo:** 1 sub-issue única (#73), seguindo o padrão da Issue #8 (sub-issue #65) — publisher aditivo + fix retroativo pequeno e acoplado, sem ambiguidade nem necessidade de UI. Justificativa completa em `openspec/changes/issue-9-publisher-instagram/tasks.md`.
+- **Decisão de disclosure (`#publi`/`#publicidade`):** pós-processamento isolado dentro do `InstagramPublisher` (regex/Contains determinístico), NÃO alteração do prompt/serviço `ClaudeAiService` — evita risco de regressão nas demais redes e garante determinismo exigido por CA10/CA11 (não depender do LLM seguir instrução).
+- **`UseStaticFiles`:** confirmado por leitura direta que NÃO está configurado em `Program.cs` — adicionado como tarefa da sub-issue #73 (pré-requisito do `InstagramPublisher`, mapeando o path físico do `LocalMediaStorage` para `/media`).
+- **Fix retroativo no `ProcessorJob`:** reaproveita o método `HasVideoAvailable` já existente (criado na Issue #8 para Youtube), generalizando a condição para também cobrir `SocialNetwork.Instagram` — sem duplicar lógica.
+- **CA20:** sinalizado explicitamente na sub-issue #73 — Dev precisa solicitar ao Gerente credenciais reais de teste (App Meta já onboardado manualmente) antes de considerar a task pronta; validação manual obrigatória, não pode ser satisfeita só por mock/CI.
+- Comentário de resumo técnico postado na Issue #9: https://github.com/DQM-BETA/omuletachou/issues/9#issuecomment-4935217327
+- Comentário 📍 Status atualizado para "Em Desenvolvimento": https://github.com/DQM-BETA/omuletachou/issues/9#issuecomment-4927227668
+
 ## Sub-issues
-sub_issues: []
+sub_issues: [#73 (stack:dotnet, task_id:T-01) — "InstagramPublisher + fix retroativo no ProcessorJob"]
 desenv_tasks_merged: []
 
 ## Historico de etapas
@@ -57,6 +68,7 @@ desenv_tasks_merged: []
 | 1 | Preparacao | coordenador | concluido — Issue #9 preparada, estado.md criado, comentario 📍 Status adicionado (id 4927227668), Issue adicionada ao Project em Backlog, card movido para Em Desenvolvimento (kickoff) |
 | 2 | PM Fase 1 | pm-analista-negocios | concluido — perguntas de levantamento postadas na Issue #9, comentario 📍 Status atualizado para Gate 1, aguardando resposta do Gerente |
 | 3 | PM Fase 2 | pm-analista-negocios | concluido — respostas do Gerente incorporadas, openspec change criado, prd.md + criterios-aceite.md (CA1-CA20) escritos, sem ambiguidade arquitetural, encaminhado ao Líder Técnico |
+| 4 | Refinamento Técnico | lider-tecnico | concluido — design.md + especificacao-tecnica.md escritos, sub-issue única #73 criada (InstagramPublisher + fix ProcessorJob + UseStaticFiles), tasks.md com decisão de escopo/disclosure/CA20 documentada, comentário de resumo e status atualizados, encaminhado ao Dev .NET |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
