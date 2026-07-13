@@ -122,4 +122,4 @@ desenv_tasks_merged: [#73]
 | 6 | Merge PR #74 + PR release #75 | lt | sonnet | 43278 | 11 | 113s |
 | 7 | Code Review PR #75 (bloqueado — infra Docker) | code-review | sonnet | 94747 | 45 | 1359s |
 | 8 | DevOps — diagnóstico Docker/WSL2 (fora do board, infra transversal) | devops | haiku | 28875 | 28 | 268s |
-| 9 | Code Review PR #75 (2ª rodada — aprovado, revalidação completa) | code-review | sonnet | (a preencher pela sessão principal a partir do `<usage>` deste HANDOFF) | — | — |
+| 9 | Code Review PR #75 (2ª rodada — aprovado, revalidação completa) | code-review | sonnet | 83847 | 39 | 412s |
