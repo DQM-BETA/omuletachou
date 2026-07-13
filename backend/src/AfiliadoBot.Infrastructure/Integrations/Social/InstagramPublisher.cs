@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using AfiliadoBot.Domain.Entities;
 using AfiliadoBot.Domain.Enums;
 using AfiliadoBot.Domain.Interfaces;
@@ -23,10 +22,6 @@ public class InstagramPublisher : ISocialPublisher
 {
     private const string GraphApiBaseUrl = "https://graph.facebook.com/v21.0";
     private const string NoVideoErrorMessage = "Produto sem mídia de vídeo, não aplicável ao Instagram";
-    private const string DisclosureHashtag = "#publi";
-
-    private static readonly Regex DisclosureRegex = new(
-        @"#publi\b|#publicidade\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static readonly TimeSpan RenewalMargin = TimeSpan.FromDays(7);
 
@@ -120,7 +115,7 @@ public class InstagramPublisher : ISocialPublisher
             return false;
         }
 
-        var caption = AppendDisclosureIfMissing(product.AiCaption ?? string.Empty);
+        var caption = SocialDisclosureHelper.AppendIfMissing(product.AiCaption ?? string.Empty);
 
         // Etapa 1: criacao do container de midia (CA1).
         var (creationId, createError) = await CreateMediaContainerAsync(videoUrl, caption, pageId, accessToken, ct);
@@ -289,19 +284,6 @@ public class InstagramPublisher : ISocialPublisher
         }
 
         return string.IsNullOrWhiteSpace(product.MediaUrl) ? null : product.MediaUrl;
-    }
-
-    /// <summary>
-    /// Anexa a hashtag de disclosure (<c>#publi</c>) ao final da legenda quando ausente — checagem
-    /// deterministica (regex), garantindo o disclosure independentemente do que a IA gerou
-    /// (CA10), sem duplicar quando ja presente (CA11).
-    /// </summary>
-    private static string AppendDisclosureIfMissing(string caption)
-    {
-        if (DisclosureRegex.IsMatch(caption))
-            return caption;
-
-        return string.IsNullOrWhiteSpace(caption) ? DisclosureHashtag : $"{caption} {DisclosureHashtag}";
     }
 
     /// <summary>

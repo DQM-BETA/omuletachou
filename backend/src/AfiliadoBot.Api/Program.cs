@@ -67,6 +67,9 @@ builder.Services.AddHttpClient<ISocialPublisher, YoutubePublisher>();
 // Publishers (Issue #9 / #73)
 builder.Services.AddHttpClient<ISocialPublisher, InstagramPublisher>();
 
+// Publishers (Issue #10 / #77)
+builder.Services.AddHttpClient<ISocialPublisher, TikTokPublisher>();
+
 // PublisherJob (Issue #7 / #60)
 builder.Services.AddScoped<PublisherJob>();
 
