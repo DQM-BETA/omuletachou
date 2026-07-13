@@ -5,19 +5,19 @@ issue: 9
 repo: omuletachou
 titulo: feat: Publisher Instagram (Meta Graph API)
 rota: normal
-etapa_atual: PR de release #76 (homolog->main) criado — BLOQUEADO para Gate 2 ate CA20 ser resolvido (credenciais reais de teste ainda nao fornecidas pelo Gerente) — proximo: GATE 2: Gerente
+etapa_atual: Concluído — merge main via PR #76 (2026-07-13T14:26:59Z, mergeCommit d4c3d66d9887d4c8d00c53cbf35dde8cdeacf993) — CA20 dispensado pelo Gerente no Gate 2
 docs_path: repos/omuletachou/documentacoes/ISSUE-9-publisher-instagram
 openspec_path: repos/omuletachou/openspec/changes/issue-9-publisher-instagram
 openspec_change: repos/omuletachou/openspec/changes/issue-9-publisher-instagram
-ultimo_agente: lider-tecnico
+ultimo_agente: coordenador
 status_comment_id: 4927227668
 pr_feature: 74 (feature/73-instagram-publisher -> desenv) — MERGED (squash) 2026-07-10T18:28:30Z
 pr_homologacao: 75 (desenv -> homolog) — MERGED (merge commit) 2026-07-13T12:33:26Z, mergeCommit af9c26cbb61009113f0789c9eb93085b6ef78047
-pr_release: 76 (homolog -> main) — CRIADO 2026-07-13, AGUARDANDO GATE 2 (NÃO MERGEAR — bloqueado explicitamente por CA20 pendente até o Gerente fornecer credenciais reais de teste ou dispensar/adiar o critério). https://github.com/DQM-BETA/omuletachou/pull/76
-qa_status: aprovado (CA1-CA19), CA20 pendente
+pr_release: 76 (homolog -> main) — MERGED (merge commit) 2026-07-13T14:26:59Z, mergeCommit d4c3d66d9887d4c8d00c53cbf35dde8cdeacf993 — CA20 dispensado pelo Gerente no Gate 2
+qa_status: aprovado (CA1-CA19), CA20 dispensado pelo Gerente no Gate 2
 code_review_homolog_pr: 75 — APROVADO na 2ª rodada (revalidação completa apos recuperacao da infra Docker). Build (dotnet build: 0 erros), suite (dotnet test: 156/156) e boot Docker real (docker compose up -d --build db api) executados do zero em worktree isolado (nao reaproveitou a checagem informal da sessao principal). Endpoints validados contra container real: GET /health (200), GET /media/arquivo-inexistente.mp4 (404, confirma UseStaticFiles/PhysicalFileProvider sem excecao), POST /api/jobs/processor/trigger (200), POST /api/jobs/publisher/trigger (200). Logs sem excecao relacionada a InstagramPublisher/DI. Migration SeedInstagramCredentials aplicada e chaves instagram.* seedadas (confirmado via docker exec + psql: access_token/app_id/app_secret/page_id/token_expires_at vazios, token_invalid=false). Stack derrubada ao final (docker compose down -v). Revisão de código sem achados bloqueantes (InstagramPublisher.cs, ProcessorJob.cs, Program.cs, migration). Evidência completa postada em https://github.com/DQM-BETA/omuletachou/pull/75#issuecomment-4957978761. Merge desenv->homolog executado (merge commit, nao squash).
-closedAt: ~
-ca20_pendente: true — validacao em conta real do Instagram (credenciais reais ainda nao fornecidas pelo Gerente). NAO bloqueia o merge desenv->homolog (ja ocorrido), mas E BLOQUEANTE PARA O GATE 2 (release homolog->main). Confirmado presente e explicito em criterios-aceite.md (CA20) nesta revalidação. Reforçado novamente no corpo do PR de release #76 — merge para main NÃO deve ser aprovado pelo Gerente até CA20 ser resolvido (credenciais fornecidas e validação manual executada) ou até decisão explícita do Gerente de dispensar/adiar o critério.
+closedAt: 2026-07-13T14:27:01Z
+ca20_pendente: false — **DISPENSADO PELO GERENTE NO GATE 2** (decisão explícita: "Dispensar por agora. Seguir com o merge e continuar o backlog"). Validação em conta real do Instagram fica como **débito técnico/acompanhamento futuro** — será executada quando credenciais reais de teste forem fornecidas. Referência: https://github.com/DQM-BETA/omuletachou/issues/9#issuecomment-4959014145
 
 ## Contexto
 Stack: .NET 8, Meta Graph API (instagram-graph-api), OAuth2
@@ -96,11 +96,18 @@ Entregáveis desta fase:
 ## QA (homolog) — aprovado com ressalva CA20
 - CA1–CA19 aprovados com evidência real de execução (docker compose up, Postgres real, endpoints, seed de credenciais). CA20 explicitamente marcado "não avaliado nesta rodada — pendente de credenciais reais", sem contar como reprovação. `relatorio-qa.md` em `documentacoes/ISSUE-9-publisher-instagram/`.
 
-## Líder Técnico — PR de release homolog→main (concluído, BLOQUEADO para Gate 2)
+## Líder Técnico — PR de release homolog→main (concluído)
 - PR **#76** (`homolog` → `main`) criado: https://github.com/DQM-BETA/omuletachou/pull/76
 - Corpo do PR deixa **explícito** que CA20 (validação em conta real do Instagram) segue pendente e que **este PR não deve ser aprovado/mergeado pelo Gerente** até (a) as credenciais reais serem fornecidas e a validação manual ocorrer, ou (b) o Gerente decidir explicitamente dispensar/adiar o critério.
 - Nenhum merge foi executado — PR permanece aberto aguardando decisão do Gerente no Gate 2.
 - Comentário 📍 Status e Kanban **não foram alterados** (fora do escopo desta invocação, conforme instrução).
+
+## Gate 2 — Gerente (concluído — CA20 dispensado, merge autorizado)
+- **Decisão do Gerente (2026-07-13):** "Dispensar por agora. Seguir com o merge e continuar o backlog." Referência: https://github.com/DQM-BETA/omuletachou/issues/9#issuecomment-4959014145
+- CA20 (validação em conta real do Instagram) foi **dispensado explicitamente** pelo Gerente, deixando-o como **débito técnico/acompanhamento futuro** — será executado quando credenciais reais de teste estiverem disponíveis.
+- PR #76 foi mergeado para main em **2026-07-13T14:26:59Z** (merge commit `d4c3d66d9887d4c8d00c53cbf35dde8cdeacf993`).
+- Issue #9 foi **auto-fechada** pelo GitHub ao mergear o PR (continha `Closes #9` no corpo).
+- Comentário de fecho resumindo a entrega, CA20 dispensado e custo consolidado postado na Issue.
 
 ## Sub-issues
 sub_issues: [#73 (stack:dotnet, task_id:T-01) — "InstagramPublisher + fix retroativo no ProcessorJob" — PR #74 MERGED (squash) em desenv]
@@ -121,6 +128,7 @@ desenv_tasks_merged: [#73]
 | 10 | Code Review (PR #75) — 2ª rodada (revalidação completa) | code-review | **concluido/aprovado** — build (0 erros) + suíte (156/156) + boot Docker real (docker compose up -d --build) executados do zero em worktree isolado. Endpoints validados contra container real: /health (200), /media/arquivo-inexistente.mp4 (404), /api/jobs/processor/trigger (200), /api/jobs/publisher/trigger (200). Logs sem exceção de InstagramPublisher/DI. Migration SeedInstagramCredentials confirmada aplicada e seedada via psql. Revisão de código sem achados bloqueantes. Checklist de veto ok (`.first()` N/A — sem specs E2E neste PR). CA20 confirmado como pendência clara para o Gate 2. Stack derrubada ao final. **Merge desenv→homolog executado** (merge commit af9c26cbb61009113f0789c9eb93085b6ef78047). Próximo: QA. |
 | 11 | QA (homolog) | qa | **concluido/aprovado** — CA1-CA19 aprovados com evidência de execução real (docker compose up, Postgres real, /health 200, /media/arquivo-inexistente 404, triggers 200, chaves instagram.* seedadas confirmadas via psql). CA20 explicitamente marcado "não avaliado nesta rodada — pendente de credenciais reais", sem contar como reprovação. Gate visual N/A (issue 100% backend, confirmado ausência de script test:visual). relatorio-qa.md criado (ficou sem commit inicialmente — corrigido pela sessão principal). Próximo: Líder Técnico (PR release homolog→main). |
 | 12 | PR release homolog→main | lider-tecnico | **concluido — BLOQUEADO para Gate 2.** PR #76 criado (homolog→main), corpo explicita que CA20 segue pendente e que o merge não deve ser aprovado até resolução (credenciais reais + validação manual) ou decisão explícita do Gerente de dispensar/adiar. Nenhum merge executado. Comentário 📍 Status e Kanban não alterados nesta invocação. Próximo: GATE 2 — Gerente. |
+| 13 | GATE 2 — Gerente (decisão e merge) | coordenador | **concluido — MERGE EXECUTADO** — Gerente dispensou CA20 explicitamente ("Dispensar por agora. Seguir com o merge e continuar o backlog"). PR #76 mergeado para main em 2026-07-13T14:26:59Z (merge commit d4c3d66d9887d4c8d00c53cbf35dde8cdeacf993). Issue #9 auto-fechada em 2026-07-13T14:27:01Z. Comentários de fecho e custo consolidado postados. Campos de custo do board atualizados (804497 tokens, 85 min). Comentário 📍 Status editado para refletir conclusão. CA20 fica como débito técnico para validação futura. |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -136,3 +144,6 @@ desenv_tasks_merged: [#73]
 | 9 | Code Review PR #75 (2ª rodada — aprovado, revalidação completa) | code-review | sonnet | 83847 | 39 | 412s |
 | 10 | QA (homolog) — aprovado (CA1-19, CA20 pendente) | qa | sonnet | 69852 | 22 | 212s |
 | 11 | PR release #76 (homolog→main) — bloqueado p/ Gate 2 (CA20) | lt | sonnet | 63076 | 12 | 167s |
+
+**Totais:** 804.497 tokens · 351 tool calls · 5.119s tempo de processamento
+**Consolidação (após merge final):** decorrido de 2026-07-03 12:44 UTC (createdAt) até 2026-07-13 14:27:01 UTC (closedAt) = 10 dias 1h 43min (10.1 dias)
