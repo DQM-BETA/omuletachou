@@ -111,5 +111,6 @@ desenv_tasks_merged: [#77]
 | 4 | Refinamento Técnico | lider-tecnico | sonnet | 92271 | 28 | 307s |
 | 5 | Dev .NET (#77, PR #78) | dev-dotnet | sonnet | 177846 | 77 | 980s |
 | 6 | Merge #77 + PR release #79 | lider-tecnico | sonnet | 42558 | 11 | 124s |
+| 7 | Code Review PR #79 (aprovado, merge homolog) | code-review | sonnet | 103906 | 43 | 410s |
 
 **Consolidação:** a preencher ao fecho da issue.
