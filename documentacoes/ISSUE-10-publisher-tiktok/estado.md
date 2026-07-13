@@ -78,6 +78,6 @@ desenv_tasks_merged: []
 | 1 | Preparacao | coordenador | haiku | 67855 | 36 | 190s |
 | 2 | PM Fase 1 | pm | sonnet | 35067 | 13 | 140s |
 | 3 | PM Fase 2 | pm | sonnet | 67362 | 23 | 324s |
-| 4 | Refinamento Técnico | lider-tecnico | sonnet | (preencher pelo orquestrador com o `<usage>` deste HANDOFF) | (preencher) | (preencher) |
+| 4 | Refinamento Técnico | lider-tecnico | sonnet | 92271 | 28 | 307s |
 
 **Consolidação:** a preencher ao fecho da issue.
