@@ -5,14 +5,14 @@ issue: 10
 repo: omuletachou
 titulo: feat: Publisher TikTok (Content Posting API)
 rota: normal
-etapa_atual: Em Desenvolvimento
+etapa_atual: Code Review
 docs_path: repos/omuletachou/documentacoes/ISSUE-10-publisher-tiktok
 openspec_path: repos/omuletachou/openspec/changes/issue-10-publisher-tiktok
 openspec_change: repos/omuletachou/openspec/changes/issue-10-publisher-tiktok
-ultimo_agente: dev-dotnet
+ultimo_agente: lider-tecnico
 status_comment_id: 4959102860
 pr_feature: 78
-pr_homologacao: ~
+pr_homologacao: 79
 pr_release: ~
 qa_status: ~
 code_review_homolog_pr: ~
@@ -60,9 +60,23 @@ Comentário: https://github.com/DQM-BETA/omuletachou/issues/10#issuecomment-4959
 - Comentário 📍 Status atualizado para "Em Desenvolvimento".
 - Sem UI/mobile envolvido — próximo agente é Dev .NET direto (não passa por UX/UI).
 
+## Dev .NET — sub-issue #77 (concluído)
+- `TikTokPublisher` (init/upload chunked/polling), `Mp4DurationReader` (parser MP4 dependency-free), `SocialDisclosureHelper` compartilhado (InstagramPublisher refatorado, regressão confirmada), retry 429 local, refresh reativo em 401, migration `SeedTikTokCredentials`, DI registrado.
+- 187/187 testes passando. Boot Docker Compose validado (`/health`, `/api/jobs/processor/trigger`, `/api/jobs/publisher/trigger` → 200; seed confirmado via psql).
+- PR #78 (`feature/77-tiktok-publisher` → `desenv`).
+
+## Líder Técnico — merge sub-issue #77 + PR de release (concluído)
+- Revisão rápida do PR #78 (diff consistente: TikTokPublisher aditivo, refactor de InstagramPublisher para consumir `SocialDisclosureHelper` sem regressão, nova migration, DI registrado). 187/187 testes reportados pelo Dev; boot Docker validado pelo Dev.
+- Merge squash de PR #78 → `desenv` (`feat(ISSUE-77): TikTokPublisher + fluxo FILE_UPLOAD`), mergeCommit `892edd2`.
+- Sub-issue #77 fechada (`gh issue close 77 --reason completed`).
+- Única sub-issue da Issue #10 → todas concluídas (`desenv_tasks_merged` = `sub_issues`).
+- PR de release criado: #79 (`desenv` → `homolog`), corpo revisado para **não** incluir keyword de auto-close (Closes #10 removido — a Issue #10 só fecha após o Gate 2 e merge homolog→main, via Coordenador).
+- **CA20 (validação em conta real do TikTok) confirmado como débito de acompanhamento, registrado no Gate 1 acima — explicitamente NÃO bloqueante para o Gate 2 desta issue (decisão do Gerente).** Sem ação adicional necessária aqui.
+- Branch local `desenv` limpa após merge (sem alterações pendentes; apenas diretório `.worktrees/` não rastreado, pré-existente).
+
 ## Sub-issues
 sub_issues: [#77 (stack:dotnet, task_id:T-01)]
-desenv_tasks_merged: []
+desenv_tasks_merged: [#77]
 
 ## Historico de etapas
 | # | Etapa | Agente | Status |
@@ -72,6 +86,7 @@ desenv_tasks_merged: []
 | 3 | PM Fase 2 | pm-analista-negocios | concluido — Gate 1 respondido pelo Gerente; PRD consolidado (prd.md, criterios-aceite.md com 20 CAs, openspec proposal.md); sem ambiguidade arquitetural; comentario 📍 Status atualizado para Refinamento Técnico (LT) |
 | 4 | Refinamento Técnico | lider-tecnico | concluido — design.md + especificacao-tecnica.md + tasks.md escritos; sub-issue #77 criada (stack:dotnet, T-01); comentario de resumo postado; 📍 Status atualizado para Em Desenvolvimento |
 | 5 | Dev .NET (sub-issue #77) | dev-dotnet | concluido — `TikTokPublisher` (init/upload chunked/polling), `Mp4DurationReader` (parser MP4 dependency-free), `SocialDisclosureHelper` compartilhado (InstagramPublisher refatorado, regressão confirmada), retry 429 local, refresh reativo em 401, migration `SeedTikTokCredentials`, DI registrado. 187 testes passando (100%). Boot Docker Compose validado (`/health`, `/api/jobs/processor/trigger`, `/api/jobs/publisher/trigger` → 200; seed confirmado via psql). PR feature→desenv #78 aberto. CA20 registrado como débito não-bloqueante. |
+| 6 | Merge sub-issue #77 + PR release | lider-tecnico | concluido — PR #78 revisado e squash-merged em `desenv` (892edd2); sub-issue #77 fechada; todas as sub-issues concluídas; PR #79 (desenv→homolog) criado; CA20 confirmado não-bloqueante no estado; branch local limpa |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -81,5 +96,6 @@ desenv_tasks_merged: []
 | 3 | PM Fase 2 | pm | sonnet | 67362 | 23 | 324s |
 | 4 | Refinamento Técnico | lider-tecnico | sonnet | 92271 | 28 | 307s |
 | 5 | Dev .NET (#77, PR #78) | dev-dotnet | sonnet | 177846 | 77 | 980s |
+| 6 | Merge #77 + PR release #79 | lider-tecnico | sonnet | (preencher pelo orquestrador via usage) | - | - |
 
 **Consolidação:** a preencher ao fecho da issue.
