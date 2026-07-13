@@ -5,18 +5,18 @@ issue: 10
 repo: omuletachou
 titulo: feat: Publisher TikTok (Content Posting API)
 rota: normal
-etapa_atual: Aguardando Aprovação (Gate 2)
+etapa_atual: Concluído — merge main via PR #80 (2026-07-13)
 docs_path: repos/omuletachou/documentacoes/ISSUE-10-publisher-tiktok
 openspec_path: repos/omuletachou/openspec/changes/issue-10-publisher-tiktok
 openspec_change: repos/omuletachou/openspec/changes/issue-10-publisher-tiktok
-ultimo_agente: lider-tecnico
+ultimo_agente: coordenador
 status_comment_id: 4959102860
 pr_feature: 78
 pr_homologacao: 79
 pr_release: 80
 qa_status: aprovado (CA1-CA19; CA20 equivalente pendente de aprovação TikTok, não-bloqueante)
 code_review_homolog_pr: 79
-closedAt: ~
+closedAt: 2026-07-13T19:58:38Z
 
 ## Contexto
 Stack: .NET 8, TikTok Content Posting API (upload chunked), OAuth2
@@ -104,6 +104,15 @@ Comentário: https://github.com/DQM-BETA/omuletachou/issues/10#issuecomment-4959
 - `Closes #10` incluído no corpo do PR (fechamento da Issue ocorre no merge final para `main`, feito pelo Coordenador após aprovação do Gerente).
 - NÃO mergeado — aguarda aprovação do Gerente (Gate 2). NÃO mexido comentário 📍 Status nem Kanban (fora do escopo desta invocação).
 
+## Gate 2 — Aprovação do Gerente e merge para main (concluído)
+- **Gerente aprovou Gate 2 com decisão explícita:** "faz o merge e segue o backlog" (CA20 confirmado novamente como não-bloqueante, aprendizado incorporado do fluxo desta issue).
+- **Merge executado:** PR #80 mergeado (`--merge`, merge commit) `homolog` → `main` via `gh pr merge 80 --repo DQM-BETA/omuletachou --merge`.
+- **Issue auto-fechada:** Closes #10 no corpo do PR disparou o fechamento automático (closedAt: 2026-07-13T19:58:38Z).
+- **Comentário de entrega postado** na Issue #10 (TikTokPublisher + fluxo FILE_UPLOAD + Mp4DurationReader dependency-free + SocialDisclosureHelper compartilhado com Instagram; débito de validação TikTok Developer Portal documentado e explicitamente não-bloqueante).
+- **Tabela de custo consolidada postada** na Issue #10 (701.405 tokens, 2.811s de processamento, 9 etapas sem rejeição de Code Review/QA).
+- **Campos do board atualizados**: Custo (tokens) = 701405, Tempo proc. (min) = 47.
+- **Comentário 📍 Status editado** para refletir conclusão ("✅ Concluído (Card aguardando Gerente mover manualmente para Concluído no board)").
+
 ## Sub-issues
 sub_issues: [#77 (stack:dotnet, task_id:T-01)]
 desenv_tasks_merged: [#77]
@@ -120,6 +129,7 @@ desenv_tasks_merged: [#77]
 | 7 | Code Review (PR #79 homologação) | code-review | concluido — build limpo, 187/187 testes (independente), regressão Instagram confirmada (20/20 isolado, arquivo de teste inalterado), Mp4DurationReader com edge cases cobertos por unit tests, boot Docker real validado (/health, triggers 200), migration SeedTikTokCredentials confirmada via psql (ids 18/19 preservados, ids 41-46 novos), CA20 reconfirmado não-bloqueante, checklist de veto ok. Merge #79 → homolog executado (merge commit b6149d8). |
 | 8 | QA (homolog) | qa | concluido — 187/187 testes, Docker Compose real, seeds tiktok.* confirmados via psql, CA1-CA19 aprovados com evidência real, CA20 equivalente marcado não avaliado/não-bloqueante (decisão Gate 1). Relatório relatorio-qa.md + comentário "✅ QA aprovado" na Issue #10. |
 | 9 | PR de release (homolog→main) | lider-tecnico | concluido — PR #80 criado, corpo com débito de acompanhamento sem linguagem de bloqueio (CA20 equivalente), Closes #10 incluído. Aguardando Gate 2 (Gerente). Sem merge, sem alteração no comentário 📍 Status/Kanban. |
+| 10 | Gate 2 e merge main | coordenador | concluido — PR #80 mergeado (merge commit, homolog→main), Issue auto-fechada (closedAt 2026-07-13 19:58:38 UTC), comentário de entrega + tabela de custo postados, campos de custo do board atualizados (tokens=701405, tempo=47min), comentário 📍 Status editado para "Concluído". Card aguarda Gerente mover manualmente para Concluído no board. |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -133,5 +143,12 @@ desenv_tasks_merged: [#77]
 | 7 | Code Review PR #79 (aprovado, merge homolog) | code-review | sonnet | 103906 | 43 | 410s |
 | 8 | QA (homolog) — aprovado (CA1-19, CA20 pendente) | qa | sonnet | 69803 | 19 | 214s |
 | 9 | PR release #80 (homolog→main) | lider-tecnico | sonnet | 44737 | 7 | 122s |
+| 10 | Gate 2 + merge main | coordenador | haiku | ~ | ~ | ~ |
 
-**Consolidação:** a preencher ao fecho da issue.
+**Consolidação (quiescência):**
+- Total de tokens: 701.405 (subagent_tokens agregado)
+- Tempo de processamento (soma dos agentes): 2.811s (~47 min)
+- Tempo decorrido (issue aberta → fechamento): 2026-07-03 12:44 UTC → 2026-07-13 19:58 UTC (10 dias 7h 14 min)
+- Rota: normal
+- Pipeline: 9 etapas de agente + Gate 2, nenhuma reprovação de Code Review ou QA
+- Aprendizado incorporado: CA20 (validação em produção do TikTok) confirmado como não-bloqueante desde o Gate 1, evitando fricção vista na Issue #9. SocialDisclosureHelper compartilhado com Instagram, reuso efetivo.
