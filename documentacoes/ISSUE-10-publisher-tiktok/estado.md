@@ -9,9 +9,9 @@ etapa_atual: Em Desenvolvimento
 docs_path: repos/omuletachou/documentacoes/ISSUE-10-publisher-tiktok
 openspec_path: repos/omuletachou/openspec/changes/issue-10-publisher-tiktok
 openspec_change: repos/omuletachou/openspec/changes/issue-10-publisher-tiktok
-ultimo_agente: lider-tecnico
+ultimo_agente: dev-dotnet
 status_comment_id: 4959102860
-pr_feature: ~
+pr_feature: 78
 pr_homologacao: ~
 pr_release: ~
 qa_status: ~
@@ -71,6 +71,7 @@ desenv_tasks_merged: []
 | 2 | PM Fase 1 | pm-analista-negocios | concluido — perguntas de levantamento postadas na Issue #10 (credenciais, modo de publicação, formato, disclosure, retry, definição de pronto); comentario 📍 Status atualizado para Gate 1 |
 | 3 | PM Fase 2 | pm-analista-negocios | concluido — Gate 1 respondido pelo Gerente; PRD consolidado (prd.md, criterios-aceite.md com 20 CAs, openspec proposal.md); sem ambiguidade arquitetural; comentario 📍 Status atualizado para Refinamento Técnico (LT) |
 | 4 | Refinamento Técnico | lider-tecnico | concluido — design.md + especificacao-tecnica.md + tasks.md escritos; sub-issue #77 criada (stack:dotnet, T-01); comentario de resumo postado; 📍 Status atualizado para Em Desenvolvimento |
+| 5 | Dev .NET (sub-issue #77) | dev-dotnet | concluido — `TikTokPublisher` (init/upload chunked/polling), `Mp4DurationReader` (parser MP4 dependency-free), `SocialDisclosureHelper` compartilhado (InstagramPublisher refatorado, regressão confirmada), retry 429 local, refresh reativo em 401, migration `SeedTikTokCredentials`, DI registrado. 187 testes passando (100%). Boot Docker Compose validado (`/health`, `/api/jobs/processor/trigger`, `/api/jobs/publisher/trigger` → 200; seed confirmado via psql). PR feature→desenv #78 aberto. CA20 registrado como débito não-bloqueante. |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -79,5 +80,6 @@ desenv_tasks_merged: []
 | 2 | PM Fase 1 | pm | sonnet | 35067 | 13 | 140s |
 | 3 | PM Fase 2 | pm | sonnet | 67362 | 23 | 324s |
 | 4 | Refinamento Técnico | lider-tecnico | sonnet | 92271 | 28 | 307s |
+| 5 | Dev .NET (#77, PR #78) | dev-dotnet | sonnet | 177846 | 77 | 980s |
 
 **Consolidação:** a preencher ao fecho da issue.
