@@ -65,6 +65,6 @@ desenv_tasks_merged: []
 |---|---|---|---|---|---|---|
 | 1 | Preparacao | coordenador | haiku | 67855 | 36 | 190s |
 | 2 | PM Fase 1 | pm | sonnet | 35067 | 13 | 140s |
-| 3 | PM Fase 2 | pm | sonnet | (a preencher pela sessão principal com o `<usage>` deste HANDOFF) | | |
+| 3 | PM Fase 2 | pm | sonnet | 67362 | 23 | 324s |
 
 **Consolidação:** a preencher ao fecho da issue.
