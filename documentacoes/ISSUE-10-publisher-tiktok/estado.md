@@ -87,6 +87,16 @@ Comentário: https://github.com/DQM-BETA/omuletachou/issues/10#issuecomment-4959
 - Evidência completa postada no PR: https://github.com/DQM-BETA/omuletachou/pull/79#issuecomment-4959862215
 - **Merge executado:** PR #79 mergeado (`--merge`, merge commit `b6149d8`) `desenv` → `homolog`.
 
+## QA (homolog) — concluído, aprovado
+- 187/187 testes confirmados via `dotnet test`. Docker Compose real (`db`+`api`), `/health` 200, triggers de jobs 200.
+- Seeds `tiktok.*` confirmados via psql: `privacy_level=SELF_ONLY`, `min_duration_seconds=3`, `max_duration_seconds=600`, `networks.tiktok.enabled=true`.
+- CA1-CA18 confirmados por inspeção de código + suíte de testes (init com brand_content_toggle, upload chunked com Content-Range, polling 15s/10min, disclosure via SocialDisclosureHelper, refresh reativo em 401, backoff 429).
+- **Regressão do Instagram reconfirmada em ambiente real:** repetido o teste do fallback "sem vídeo" contra o container (`GET /media/{inexistente}` → 404), suíte do Instagram passando.
+- Gate visual N/A (sem UI no diff, confirmado via package.json).
+- **CA20 (equivalente) marcado "não avaliado nesta rodada — pendente de aprovação do app TikTok"**, não contabilizado como reprovação (decisão do Gate 1).
+- Relatório: `relatorio-qa.md`. Comentário "✅ QA aprovado" postado na Issue #10.
+- Próximo: Líder Técnico cria PR de release `homolog` → `main`.
+
 ## Sub-issues
 sub_issues: [#77 (stack:dotnet, task_id:T-01)]
 desenv_tasks_merged: [#77]
@@ -112,5 +122,6 @@ desenv_tasks_merged: [#77]
 | 5 | Dev .NET (#77, PR #78) | dev-dotnet | sonnet | 177846 | 77 | 980s |
 | 6 | Merge #77 + PR release #79 | lider-tecnico | sonnet | 42558 | 11 | 124s |
 | 7 | Code Review PR #79 (aprovado, merge homolog) | code-review | sonnet | 103906 | 43 | 410s |
+| 8 | QA (homolog) — aprovado (CA1-19, CA20 pendente) | qa | sonnet | 69803 | 19 | 214s |
 
 **Consolidação:** a preencher ao fecho da issue.
