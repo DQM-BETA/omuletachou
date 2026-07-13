@@ -5,16 +5,16 @@ issue: 10
 repo: omuletachou
 titulo: feat: Publisher TikTok (Content Posting API)
 rota: normal
-etapa_atual: QA
+etapa_atual: Aguardando Aprovação (Gate 2)
 docs_path: repos/omuletachou/documentacoes/ISSUE-10-publisher-tiktok
 openspec_path: repos/omuletachou/openspec/changes/issue-10-publisher-tiktok
 openspec_change: repos/omuletachou/openspec/changes/issue-10-publisher-tiktok
-ultimo_agente: code-review
+ultimo_agente: lider-tecnico
 status_comment_id: 4959102860
 pr_feature: 78
 pr_homologacao: 79
-pr_release: ~
-qa_status: ~
+pr_release: 80
+qa_status: aprovado (CA1-CA19; CA20 equivalente pendente de aprovação TikTok, não-bloqueante)
 code_review_homolog_pr: 79
 closedAt: ~
 
@@ -97,6 +97,13 @@ Comentário: https://github.com/DQM-BETA/omuletachou/issues/10#issuecomment-4959
 - Relatório: `relatorio-qa.md`. Comentário "✅ QA aprovado" postado na Issue #10.
 - Próximo: Líder Técnico cria PR de release `homolog` → `main`.
 
+## Líder Técnico — PR de release homolog→main (concluído)
+- PR #80 criado (`homolog` → `main`, título "[ISSUE-10] Release: Publisher TikTok"), merge commit (NUNCA squash) a ser usado no merge final pelo Coordenador após o Gate 2.
+- Corpo do PR documenta o escopo completo (TikTokPublisher, Mp4DurationReader, SocialDisclosureHelper compartilhado, retry/refresh, migration SeedTikTokCredentials) e a qualidade validada (187/187 testes, Code Review e QA aprovados).
+- **Débito de acompanhamento registrado no PR sem linguagem de bloqueio:** validação em conta real do TikTok (CA20 equivalente) segue pendente de aprovação do app pelo TikTok Developer Portal, mas explicitamente NÃO bloqueia este release — decisão do Gerente no Gate 1 desta issue. PR pode ser mergeado normalmente assim que o Gate 2 for aprovado.
+- `Closes #10` incluído no corpo do PR (fechamento da Issue ocorre no merge final para `main`, feito pelo Coordenador após aprovação do Gerente).
+- NÃO mergeado — aguarda aprovação do Gerente (Gate 2). NÃO mexido comentário 📍 Status nem Kanban (fora do escopo desta invocação).
+
 ## Sub-issues
 sub_issues: [#77 (stack:dotnet, task_id:T-01)]
 desenv_tasks_merged: [#77]
@@ -111,6 +118,8 @@ desenv_tasks_merged: [#77]
 | 5 | Dev .NET (sub-issue #77) | dev-dotnet | concluido — `TikTokPublisher` (init/upload chunked/polling), `Mp4DurationReader` (parser MP4 dependency-free), `SocialDisclosureHelper` compartilhado (InstagramPublisher refatorado, regressão confirmada), retry 429 local, refresh reativo em 401, migration `SeedTikTokCredentials`, DI registrado. 187 testes passando (100%). Boot Docker Compose validado (`/health`, `/api/jobs/processor/trigger`, `/api/jobs/publisher/trigger` → 200; seed confirmado via psql). PR feature→desenv #78 aberto. CA20 registrado como débito não-bloqueante. |
 | 6 | Merge sub-issue #77 + PR release | lider-tecnico | concluido — PR #78 revisado e squash-merged em `desenv` (892edd2); sub-issue #77 fechada; todas as sub-issues concluídas; PR #79 (desenv→homolog) criado; CA20 confirmado não-bloqueante no estado; branch local limpa |
 | 7 | Code Review (PR #79 homologação) | code-review | concluido — build limpo, 187/187 testes (independente), regressão Instagram confirmada (20/20 isolado, arquivo de teste inalterado), Mp4DurationReader com edge cases cobertos por unit tests, boot Docker real validado (/health, triggers 200), migration SeedTikTokCredentials confirmada via psql (ids 18/19 preservados, ids 41-46 novos), CA20 reconfirmado não-bloqueante, checklist de veto ok. Merge #79 → homolog executado (merge commit b6149d8). |
+| 8 | QA (homolog) | qa | concluido — 187/187 testes, Docker Compose real, seeds tiktok.* confirmados via psql, CA1-CA19 aprovados com evidência real, CA20 equivalente marcado não avaliado/não-bloqueante (decisão Gate 1). Relatório relatorio-qa.md + comentário "✅ QA aprovado" na Issue #10. |
+| 9 | PR de release (homolog→main) | lider-tecnico | concluido — PR #80 criado, corpo com débito de acompanhamento sem linguagem de bloqueio (CA20 equivalente), Closes #10 incluído. Aguardando Gate 2 (Gerente). Sem merge, sem alteração no comentário 📍 Status/Kanban. |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -123,5 +132,6 @@ desenv_tasks_merged: [#77]
 | 6 | Merge #77 + PR release #79 | lider-tecnico | sonnet | 42558 | 11 | 124s |
 | 7 | Code Review PR #79 (aprovado, merge homolog) | code-review | sonnet | 103906 | 43 | 410s |
 | 8 | QA (homolog) — aprovado (CA1-19, CA20 pendente) | qa | sonnet | 69803 | 19 | 214s |
+| 9 | PR release #80 (homolog→main) | lider-tecnico | sonnet | ~ | ~ | ~ |
 
 **Consolidação:** a preencher ao fecho da issue.
