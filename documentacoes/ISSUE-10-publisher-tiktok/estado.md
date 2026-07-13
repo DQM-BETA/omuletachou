@@ -132,6 +132,6 @@ desenv_tasks_merged: [#77]
 | 6 | Merge #77 + PR release #79 | lider-tecnico | sonnet | 42558 | 11 | 124s |
 | 7 | Code Review PR #79 (aprovado, merge homolog) | code-review | sonnet | 103906 | 43 | 410s |
 | 8 | QA (homolog) — aprovado (CA1-19, CA20 pendente) | qa | sonnet | 69803 | 19 | 214s |
-| 9 | PR release #80 (homolog→main) | lider-tecnico | sonnet | ~ | ~ | ~ |
+| 9 | PR release #80 (homolog→main) | lider-tecnico | sonnet | 44737 | 7 | 122s |
 
 **Consolidação:** a preencher ao fecho da issue.
