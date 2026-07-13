@@ -135,4 +135,4 @@ desenv_tasks_merged: [#73]
 | 8 | DevOps — diagnóstico Docker/WSL2 (fora do board, infra transversal) | devops | haiku | 28875 | 28 | 268s |
 | 9 | Code Review PR #75 (2ª rodada — aprovado, revalidação completa) | code-review | sonnet | 83847 | 39 | 412s |
 | 10 | QA (homolog) — aprovado (CA1-19, CA20 pendente) | qa | sonnet | 69852 | 22 | 212s |
-| 11 | PR release #76 (homolog→main) — bloqueado p/ Gate 2 (CA20) | lt | sonnet | ~ | ~ | ~ |
+| 11 | PR release #76 (homolog→main) — bloqueado p/ Gate 2 (CA20) | lt | sonnet | 63076 | 12 | 167s |
