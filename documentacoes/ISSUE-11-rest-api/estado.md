@@ -71,6 +71,7 @@ desenv_tasks_merged: []
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
 |---|---|---|---|---|---|---|
 | 1 | Preparacao | coordenador | haiku | 61934 | 56 | 302s |
+| 2 | PM Fase 1 | pm | sonnet | 30761 | 9 | 68s |
 
 **Consolidação (quiescência):** A preencher pela sessão principal após cada etapa. Nenhuma invocação anterior — isto é a Issue #11, primeira vez no pipeline.
 
