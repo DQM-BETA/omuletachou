@@ -10,6 +10,7 @@ using global::Hangfire;
 using global::Hangfire.Dashboard;
 using global::Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -62,6 +63,9 @@ builder.Services.AddHttpClient<ISocialPublisher, TelegramPublisher>();
 
 // Publishers (Issue #8 / #65)
 builder.Services.AddHttpClient<ISocialPublisher, YoutubePublisher>();
+
+// Publishers (Issue #9 / #73)
+builder.Services.AddHttpClient<ISocialPublisher, InstagramPublisher>();
 
 // PublisherJob (Issue #7 / #60)
 builder.Services.AddScoped<PublisherJob>();
@@ -130,6 +134,17 @@ using (var scope = app.Services.CreateScope())
         }
     }
 }
+
+// Midia publica (Issue #9 / #73): expoe o mesmo diretorio fisico usado pelo LocalMediaStorage
+// em /media, necessario para o InstagramPublisher montar video_url publicamente acessivel.
+// CreateDirectory garante que o path exista mesmo antes do primeiro download (evita excecao do
+// PhysicalFileProvider em ambientes novos).
+Directory.CreateDirectory(LocalMediaStorage.MediaDirectory);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(LocalMediaStorage.MediaDirectory),
+    RequestPath = "/media",
+});
 
 if (hangfireEnabled)
 {

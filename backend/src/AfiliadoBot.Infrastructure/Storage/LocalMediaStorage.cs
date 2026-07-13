@@ -12,7 +12,13 @@ namespace AfiliadoBot.Infrastructure.Storage;
 /// </summary>
 public class LocalMediaStorage : IMediaStorage
 {
-    private const string MediaDirectory = "/app/media";
+    /// <summary>
+    /// Diretorio fisico raiz onde a midia local e gravada — exposto como <c>public</c> (Issue #9
+    /// / #73) para que <c>Program.cs</c> mapeie o mesmo path via <c>UseStaticFiles</c>
+    /// (<c>RequestPath=/media</c>), garantindo que <see cref="InstagramPublisher"/> monte URLs
+    /// publicas que realmente apontam para onde os arquivos sao salvos.
+    /// </summary>
+    public const string MediaDirectory = "/app/media";
     private static readonly string[] VideoExtensions = { ".mp4", ".webm" };
 
     private readonly HttpClient _httpClient;

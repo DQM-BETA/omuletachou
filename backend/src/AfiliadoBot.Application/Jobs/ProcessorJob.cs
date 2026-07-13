@@ -241,14 +241,15 @@ public class ProcessorJob
                 continue;
             }
 
-            // Fix retroativo (Issue #8 / #65): Youtube exige video disponivel — produto sem
-            // MediaType="video" (ou sem MediaLocalPath/MediaUrl) nunca e enfileirado para essa
-            // rede. Demais redes seguem a regra atual, inalterada (CA17-CA19).
-            if (network == SocialNetwork.Youtube && !HasVideoAvailable(product))
+            // Fix retroativo (Issue #8 / #65, generalizado na Issue #9 / #73): Youtube e Instagram
+            // exigem video disponivel — produto sem MediaType="video" (ou sem MediaLocalPath/
+            // MediaUrl) nunca e enfileirado para essas redes. Demais redes seguem a regra atual,
+            // inalterada (CA16-CA18).
+            if ((network == SocialNetwork.Youtube || network == SocialNetwork.Instagram) && !HasVideoAvailable(product))
             {
                 _logger.LogInformation(
-                    "ProcessorJob: produto {ProductId} sem midia de video disponivel. Rede Youtube nao sera enfileirada.",
-                    product.Id);
+                    "ProcessorJob: produto {ProductId} sem midia de video disponivel. Rede {Network} nao sera enfileirada.",
+                    product.Id, network);
                 continue;
             }
 
@@ -264,8 +265,9 @@ public class ProcessorJob
     }
 
     /// <summary>
-    /// Youtube exige video disponivel (Issue #8 / #65, CA17): considera "com video" quando
-    /// MediaType == "video" e ao menos uma das fontes (MediaLocalPath ou MediaUrl) esta preenchida.
+    /// Youtube e Instagram exigem video disponivel (Issue #8 / #65 e Issue #9 / #73, CA16/CA17):
+    /// considera "com video" quando MediaType == "video" e ao menos uma das fontes
+    /// (MediaLocalPath ou MediaUrl) esta preenchida.
     /// </summary>
     private static bool HasVideoAvailable(Product product)
     {
