@@ -421,11 +421,12 @@ public class ProcessorJobTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_NaoAfetaDemaisRedes_QuandoYoutubeFiltrado()
+    public async Task ExecuteAsync_NaoAfetaDemaisRedes_QuandoYoutubeEInstagramFiltrados()
     {
-        // CA19 (regressao, nao-negociavel): produto sem video, elegivel para Telegram/Instagram/
-        // TikTok/Facebook (com credenciais) — o filtro adicional do Youtube nao pode afetar as
-        // demais redes, que devem se comportar exatamente como antes da correcao.
+        // CA18 (regressao, nao-negociavel — Issue #9 / #73 generaliza o filtro do Issue #8 / #65
+        // para tambem cobrir Instagram): produto sem video, elegivel para Telegram/TikTok/
+        // Facebook (com credenciais) — o filtro adicional de video (Youtube + Instagram) nao pode
+        // afetar as demais redes, que devem se comportar exatamente como antes da correcao.
         using var db = CreateInMemoryContext();
         var product = CriarProduto(mediaUrl: null); // sem video
         db.Products.Add(product);
@@ -443,12 +444,54 @@ public class ProcessorJobTests
         var entries = await db.PublicationQueues.Where(q => q.ProductId == product.Id).ToListAsync();
 
         entries.Should().NotContain(q => q.SocialNetwork == SocialNetwork.Youtube);
+        entries.Should().NotContain(q => q.SocialNetwork == SocialNetwork.Instagram);
         entries.Should().ContainSingle(q => q.SocialNetwork == SocialNetwork.Telegram);
-        entries.Should().ContainSingle(q => q.SocialNetwork == SocialNetwork.Instagram);
         entries.Should().ContainSingle(q => q.SocialNetwork == SocialNetwork.TikTok);
         entries.Should().ContainSingle(q => q.SocialNetwork == SocialNetwork.Facebook);
         entries.Single(q => q.SocialNetwork == SocialNetwork.Facebook).Status.Should().Be(PublicationStatus.ManualPending);
-        entries.Should().HaveCount(4);
+        entries.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NaoCriaEntradaInstagram_QuandoProdutoSemVideo()
+    {
+        // CA16: Instagram habilitado com credenciais, mas produto sem video — nenhuma entrada
+        // Instagram e criada, e GenerateCaptionAsync nao e chamado para essa rede.
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto(mediaUrl: null);
+        db.Products.Add(product);
+        await SeedNetworkAsync(db, "instagram", true, ("instagram.access_token", "tok"), ("instagram.page_id", "1"));
+        await db.SaveChangesAsync();
+
+        var aiMock = CreateAiServiceMock();
+        var job = CreateJob(db, aiService: aiMock);
+        await job.ExecuteAsync();
+
+        var entries = await db.PublicationQueues.Where(q => q.ProductId == product.Id).ToListAsync();
+        entries.Should().NotContain(q => q.SocialNetwork == SocialNetwork.Instagram);
+        aiMock.Verify(a => a.GenerateCaptionAsync(It.IsAny<Product>(), SocialNetwork.Instagram, It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CriaEntradaInstagram_QuandoProdutoComVideo()
+    {
+        // CA17: Instagram habilitado com credenciais e produto com video — entrada criada
+        // normalmente, com ScheduledAt no slot round-robin correspondente.
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto(mediaUrl: "https://cdn.com/video.mp4");
+        db.Products.Add(product);
+        await SeedNetworkAsync(db, "instagram", true, ("instagram.access_token", "tok"), ("instagram.page_id", "1"));
+        await db.SaveChangesAsync();
+
+        var mediaMock = CreateMediaStorageMock("/app/media/video.mp4", "video");
+        var aiMock = CreateAiServiceMock();
+        var job = CreateJob(db, mediaStorage: mediaMock, aiService: aiMock);
+        await job.ExecuteAsync();
+
+        var entries = await db.PublicationQueues.Where(q => q.ProductId == product.Id).ToListAsync();
+        entries.Should().ContainSingle(q => q.SocialNetwork == SocialNetwork.Instagram);
+        entries.Single(q => q.SocialNetwork == SocialNetwork.Instagram).ScheduledAt.Hour.Should().Be(9);
+        aiMock.Verify(a => a.GenerateCaptionAsync(It.IsAny<Product>(), SocialNetwork.Instagram, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
