@@ -49,6 +49,6 @@ desenv_tasks_merged: []
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
 |---|---|---|---|---|---|---|
-| 1 | Preparacao | coordenador | haiku | a preencher | a preencher | a preencher |
+| 1 | Preparacao | coordenador | haiku | 67855 | 36 | 190s |
 
 **Consolidação:** a preencher ao fecho da issue.
