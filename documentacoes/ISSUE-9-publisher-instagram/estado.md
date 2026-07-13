@@ -5,17 +5,17 @@ issue: 9
 repo: omuletachou
 titulo: feat: Publisher Instagram (Meta Graph API)
 rota: normal
-etapa_atual: Code Review BLOQUEADO — boot Docker real não validável no ambiente (infra), escalar via DevOps antes de nova tentativa
+etapa_atual: Infra Docker recuperada — nova rodada de Code Review (agente independente) necessária para revalidar boot antes de avançar
 docs_path: repos/omuletachou/documentacoes/ISSUE-9-publisher-instagram
 openspec_path: repos/omuletachou/openspec/changes/issue-9-publisher-instagram
 openspec_change: repos/omuletachou/openspec/changes/issue-9-publisher-instagram
-ultimo_agente: code-review
+ultimo_agente: devops
 status_comment_id: 4927227668
 pr_feature: 74 (feature/73-instagram-publisher -> desenv) — MERGED (squash) 2026-07-10T18:28:30Z
-pr_homologacao: 75 (desenv -> homolog) — OPEN, Code Review executado, status BLOQUEADO (não reprovado por código — infra Docker)
+pr_homologacao: 75 (desenv -> homolog) — OPEN, Code Review anterior bloqueado por infra; nova rodada necessária agora que Docker recuperou
 pr_release: ~ (será criado após QA aprovar, PR homolog -> main)
 qa_status: ~
-code_review_homolog_pr: 75 — build/testes validados por execução própria (156/156), boot Docker NÃO validado (infra indisponível)
+code_review_homolog_pr: 75 — 1ª rodada: build/testes validados (156/156), boot Docker bloqueado por infra (serviço com.docker.service indisponível). Nota: a sessão principal verificou informalmente que o serviço Docker recuperou (docker compose up/down local, sem certificação formal de PR — isso é atribuição exclusiva do agente Code Review, não da orquestração). 2ª rodada de Code Review pendente de spawn.
 closedAt: ~
 ca20_pendente: true — validacao em conta real do Instagram (credenciais reais ainda nao fornecidas pelo Gerente). NAO bloqueia o merge desenv->homolog, mas E BLOQUEANTE PARA O GATE 2 (release homolog->main). Reforçando novamente para não se perder no histórico.
 
@@ -90,6 +90,8 @@ desenv_tasks_merged: [#73]
 | 5 | Dev .NET (sub-issue #73) | dev-dotnet | concluido — `InstagramPublisher` implementado (3 etapas, renovação de token, disclosure determinístico), fix retroativo `ProcessorJob.HasVideoAvailable` generalizado p/ Instagram, `UseStaticFiles` adicionado em `Program.cs`, migration `SeedInstagramCredentials` (app_settings placeholders), 156/156 testes passando (CA1-CA19). Docker Desktop indisponível no sandbox (engine não iniciou após ~10min) — boot do DI validado via `WebApplicationFactory<Program>` (`JobsTriggerTests.cs`, 3 novos testes de boot/trigger). PR #74 aberto (feature/73-instagram-publisher → desenv). **CA20 pendente** (validação em conta real), bloqueante apenas para o Gate 2. |
 | 6 | Merge sub-issue #73 + PR release | lider-tecnico | concluido — PR #74 revisado e merged (squash) em desenv (`mergedAt: 2026-07-10T18:28:30Z`), sub-issue #73 fechada. Validação de boot Docker NÃO realizada (fora do escopo de ferramentas do LT — sem permissão para rodar código/infra); registrado como pendência obrigatória para o Code Review. Única sub-issue concluída → PR de release #75 (desenv→homolog) criado. CA20 segue pendente, bloqueante apenas para o Gate 2. |
 | 7 | Code Review (PR #75) | code-review | **bloqueado** — build/suíte validados por execução própria (156/156, sem Docker). Boot Docker real tentado ativamente (~20min, 2 tentativas de start, diagnóstico completo via wsl/services) e falhou por infra do sandbox (WSL2/serviço Docker indisponível), não por código do PR. Sem achados de segurança/correção bloqueantes no diff. Merge NÃO executado — recomenda escalar via DevOps antes de nova tentativa (3ª falha consecutiva de boot Docker nesta Issue). |
+| 8 | DevOps — diagnóstico Docker/WSL2 | devops | concluido — causa raiz identificada (usuário sem privilégios de admin, serviço `com.docker.service` não inicia sem elevação); sugestão documentada em `.claude/melhorias/2026-07-10-devops-docker-desktop-wsl2-service-permissions.md`; não implementou correção (fora do escopo). |
+| 9 | Verificação informal de infra (sessão principal) | sessao-principal | a sessão principal confirmou informalmente que `docker compose up/down` volta a funcionar no host (serviço `com.docker.service` recuperou) — **isso NÃO substitui uma rodada formal de Code Review**; a sessão principal não revisa PR nem certifica aprovação (regra da squad). Próximo passo: spawnar novo agente Code Review para revalidar o PR #75 do zero, agora que a infra está disponível. Não gera linha de custo (overhead do orquestrador não entra no ledger). |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -102,5 +104,3 @@ desenv_tasks_merged: [#73]
 | 6 | Merge PR #74 + PR release #75 | lt | sonnet | 43278 | 11 | 113s |
 | 7 | Code Review PR #75 (bloqueado — infra Docker) | code-review | sonnet | 94747 | 45 | 1359s |
 | 8 | DevOps — diagnóstico Docker/WSL2 (fora do board, infra transversal) | devops | haiku | 28875 | 28 | 268s |
-| 6 | Merge #73 + PR release #75 | lt | sonnet | PENDENTE_USAGE | PENDENTE_TOOLS | PENDENTE_TEMPO |
-| 7 | Code Review PR #75 (bloqueado — infra Docker) | code-review | sonnet | PENDENTE_USAGE | PENDENTE_TOOLS | PENDENTE_TEMPO |
