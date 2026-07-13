@@ -5,17 +5,17 @@ issue: 10
 repo: omuletachou
 titulo: feat: Publisher TikTok (Content Posting API)
 rota: normal
-etapa_atual: Code Review
+etapa_atual: QA
 docs_path: repos/omuletachou/documentacoes/ISSUE-10-publisher-tiktok
 openspec_path: repos/omuletachou/openspec/changes/issue-10-publisher-tiktok
 openspec_change: repos/omuletachou/openspec/changes/issue-10-publisher-tiktok
-ultimo_agente: lider-tecnico
+ultimo_agente: code-review
 status_comment_id: 4959102860
 pr_feature: 78
 pr_homologacao: 79
 pr_release: ~
 qa_status: ~
-code_review_homolog_pr: ~
+code_review_homolog_pr: 79
 closedAt: ~
 
 ## Contexto
@@ -74,6 +74,19 @@ Comentário: https://github.com/DQM-BETA/omuletachou/issues/10#issuecomment-4959
 - **CA20 (validação em conta real do TikTok) confirmado como débito de acompanhamento, registrado no Gate 1 acima — explicitamente NÃO bloqueante para o Gate 2 desta issue (decisão do Gerente).** Sem ação adicional necessária aqui.
 - Branch local `desenv` limpa após merge (sem alterações pendentes; apenas diretório `.worktrees/` não rastreado, pré-existente).
 
+## Code Review — PR #79 homologação (concluído, aprovado)
+- Build limpo (`dotnet build`): 0 erros, 1 warning pré-existente (CS0618, Hangfire, não relacionado ao PR).
+- Suíte completa (`dotnet test`): **187/187 aprovados** (confirmado independentemente, bate com o reportado pelo Dev).
+- **Regressão Instagram confirmada:** `InstagramPublisherTests.cs` não foi modificado neste PR; rodado isoladamente (`--filter FullyQualifiedName~InstagramPublisherTests`) → **20/20 passando**, sem alteração no arquivo de teste. Refactor do `InstagramPublisher` para consumir `SocialDisclosureHelper.AppendIfMissing` preserva regex (`#publi\b|#publicidade\b`) e lógica de anexação — comportamento idêntico.
+- `Mp4DurationReader`: não foi prático testar contra MP4 real neste ambiente (sem ffmpeg/amostra disponível). Confirmado que `Mp4DurationReaderTests.cs` cobre todos os casos de borda exigidos: `mvhd` v0 (32-bit) e v1 (64-bit), `moov` ausente, `mvhd` ausente dentro de `moov`, arquivo corrompido/inválido, arquivo inexistente, timescale zero.
+- **Boot Docker real:** `docker compose up -d --build db api` → build e subida OK. `/health` → 200, `/api/jobs/processor/trigger` → 200, `/api/jobs/publisher/trigger` → 200 (logs Hangfire confirmam execução real dos jobs contra Postgres real).
+- **Migration `SeedTikTokCredentials` confirmada aplicada** via `__EFMigrationsHistory` (psql). Novas chaves seedadas corretamente (ids 41-46: `client_key`/`client_secret`/`refresh_token` vazios sem segredo commitado, `privacy_level=SELF_ONLY`, `min_duration_seconds=3`, `max_duration_seconds=600`). **Confirmado que `tiktok.access_token`/`tiktok.open_id` (ids 18/19, pré-existentes) não foram duplicados nem sobrescritos** — mesmos ids e valores de antes.
+- Nenhum comentário do plugin `/code-review` encontrado no PR no momento da revisão (nada a incorporar).
+- Checklist de veto: sem teste-lixo, sem segredo commitado, sem uso de `.first()`/`.nth()` (PR 100% backend, sem E2E/Playwright), integração real coberta na medida do possível (boot Docker + Postgres real; HTTP externo do TikTok mockado via fake `HttpMessageHandler`, mesmo padrão de `YoutubePublisherTests`/`InstagramPublisherTests`), conformidade com `design.md`/`criterios-aceite.md` confirmada.
+- **CA20 reconfirmado como débito não-bloqueante** (decisão do Gerente no Gate 1 desta issue) — nenhuma ação adicional necessária.
+- Evidência completa postada no PR: https://github.com/DQM-BETA/omuletachou/pull/79#issuecomment-4959862215
+- **Merge executado:** PR #79 mergeado (`--merge`, merge commit `b6149d8`) `desenv` → `homolog`.
+
 ## Sub-issues
 sub_issues: [#77 (stack:dotnet, task_id:T-01)]
 desenv_tasks_merged: [#77]
@@ -87,6 +100,7 @@ desenv_tasks_merged: [#77]
 | 4 | Refinamento Técnico | lider-tecnico | concluido — design.md + especificacao-tecnica.md + tasks.md escritos; sub-issue #77 criada (stack:dotnet, T-01); comentario de resumo postado; 📍 Status atualizado para Em Desenvolvimento |
 | 5 | Dev .NET (sub-issue #77) | dev-dotnet | concluido — `TikTokPublisher` (init/upload chunked/polling), `Mp4DurationReader` (parser MP4 dependency-free), `SocialDisclosureHelper` compartilhado (InstagramPublisher refatorado, regressão confirmada), retry 429 local, refresh reativo em 401, migration `SeedTikTokCredentials`, DI registrado. 187 testes passando (100%). Boot Docker Compose validado (`/health`, `/api/jobs/processor/trigger`, `/api/jobs/publisher/trigger` → 200; seed confirmado via psql). PR feature→desenv #78 aberto. CA20 registrado como débito não-bloqueante. |
 | 6 | Merge sub-issue #77 + PR release | lider-tecnico | concluido — PR #78 revisado e squash-merged em `desenv` (892edd2); sub-issue #77 fechada; todas as sub-issues concluídas; PR #79 (desenv→homolog) criado; CA20 confirmado não-bloqueante no estado; branch local limpa |
+| 7 | Code Review (PR #79 homologação) | code-review | concluido — build limpo, 187/187 testes (independente), regressão Instagram confirmada (20/20 isolado, arquivo de teste inalterado), Mp4DurationReader com edge cases cobertos por unit tests, boot Docker real validado (/health, triggers 200), migration SeedTikTokCredentials confirmada via psql (ids 18/19 preservados, ids 41-46 novos), CA20 reconfirmado não-bloqueante, checklist de veto ok. Merge #79 → homolog executado (merge commit b6149d8). |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
