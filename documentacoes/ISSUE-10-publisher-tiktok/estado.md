@@ -59,5 +59,6 @@ desenv_tasks_merged: []
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
 |---|---|---|---|---|---|---|
 | 1 | Preparacao | coordenador | haiku | 67855 | 36 | 190s |
+| 2 | PM Fase 1 | pm | sonnet | 35067 | 13 | 140s |
 
 **Consolidação:** a preencher ao fecho da issue.
