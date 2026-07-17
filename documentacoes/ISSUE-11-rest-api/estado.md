@@ -149,6 +149,7 @@ desenv_tasks_merged: [#81]
 | 7 | Líder Técnico — merge Sub-A #81 (PR #86) | lider-tecnico | sonnet | 49253 | 13 | 120s |
 | 8 | Dev .NET Sub-B #82 (PR #87) — escopo parcial | dev-dotnet | sonnet | 108510 | 53 | 417s |
 | 9 | Dev .NET Sub-E #85 (PR #89) — policy public-write pendente | dev-dotnet | sonnet | 95367 | 55 | 399s |
+| 10 | Dev .NET Sub-C #83 (PR #88) — atenção: mexeu em Program.cs | dev-dotnet | sonnet | 124773 | 59 | 466s |
 
 **Consolidação (quiescência):** A preencher pela sessão principal após cada etapa.
 
