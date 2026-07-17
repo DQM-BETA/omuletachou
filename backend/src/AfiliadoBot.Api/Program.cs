@@ -219,41 +219,8 @@ app.MapControllers();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
-app.MapPost("/api/jobs/collector/trigger", async (CollectorJob job, CancellationToken ct) =>
-{
-    await job.ExecuteAsync(ct);
-    return Results.Ok();
-});
-
-app.MapPost("/api/jobs/collector/amazon/trigger", async (AmazonCollector collector, CancellationToken ct) =>
-{
-    var products = await collector.CollectAsync(ct);
-    return Results.Ok(new { count = products.Count() });
-});
-
-app.MapPost("/api/jobs/collector/mercadolivre/trigger", async (MercadoLivreCollector collector, CancellationToken ct) =>
-{
-    var products = await collector.CollectAsync(ct);
-    return Results.Ok(new { count = products.Count() });
-});
-
-app.MapPost("/api/jobs/collector/shopee/trigger", async (ShopeeCollector collector, CancellationToken ct) =>
-{
-    var products = await collector.CollectAsync(ct);
-    return Results.Ok(new { count = products.Count() });
-});
-
-app.MapPost("/api/jobs/processor/trigger", async (ProcessorJob job, CancellationToken ct) =>
-{
-    await job.ExecuteAsync(ct);
-    return Results.Ok();
-});
-
-app.MapPost("/api/jobs/publisher/trigger", async (PublisherJob job, CancellationToken ct) =>
-{
-    await job.ExecuteAsync(ct);
-    return Results.Ok();
-});
+// Disparo manual dos jobs (Issue #11 / Sub-C): movido para JobsController (protegido por
+// [Authorize], CA-C10) — os endpoints minimos que existiam aqui nao exigiam token.
 
 app.Run();
 
