@@ -94,7 +94,7 @@ desenv_tasks_merged: []
 | 2 | PM Fase 1 | pm | sonnet | 30761 | 9 | 68s |
 | 3 | PM Fase 2 | pm | sonnet | 55923 | 21 | 253s |
 | 4 | Arquiteto | arquiteto | sonnet | 55194 | 12 | 181s |
-| 5 | Líder Técnico — refinamento | lider-tecnico | sonnet | PREENCHER (usage do HANDOFF) | PREENCHER | PREENCHER |
+| 5 | Líder Técnico — refinamento | lider-tecnico | sonnet | 76208 | 20 | 257s |
 
 **Consolidação (quiescência):** A preencher pela sessão principal após cada etapa.
 
