@@ -10,6 +10,7 @@ public class AfiliadoBotDbContext : DbContext
     public DbSet<AppSetting> AppSettings { get; set; } = null!;
     public DbSet<PushSubscription> PushSubscriptions { get; set; } = null!;
     public DbSet<PublicationLog> PublicationLogs { get; set; } = null!;
+    public DbSet<User> Users { get; set; } = null!;
 
     public AfiliadoBotDbContext(DbContextOptions<AfiliadoBotDbContext> options) : base(options) { }
 

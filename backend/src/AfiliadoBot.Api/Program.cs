@@ -1,3 +1,5 @@
+using System.Text;
+using AfiliadoBot.Api.Auth;
 using AfiliadoBot.Api.Hangfire;
 using AfiliadoBot.Application.Jobs;
 using AfiliadoBot.Domain.Interfaces;
@@ -9,8 +11,10 @@ using AfiliadoBot.Infrastructure.Storage;
 using global::Hangfire;
 using global::Hangfire.Dashboard;
 using global::Hangfire.PostgreSql;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,9 +25,47 @@ var builder = WebApplication.CreateBuilder(args);
 var hangfireEnabled = builder.Configuration.GetValue("Hangfire:Enabled", true);
 
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddControllers();
 
 builder.Services.AddDbContext<AfiliadoBotDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Autenticacao JWT (Issue #11 / Sub-A). Fail-fast se a chave de assinatura estiver
+// ausente/vazia em QUALQUER ambiente — nunca sobe com uma chave fraca/default silenciosa
+// (especificacao-tecnica.md §2). Em Development, o valor vem de appsettings.Development.json
+// (chave fixa documentada, apenas para uso local); em Production, exclusivamente da variavel
+// de ambiente Jwt__SigningKey (nunca versionada com secret real).
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
+
+var signingKey = builder.Configuration["Jwt:SigningKey"];
+if (string.IsNullOrWhiteSpace(signingKey))
+    throw new InvalidOperationException("Jwt:SigningKey nao configurada (env var Jwt__SigningKey ausente).");
+
+var jwtIssuer = builder.Configuration["Jwt:Issuer"];
+var jwtAudience = builder.Configuration["Jwt:Audience"];
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        // Preserva os nomes de claim originais do token ("sub", "email") em vez do
+        // remapeamento legado do .NET para URIs longas (ClaimTypes.*) — o AuthController le
+        // JwtRegisteredClaimNames.Email diretamente do ClaimsPrincipal.
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtIssuer,
+            ValidateAudience = true,
+            ValidAudience = jwtAudience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(1),
+        };
+    });
+
+builder.Services.AddAuthorization();
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 
 // AI Service
 builder.Services.AddScoped<IAnthropicClientWrapper>(sp =>
@@ -135,6 +177,14 @@ using (var scope = app.Services.CreateScope())
                 j => j.ExecuteAsync(CancellationToken.None),
                 string.IsNullOrWhiteSpace(publisherCron) ? "0 9,12,15,18,20 * * *" : publisherCron);
         }
+
+        // Seed do usuario unico do operador (Issue #11 / Sub-A, CA-A4/CA-A5). So roda se a
+        // tabela "users" estiver vazia (idempotente); email/senha vem exclusivamente de
+        // variavel de ambiente (Seed__UserEmail / Seed__UserPassword) — se ausentes, a
+        // aplicacao sobe normalmente sem usuario (login retorna 401 ate seed manual).
+        var seedEmail = builder.Configuration["Seed:UserEmail"];
+        var seedPassword = builder.Configuration["Seed:UserPassword"];
+        UserSeeder.SeedIfEmpty(db, seedEmail, seedPassword);
     }
 }
 
@@ -156,6 +206,16 @@ if (hangfireEnabled)
         Authorization = new[] { new HangfireAuthFilter() }
     });
 }
+
+// Ordem do pipeline (especificacao-tecnica.md §3): ForwardedHeaders -> Https -> CORS ->
+// Authentication -> Authorization -> RateLimiter -> MapControllers. Sub-A registra a base
+// (Authentication/Authorization); ForwardedHeaders/CORS/RateLimiter completos entram em Sub-D.
+// UseAuthentication precisa vir antes de UseAuthorization (HttpContext.User precisa estar
+// populado antes de [Authorize] ser avaliado).
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
