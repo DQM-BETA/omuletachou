@@ -5,13 +5,13 @@ issue: 11
 repo: omuletachou
 titulo: feat: REST API (Dashboard + Endpoints Publicos)
 rota: normal
-etapa_atual: Dev .NET — Sub-A (#81) mergeada em desenv; Sub-B/C/D/E (#82-#85) desbloqueadas, paralelizáveis
+etapa_atual: Dev .NET — Sub-A (#81) e Sub-B parcial (#82, PR #87) mergeadas em desenv; Sub-B aguarda 2ª rodada (CA-B5/B6/B8/B9/B10); Sub-C (#83, PR #88) e Sub-D (#84, PR #90) aguardando merge; Sub-E (#85, PR #89) aguardando merge
 docs_path: repos/omuletachou/documentacoes/ISSUE-11-rest-api
 openspec_path: repos/omuletachou/openspec/changes/issue-11-rest-api
 openspec_change: repos/omuletachou/openspec/changes/issue-11-rest-api
 ultimo_agente: lider-tecnico
 status_comment_id: 4962193361
-pr_feature: #86 (merged)
+pr_feature: #86 (merged), #87 (merged)
 pr_homologacao: ~
 pr_release: ~
 qa_status: ~
@@ -102,6 +102,14 @@ Concluído em 2026-07-17. PR #87 (`feature/82-products-queue` → `desenv`). Imp
 - Testes: `ProductsControllerTests` (8 casos) + `QueueControllerTests` (4 casos) cobrindo CA-B1, CA-B2, CA-B3, CA-B4, CA-B7, CA-B11 — 209/209 testes totais (197 pré-existentes + 12 novos), 100% passando.
 - Boot Docker validado via `docker compose build/up db api`: `/health` 200, smoke test real via `/api/auth/login` → token JWT → `GET /api/products` e `GET /api/queue` (401 sem token, 200 com token, `pageSize=500` truncado para `100`).
 
+## Líder Técnico — merge Sub-B (#82, PR #87)
+Concluído em 2026-07-17.
+- Revisão do PR #87: `mergeStateStatus: CLEAN`, `mergeable: MERGEABLE`. 209/209 testes, boot Docker validado (401/200, truncamento de paginação) documentado pelo Dev.
+- **Escopo parcial avaliado com cautela**: CA-B5/CA-B6 (`PATCH /api/products/{id}/status`), CA-B8 (`GET /api/queue/manual`) e CA-B9/CA-B10 (`POST /api/queue/{id}/retry`) constam formalmente em `criterios-aceite.md` — não são opcionais. Cobrem endpoints de **escrita** (mudança de status de produto, retry de item de fila) e um filtro de leitura específico (fila manual do Facebook), não são detalhes cosméticos.
+- **Decisão: PR #87 mergeado (squash) em `desenv`, mas sub-issue #82 mantida ABERTA** (não fechada). Optei por follow-up **dentro da mesma sub-issue** em vez de abrir uma issue de follow-up separada (ex.: #91): fechar #82 agora fragmentaria o rastreamento de um CA formal em duas issues, com risco real de o follow-up separado ser deprioritizado após o Gate 2 da issue-pai #11 (a issue-pai é guarda-chuva e só deveria fechar com os 46 CAs completos, não com débito técnico não rastreado explicitamente como bloqueante). Comentário de decisão postado em #82: https://github.com/DQM-BETA/omuletachou/issues/82#issuecomment-5003999621
+- Sub-issue #82 **NÃO** adicionada a `desenv_tasks_merged` (código parcial já está em `desenv`, mas a sub-issue só conta como concluída quando os 11 CAs de Sub-B estiverem cobertos). Próxima rodada de Dev .NET deve abrir nova branch `feature/82-*` a partir de `desenv` atualizado (já contém `PagedResult<T>`/`ProductsController`/`QueueController`) implementando CA-B5, CA-B6, CA-B8, CA-B9, CA-B10.
+- Branch local `feature/82-products-queue` (remota) permanece no GitHub para referência do PR mergeado; nenhuma branch local de trabalho pendente nesta invocação do LT (LT não edita código).
+
 ## Dev .NET — Sub-E (#85)
 Concluído em 2026-07-17. PR (`feature/85-push-reports` → `desenv`). Implementado:
 - `PushController` (`api/public/push`, `[AllowAnonymous]`): `POST /subscribe` (recebe `endpoint`+`keys.p256dh`+`keys.auth`, persiste via `PushSubscription` — entidade já existente do domínio —, 201 no primeiro cadastro, 200 idempotente se o `endpoint` já existir, 400 se faltar campo obrigatório) e `DELETE /unsubscribe?endpoint=...` (204 idempotente tanto para endpoint existente quanto inexistente — CA-E3, decisão de segurança documentada em especificacao-tecnica.md §6: evita 404 permitir enumeração de endpoints cadastrados por um chamador não autenticado).
@@ -135,7 +143,7 @@ Concluído em 2026-07-17. PR #90 (`feature/84-public-cors-ratelimit` → `desenv
 - Não tocados: `ProductsController`, `QueueController`, `SettingsController`, `JobsController`, `PushController`, `ReportsController` (fora do escopo de Sub-D).
 
 ## Sub-issues
-sub_issues: [#81 (stack:dotnet, task_id:Sub-A) — MERGED, #82 (stack:dotnet, task_id:Sub-B), #83 (stack:dotnet, task_id:Sub-C) — PR #88 aberto, aguardando merge, #84 (stack:dotnet, task_id:Sub-D) — PR #90 aberto, aguardando merge, #85 (stack:dotnet, task_id:Sub-E) — PR aberto, aguardando merge]
+sub_issues: [#81 (stack:dotnet, task_id:Sub-A) — MERGED, #82 (stack:dotnet, task_id:Sub-B) — PR #87 merged (parcial: CA-B1/B2/B3/B4/B7/B11), sub-issue ABERTA aguardando 2ª rodada (CA-B5/B6/B8/B9/B10), #83 (stack:dotnet, task_id:Sub-C) — PR #88 aberto, aguardando merge, #84 (stack:dotnet, task_id:Sub-D) — PR #90 aberto, aguardando merge, #85 (stack:dotnet, task_id:Sub-E) — PR aberto, aguardando merge]
 desenv_tasks_merged: [#81]
 
 ## Historico de etapas
@@ -150,6 +158,7 @@ desenv_tasks_merged: [#81]
 | 7 | Líder Técnico — merge Sub-A | lider-tecnico | concluido — PR #86 revisado (fail-fast JWT confirmado) e mergeado (squash) em desenv, sub-issue #81 fechada, Sub-B/C/D/E desbloqueadas |
 | 8 | Dev .NET Sub-B #82 (PR #87) | dev-dotnet | concluido — PR #87 (feature/82-products-queue → desenv), 209/209 testes, boot Docker validado; escopo reduzido aos 3 endpoints GET do spawn message (CA-B5/B6/B8/B9/B10 não implementados) |
 | 9 | Dev .NET Sub-D #84 (PR #90) | dev-dotnet | concluido — PR #90 (feature/84-public-cors-ratelimit → desenv), 218/218 testes, boot Docker validado; policy "public-write" pronta para Sub-E consumir no merge; conflito esperado em Program.cs com Sub-C (#83) |
+| 10 | Líder Técnico — merge Sub-B #82 (PR #87) | lider-tecnico | concluido — PR #87 mergeado (squash) em desenv; CA-B5/B6/B8/B9/B10 formais e não implementados (endpoints de escrita); decisão: sub-issue #82 mantida ABERTA para 2ª rodada de Dev .NET na mesma sub-issue (não follow-up separado); comentário de decisão postado em #82 (5003999621); #82 NÃO adicionada a desenv_tasks_merged |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
