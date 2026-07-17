@@ -93,8 +93,26 @@ Concluído em 2026-07-17.
 
 Próxima etapa: sessão principal spawna Devs .NET em paralelo para Sub-B (#82), Sub-C (#83), Sub-D (#84), Sub-E (#85).
 
+## Dev .NET — Sub-B (#82)
+Concluído em 2026-07-17. PR #87 (`feature/82-products-queue` → `desenv`). Implementado:
+- `PagedResult<T>` + `ToPagedResultAsync` (`AfiliadoBot.Api.Common`) — contrato compartilhado de paginação (especificacao-tecnica.md §4): normalização `page`/`pageSize` (default 1/20, `pageSize` truncado em 100, nunca erro). Disponível para Sub-D reaproveitar via merge de `desenv`.
+- `ProductsController` (`[Authorize]`): `GET /api/products` (paginado, filtros opcionais `status`/`platform` case-insensitive contra os enums `ProductStatus`/`Platform`) e `GET /api/products/{id}` (detalhe com `ai_score`/`ai_reason` em snake_case — CA-B3; 404 se inexistente).
+- `QueueController` (`[Authorize]`): `GET /api/queue` (paginado, filtros opcionais `status`/`network`).
+- **Escopo reduzido conforme spawn message**: implementados apenas os 3 endpoints GET listados no "Escopo" recebido. CA-B5/CA-B6 (`PATCH /api/products/{id}/status`), CA-B8 (`GET /api/queue/manual`) e CA-B9/CA-B10 (`POST /api/queue/{id}/retry`) **não foram implementados** — não constavam no Escopo explícito da tarefa. Sinalizado no PR para o LT avaliar se sub-issue #82 precisa de um follow-up para fechar CA-B1 a CA-B11 por completo.
+- Testes: `ProductsControllerTests` (8 casos) + `QueueControllerTests` (4 casos) cobrindo CA-B1, CA-B2, CA-B3, CA-B4, CA-B7, CA-B11 — 209/209 testes totais (197 pré-existentes + 12 novos), 100% passando.
+- Boot Docker validado via `docker compose build/up db api`: `/health` 200, smoke test real via `/api/auth/login` → token JWT → `GET /api/products` e `GET /api/queue` (401 sem token, 200 com token, `pageSize=500` truncado para `100`).
+
+## Dev .NET — Sub-E (#85)
+Concluído em 2026-07-17. PR (`feature/85-push-reports` → `desenv`). Implementado:
+- `PushController` (`api/public/push`, `[AllowAnonymous]`): `POST /subscribe` (recebe `endpoint`+`keys.p256dh`+`keys.auth`, persiste via `PushSubscription` — entidade já existente do domínio —, 201 no primeiro cadastro, 200 idempotente se o `endpoint` já existir, 400 se faltar campo obrigatório) e `DELETE /unsubscribe?endpoint=...` (204 idempotente tanto para endpoint existente quanto inexistente — CA-E3, decisão de segurança documentada em especificacao-tecnica.md §6: evita 404 permitir enumeração de endpoints cadastrados por um chamador não autenticado).
+- `ReportsController` (`api/reports`, `[Authorize]`): `GET /summary` — agrega `PublicationQueue` com `Status=Published` nos últimos 7 dias (janela `[hoje-6, hoje]` UTC), retorna `periodStart`/`periodEnd`/`totalPublished`/`byNetwork` (rede→contagem)/`byDay` (data→contagem). 401 sem token (CA-E6).
+- **Policy de rate limit `"public-write"` (Sub-D, #84) — pendente de conferência no merge**: no momento desta implementação, Sub-D ainda não estava mergeada em `desenv` e a policy `AddRateLimiter`/`AddPolicy("public-write", ...)` não existia em `Program.cs`. `POST /api/public/push/subscribe` foi implementado **sem** `.RequireRateLimiting("public-write")` (CA-E4 não coberto por teste automatizado nesta sub-issue). **Ação para o LT no merge final**: depois que Sub-D estiver em `desenv`, adicionar `.RequireRateLimiting("public-write")` ao `PushController.Subscribe` (ou ao mapeamento do endpoint) e validar CA-E4 (10 req/min/IP → 429 acima do limite).
+- Testes: `PushControllerTests` (5 casos: subscribe sucesso/persistência, subscribe sem campos obrigatórios → 400, unsubscribe existente → 204 + remove do banco, unsubscribe inexistente → 204 idempotente, unsubscribe sem `endpoint` → 400) + `ReportsControllerTests` (2 casos: sem token → 401, com token → agregação correta por rede/dia incluindo exclusão de itens fora da janela de 7 dias e itens com `Status=Failed`) — 204/204 testes totais (209 pré-existentes + 6 novos — Sub-B ainda não estava mergeada em `desenv` na base usada por esta branch, delta líquido real será resolvido no merge), 100% passando.
+- Boot Docker validado via `docker compose up --build db api`: `/health` 200; smoke real via curl — `POST /subscribe` (201 + persistido), `DELETE /unsubscribe` com endpoint existente (204) e inexistente (204 idempotente), `GET /reports/summary` sem token (401) e com token JWT válido (200, payload agregado). Containers e volumes removidos ao final (`docker compose down -v`).
+- Não tocados: `ProductsController`, `QueueController`, `SettingsController`, `JobsController`, `PublicController` (fora do escopo de Sub-E, conforme instrução de minimizar conflito de merge).
+
 ## Sub-issues
-sub_issues: [#81 (stack:dotnet, task_id:Sub-A) — MERGED, #82 (stack:dotnet, task_id:Sub-B), #83 (stack:dotnet, task_id:Sub-C), #84 (stack:dotnet, task_id:Sub-D), #85 (stack:dotnet, task_id:Sub-E)]
+sub_issues: [#81 (stack:dotnet, task_id:Sub-A) — MERGED, #82 (stack:dotnet, task_id:Sub-B), #83 (stack:dotnet, task_id:Sub-C), #84 (stack:dotnet, task_id:Sub-D), #85 (stack:dotnet, task_id:Sub-E) — PR aberto, aguardando merge]
 desenv_tasks_merged: [#81]
 
 ## Historico de etapas
@@ -107,6 +125,7 @@ desenv_tasks_merged: [#81]
 | 5 | Líder Técnico — refinamento | lider-tecnico | concluido — decisão de ordem sequencial (Sub-A bloqueante), especificacao-tecnica.md + tasks.md escritos, 5 sub-issues criadas (#81-#85), resumo postado (comentário 5003649743), comentario 📍 Status atualizado para Dev .NET (Sub-A) |
 | 6 | Dev .NET Sub-A | dev-dotnet | concluido — PR #86 (feature/81-auth → desenv), 197/197 testes, boot Docker validado |
 | 7 | Líder Técnico — merge Sub-A | lider-tecnico | concluido — PR #86 revisado (fail-fast JWT confirmado) e mergeado (squash) em desenv, sub-issue #81 fechada, Sub-B/C/D/E desbloqueadas |
+| 8 | Dev .NET Sub-B #82 (PR #87) | dev-dotnet | concluido — PR #87 (feature/82-products-queue → desenv), 209/209 testes, boot Docker validado; escopo reduzido aos 3 endpoints GET do spawn message (CA-B5/B6/B8/B9/B10 não implementados) |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -118,6 +137,7 @@ desenv_tasks_merged: [#81]
 | 5 | Líder Técnico — refinamento | lider-tecnico | sonnet | 76208 | 20 | 257s |
 | 6 | Dev .NET Sub-A #81 (PR #86) | dev-dotnet | sonnet | 159882 | 103 | 1133s |
 | 7 | Líder Técnico — merge Sub-A #81 (PR #86) | lider-tecnico | sonnet | 49253 | 13 | 120s |
+| 8 | Dev .NET Sub-B #82 (PR #87) — escopo parcial | dev-dotnet | sonnet | 108510 | 53 | 417s |
 
 **Consolidação (quiescência):** A preencher pela sessão principal após cada etapa.
 
