@@ -58,9 +58,9 @@ public class RateLimiterConfiguratorTests
     [Fact]
     public async Task PublicWriteLimiter_AteDezRequisicoesMesmoIp_TodasAdquiremLease_DecimaPrimeiraRejeitada()
     {
-        // CA-E4: policy "public-write" (10 req/min/IP) deixada pronta para a Sub-E consumir em
-        // POST /api/public/push/subscribe. Validada aqui isoladamente pois o endpoint da Sub-E
-        // ainda nao existe nesta sub-issue.
+        // CA-E4: policy "public-write" (10 req/min/IP) aplicada em POST /api/public/push/subscribe
+        // (PushController). Validada aqui isoladamente (limiter puro); o teste de integracao HTTP
+        // ponta a ponta esta em PushSubscribeRateLimitIntegrationTests.
         using var limiter = RateLimiterConfigurator.CreateFixedWindowLimiter(
             RateLimiterConfigurator.DefaultPublicWritePermitLimit, TimeSpan.FromMinutes(1));
 

@@ -1,7 +1,9 @@
+using AfiliadoBot.Api.RateLimiting;
 using AfiliadoBot.Domain.Entities;
 using AfiliadoBot.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace AfiliadoBot.Api.Controllers;
@@ -13,13 +15,9 @@ namespace AfiliadoBot.Api.Controllers;
 /// so o dashboard (ReportsController/SettingsController/etc.) exige token.
 ///
 /// Rate limit: especificacao-tecnica.md §3/§6 define a policy nomeada "public-write"
-/// (10 req/min/IP) para POST /subscribe, registrada pela Sub-D (#84) em Program.cs via
-/// AddRateLimiter/AddPolicy. Na data desta implementacao a Sub-D ainda nao mergeou em
-/// desenv (rodam em paralelo) — o endpoint abaixo NAO tem .RequireRateLimiting("public-write")
-/// aplicado. Acao pendente para o LT no merge final: adicionar
-/// .RequireRateLimiting("public-write") ao MapPost/atributo deste endpoint assim que a
-/// policy estiver registrada (ver tasks.md §Sub-E: "nao e bloqueio duro, apenas atencao
-/// no merge").
+/// (10 req/min/IP) para POST /subscribe, registrada pela Sub-D (#84) em
+/// RateLimiterConfigurator.AddPublicPolicies. Aplicada aqui via [EnableRateLimiting]
+/// no endpoint (CA-E4) — Sub-D ja mergeada em desenv.
 /// </summary>
 [ApiController]
 [Route("api/public/push")]
@@ -34,6 +32,7 @@ public class PushController : ControllerBase
     }
 
     [HttpPost("subscribe")]
+    [EnableRateLimiting(RateLimiterConfigurator.PublicWritePolicy)]
     public async Task<IActionResult> Subscribe([FromBody] PushSubscribeRequest request, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.Endpoint)

@@ -9,9 +9,8 @@ namespace AfiliadoBot.Api.RateLimiting;
 /// especificacao-tecnica.md §3, design.md §3). Duas policies nomeadas, particionadas por IP
 /// (RemoteIpAddress ja reescrito pelo ForwardedHeadersMiddleware — CA-D11/CA-D12):
 /// - "public-read" (60 req/min/IP): PublicController (deals/slug/category).
-/// - "public-write" (10 req/min/IP): deixada pronta para a Sub-E consumir em
-///   POST /api/public/push/subscribe via [EnableRateLimiting(RateLimiterConfigurator.PublicWritePolicy)]
-///   (o endpoint ainda nao existe nesta sub-issue — CA-E4).
+/// - "public-write" (10 req/min/IP): aplicada em POST /api/public/push/subscribe via
+///   [EnableRateLimiting(RateLimiterConfigurator.PublicWritePolicy)] (PushController — CA-E4).
 /// Limites configuraveis via appsettings ("RateLimiting:PublicReadPermitLimit" /
 /// "RateLimiting:PublicWritePermitLimit"), com os valores do Gate 1 como default.
 /// </summary>
