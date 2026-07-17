@@ -1,6 +1,9 @@
 using System.Text;
 using AfiliadoBot.Api.Auth;
+using AfiliadoBot.Api.Cors;
 using AfiliadoBot.Api.Hangfire;
+using AfiliadoBot.Api.Proxy;
+using AfiliadoBot.Api.RateLimiting;
 using AfiliadoBot.Application.Jobs;
 using AfiliadoBot.Domain.Interfaces;
 using AfiliadoBot.Infrastructure.Data;
@@ -12,6 +15,7 @@ using global::Hangfire;
 using global::Hangfire.Dashboard;
 using global::Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
@@ -66,6 +70,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+
+// ForwardedHeaders (Issue #11 / Sub-D, design.md §3): reescreve RemoteIpAddress/Scheme a partir
+// de X-Forwarded-For/X-Forwarded-Proto, confiando apenas na rede Docker do nginx
+// ("ForwardedHeaders:KnownNetworks" em appsettings; default = CIDR privado do Docker Compose).
+// ForwardLimit=1 evita que um cliente malicioso spoofe o proprio IP para escapar do rate limit.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    ForwardedHeadersConfigurator.Configure(options, builder.Configuration));
+
+// CORS (Issue #11 / Sub-D, CA-D8/CA-D9/CA-D10): lista explicita de origins, nunca AllowAnyOrigin
+// — configuravel via "Cors:AllowedOrigins" em appsettings.json por ambiente.
+builder.Services.AddCors(options => options.AddPublicCorsPolicy(builder.Configuration));
+
+// Rate limiting (Issue #11 / Sub-D, CA-D11/CA-D12/CA-E4): policies nomeadas "public-read"
+// (60 req/min/IP, PublicController) e "public-write" (10 req/min/IP, deixada pronta para a
+// Sub-E consumir em POST /api/public/push/subscribe).
+builder.Services.AddRateLimiter(options => options.AddPublicPolicies(builder.Configuration));
 
 // AI Service
 builder.Services.AddScoped<IAnthropicClientWrapper>(sp =>
@@ -188,6 +208,23 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+// Ordem do pipeline (especificacao-tecnica.md §3): ForwardedHeaders -> Https -> CORS ->
+// Authentication -> Authorization -> RateLimiter -> MapControllers. ForwardedHeaders sempre
+// primeiro — CORS e RateLimiter dependem (direta ou indiretamente) do IP/scheme corrigido.
+// Https: nginx ja termina TLS na frente da API (container-to-container e HTTP puro), por isso
+// UseHttpsRedirection nao e adicionado aqui (seria um no-op ruidoso sem porta HTTPS configurada).
+app.UseForwardedHeaders();
+
+app.UseCors(CorsConfigurator.PolicyName);
+
+// UseAuthentication precisa vir antes de UseAuthorization (HttpContext.User precisa estar
+// populado antes de [Authorize] ser avaliado). CORS antes de Authentication: preflight OPTIONS
+// nao carrega Authorization e nao deve ser barrado antes do CORS responder Access-Control-Allow-*.
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.UseRateLimiter();
+
 // Midia publica (Issue #9 / #73): expoe o mesmo diretorio fisico usado pelo LocalMediaStorage
 // em /media, necessario para o InstagramPublisher montar video_url publicamente acessivel.
 // CreateDirectory garante que o path exista mesmo antes do primeiro download (evita excecao do
@@ -206,14 +243,6 @@ if (hangfireEnabled)
         Authorization = new[] { new HangfireAuthFilter() }
     });
 }
-
-// Ordem do pipeline (especificacao-tecnica.md §3): ForwardedHeaders -> Https -> CORS ->
-// Authentication -> Authorization -> RateLimiter -> MapControllers. Sub-A registra a base
-// (Authentication/Authorization); ForwardedHeaders/CORS/RateLimiter completos entram em Sub-D.
-// UseAuthentication precisa vir antes de UseAuthorization (HttpContext.User precisa estar
-// populado antes de [Authorize] ser avaliado).
-app.UseAuthentication();
-app.UseAuthorization();
 
 app.MapControllers();
 
