@@ -5,7 +5,7 @@ issue: 11
 repo: omuletachou
 titulo: feat: REST API (Dashboard + Endpoints Publicos)
 rota: normal
-etapa_atual: Dev .NET — Sub-A (#81), Sub-C (#83, PR #88), Sub-D (#84, PR #90) mergeadas em desenv; Sub-B parcial (#82, PR #87) mergeada em desenv (sub-issue mantida aberta, aguarda 2ª rodada CA-B5/B6/B8/B9/B10); Sub-E (#85, PR #89) aguardando merge — precisa ganhar `.RequireRateLimiting("public-write")` agora que a policy da Sub-D está em desenv
+etapa_atual: Dev .NET — Sub-A (#81), Sub-C (#83, PR #88), Sub-D (#84, PR #90) mergeadas em desenv; Sub-B parcial (#82, PR #87) mergeada em desenv (sub-issue mantida aberta, aguarda 2ª rodada CA-B5/B6/B8/B9/B10); Sub-E (#85, PR #89) BLOQUEADA aguardando Dev — precisa ganhar `.RequireRateLimiting("public-write")` em PushController.cs + teste CA-E4 (fora do escopo de ferramentas do LT)
 docs_path: repos/omuletachou/documentacoes/ISSUE-11-rest-api
 openspec_path: repos/omuletachou/openspec/changes/issue-11-rest-api
 openspec_change: repos/omuletachou/openspec/changes/issue-11-rest-api
@@ -161,8 +161,17 @@ Concluído em 2026-07-17.
 - **Ação pendente para o próximo merge (Sub-E, #85, PR #89)**: a policy `"public-write"` agora está em `desenv` (`RateLimiterConfigurator.PublicWritePolicy`). `PushController.Subscribe` (Sub-E) precisa ganhar `.RequireRateLimiting("public-write")` (ou `[EnableRateLimiting(...)]` equivalente) para fechar CA-E4 — não implementado ainda porque Sub-D não estava em `desenv` quando Sub-E foi codada. Isso é trabalho de **Dev** (edição de código), não do LT — o próximo LT deve mapear essa pendência para o Dev antes/durante o merge de #85, não implementá-la ele mesmo.
 - `desenv_tasks_merged` atualizado para incluir #84. **PR desenv→homolog ainda NÃO criado** — 3/5 sub-issues concluídas de fato (#81, #83, #84); #82 mantida aberta (parcial); falta #85 (Sub-E, PR #89, com a pendência de rate limit acima).
 
+## Líder Técnico — tentativa de merge Sub-E (#85, PR #89) — BLOQUEADO
+Concluído (bloqueado) em 2026-07-17.
+- Spawn message desta invocação instruía o LT a: rebasear o PR #89, **editar `PushController.cs`** adicionando `.RequireRateLimiting("public-write")`/`[EnableRateLimiting(...)]`, **escrever um teste novo** cobrindo CA-E4 (429 acima de 10 req/min), rodar suíte+Docker, e só então mergear.
+- **Recusa de escopo, conforme a definição de papel do LT (fixa em CLAUDE.md/config do agente)**: LT não tem ferramenta `Edit`; `Write` é só para docs/openspec/estado.md; `Bash` é restrito a git/gh (nunca rodar/editar código de aplicação ou testes). Editar `PushController.cs` e escrever um teste automatizado é **implementação**, exclusiva de Dev. Essa mesma restrição já estava documentada pela invocação anterior do LT (ver seção "merge Sub-D" acima: "Isso é trabalho de Dev (edição de código), não do LT").
+- Confirmado via leitura de código (`grep` em `RateLimiterConfigurator.cs`) que a policy `"public-write"` existe em `desenv` (comentário no próprio arquivo já referenciando `PushController` como consumidor pretendido, `[EnableRateLimiting(RateLimiterConfigurator.PublicWritePolicy)]`), mas o `PushController.Subscribe` ainda não a aplica — gap real, precisa de Dev.
+- **Nenhuma ação destrutiva/irreversível tomada**: PR #89 NÃO rebaseado, NÃO mergeado; sub-issue #85 NÃO fechada; nenhum código editado; nenhum teste escrito. `desenv_tasks_merged` inalterado (`[#81, #83, #84]`). Comentário 📍 Status NÃO tocado (conforme instrução).
+- **Próximo passo real**: sessão principal deve spawnar um **Dev .NET** na branch `feature/85-push-reports` (ou nova branch a partir dela) com escopo explícito: (1) rebase/sync contra `desenv` atual (já contém Sub-D); (2) aplicar `.RequireRateLimiting("public-write")` (ou `[EnableRateLimiting]`, conforme o padrão de `PublicController`) ao endpoint `POST /api/public/push/subscribe`; (3) escrever teste cobrindo CA-E4 (429 após exceder 10 req/min/IP); (4) rodar suíte completa + boot Docker; (5) push do PR #89 atualizado. **Depois** disso, novo LT mergeia #89, fecha #85, e reavalia PR desenv→homolog.
+- **Pendência formal registrada para a decisão de desenv→homolog (fica para quando #85 estiver realmente pronta)**: mesmo após #85 fechar, ainda restará o follow-up de Sub-B (#82: CA-B5/B6/B8/B9/B10) como sub-issue aberta. A sessão principal/Gerente precisará decidir entre (a) spawnar novo Dev para completar #82 antes do PR desenv→homolog, ou (b) seguir para homolog com Sub-B parcial e tratar o follow-up (CA-B5/B6/B8/B9/B10) como issue subsequente — isso NÃO é uma decisão que o LT toma sozinho.
+
 ## Sub-issues
-sub_issues: [#81 (stack:dotnet, task_id:Sub-A) — MERGED, #82 (stack:dotnet, task_id:Sub-B) — PR #87 merged (parcial: CA-B1/B2/B3/B4/B7/B11), sub-issue ABERTA aguardando 2ª rodada (CA-B5/B6/B8/B9/B10), #83 (stack:dotnet, task_id:Sub-C) — MERGED (PR #88), #84 (stack:dotnet, task_id:Sub-D) — MERGED (PR #90, merge local via git push em desenv devido a bug de infra na GitHub Pulls API), #85 (stack:dotnet, task_id:Sub-E) — PR #89 aberto, aguardando merge; precisa `.RequireRateLimiting("public-write")` antes/no merge]
+sub_issues: [#81 (stack:dotnet, task_id:Sub-A) — MERGED, #82 (stack:dotnet, task_id:Sub-B) — PR #87 merged (parcial: CA-B1/B2/B3/B4/B7/B11), sub-issue ABERTA aguardando 2ª rodada (CA-B5/B6/B8/B9/B10), #83 (stack:dotnet, task_id:Sub-C) — MERGED (PR #88), #84 (stack:dotnet, task_id:Sub-D) — MERGED (PR #90, merge local via git push em desenv devido a bug de infra na GitHub Pulls API), #85 (stack:dotnet, task_id:Sub-E) — PR #89 aberto, BLOQUEADO aguardando Dev (rate limit + teste CA-E4, fora do escopo de ferramentas do LT)]
 desenv_tasks_merged: [#81, #83, #84]
 
 ## Historico de etapas
@@ -181,6 +190,7 @@ desenv_tasks_merged: [#81, #83, #84]
 | 11 | Dev .NET Sub-C #83 (PR #88) | dev-dotnet | concluido — PR #88 (feature/83-settings-jobs → desenv), 220/220 testes, boot Docker validado (mascaramento correto via curl real); teste dedicado confirma que valor completo de secret nunca vaza no JSON de `/api/settings` |
 | 12 | Líder Técnico — merge Sub-C #83 (PR #88) | lider-tecnico | concluido — build+testes revalidados localmente via worktree isolado (220/220), teste crítico de não-vazamento de secret confirmado; PR #88 mergeado (squash) em desenv; sub-issue #83 fechada (completed, escopo completo); PR desenv→homolog NÃO criado (2/5 sub-issues concluídas); próximo merge é Sub-D (#84, PR #90) com conflito esperado em Program.cs |
 | 13 | Líder Técnico — merge Sub-D #84 (PR #90) | lider-tecnico | concluido — conflito em Program.cs resolvido automaticamente (3-way merge sem marcadores textuais) via `gh pr update-branch`; verificado linha a linha (pipeline ForwardedHeaders→CORS→Auth→Authz→RateLimiter→MapControllers correto, sem triggers remanescentes de Sub-C, sem AllowAnyOrigin); bug de infra na GitHub Pulls API (head.sha stale) impediu `gh pr merge`, contornado com merge local (`--no-ff`, commit 558365f) + push direto em `desenv` (não protegida); GitHub reconheceu PR #90 como MERGED automaticamente; sub-issue #84 fechada; desenv_tasks_merged agora [#81,#83,#84]; PR desenv→homolog NÃO criado (falta #85/Sub-E, que precisa da policy public-write) |
+| 14 | Líder Técnico — tentativa de merge Sub-E #85 (PR #89) | lider-tecnico | bloqueado — spawn pedia edição de PushController.cs + novo teste CA-E4, fora do escopo de ferramentas do LT (sem Edit; Bash só git/gh); nenhuma ação destrutiva tomada (PR não rebaseado/mergeado, sub-issue não fechada); recomenda spawn de Dev .NET para aplicar `.RequireRateLimiting("public-write")` + teste CA-E4 antes do próximo merge; follow-up de Sub-B (#82) permanece pendente separadamente |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -199,8 +209,12 @@ desenv_tasks_merged: [#81, #83, #84]
 | 12 | Líder Técnico — merge Sub-B #82 (PR #87), mantida aberta | lider-tecnico | sonnet | 62650 | 14 | 199s |
 | 13 | Líder Técnico — merge Sub-C #83 (PR #88) | lider-tecnico | sonnet | 65942 | 19 | 241s |
 | 14 | Líder Técnico — merge Sub-D #84 (PR #90), conflito resolvido + bug infra contornado | lider-tecnico | sonnet | 85533 | 38 | 627s |
+| 15 | Líder Técnico — tentativa merge Sub-E #85 (PR #89), bloqueado (edição de código fora de escopo) | lider-tecnico | sonnet | ~ | ~ | ~ |
 
 **Consolidação (quiescência):** A preencher pela sessão principal após cada etapa.
 
+**Nota (linha 15):** tokens/tools/tempo desta invocação a preencher pela sessão principal a partir do `<usage>` retornado no HANDOFF abaixo.
+
 ---
 _Última atualização: 2026-07-17 — mantido pelo Líder Técnico._
+</content>
