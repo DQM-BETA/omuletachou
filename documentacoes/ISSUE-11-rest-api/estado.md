@@ -117,7 +117,7 @@ desenv_tasks_merged: [#81]
 | 4 | Arquiteto | arquiteto | sonnet | 55194 | 12 | 181s |
 | 5 | Líder Técnico — refinamento | lider-tecnico | sonnet | 76208 | 20 | 257s |
 | 6 | Dev .NET Sub-A #81 (PR #86) | dev-dotnet | sonnet | 159882 | 103 | 1133s |
-| 7 | Líder Técnico — merge Sub-A #81 (PR #86) | lider-tecnico | sonnet | TBD | TBD | TBD |
+| 7 | Líder Técnico — merge Sub-A #81 (PR #86) | lider-tecnico | sonnet | 49253 | 13 | 120s |
 
 **Consolidação (quiescência):** A preencher pela sessão principal após cada etapa.
 
