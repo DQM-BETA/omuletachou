@@ -5,11 +5,11 @@ issue: 11
 repo: omuletachou
 titulo: feat: REST API (Dashboard + Endpoints Publicos)
 rota: normal
-etapa_atual: Líder Técnico — refinamento técnico (aguarda início; sub-issues A–E a criar no GitHub)
+etapa_atual: Dev .NET — Sub-A (#81) bloqueante primeiro; Sub-B/C/D/E (#82-#85) paralelizáveis após merge de #81
 docs_path: repos/omuletachou/documentacoes/ISSUE-11-rest-api
 openspec_path: repos/omuletachou/openspec/changes/issue-11-rest-api
 openspec_change: repos/omuletachou/openspec/changes/issue-11-rest-api
-ultimo_agente: arquiteto
+ultimo_agente: lider-tecnico
 status_comment_id: 4962193361
 pr_feature: ~
 pr_homologacao: ~
@@ -63,13 +63,19 @@ Concluído em 2026-07-17. `design.md` escrito em `repos/omuletachou/openspec/cha
 Resumo postado na Issue #11: https://github.com/DQM-BETA/omuletachou/issues/11#issuecomment-5003608110
 
 ## Líder Técnico — refinamento técnico
-Etapa atual. Aguarda início. Ao refinar, avaliar dependência de ordem entre Sub-A (autenticação) e as demais sub-issues (podem rodar em paralelo com stub de auth, ou há dependência sequencial real) — ver nota em `proposal.md`. Deve criar as 5 sub-issues reais no GitHub (Sub-A a Sub-E) e considerar a recomendação de log estruturado (não bloqueante) do `design.md` no refinamento da Sub-C.
+Concluído em 2026-07-17.
+- Decisão de ordem: **Sub-A (#81) sequencial e bloqueante**; Sub-B/C/D/E rodam em paralelo apenas após merge de #81 em `desenv`. Justificativa completa em `openspec/changes/issue-11-rest-api/tasks.md` (risco de stub de auth vazar para produção, superfície pequena de Sub-A, dependência leve de `PagedResult<T>` entre Sub-B/Sub-D e da policy `"public-write"` entre Sub-D/Sub-E resolvida via merge de `desenv`).
+- `especificacao-tecnica.md` escrito em `repos/omuletachou/documentacoes/ISSUE-11-rest-api/especificacao-tecnica.md`: schema `users` (migration), config `Jwt__SigningKey`/`AddJwtBearer`, ordem completa do pipeline de middlewares (ForwardedHeaders → Https → CORS → Authentication → Authorization → RateLimiter), contrato `PagedResult<T>` compartilhado, formato exato de mascaramento (16 asteriscos fixos + últimos 4 chars), decisão CA-E3 (204 idempotente).
+- `tasks.md` escrito em `repos/omuletachou/openspec/changes/issue-11-rest-api/tasks.md`.
+- 5 sub-issues reais criadas no GitHub (label `stack:dotnet`): #81 (Sub-A), #82 (Sub-B), #83 (Sub-C), #84 (Sub-D), #85 (Sub-E) — cada uma com CAs correspondentes copiados de `criterios-aceite.md`.
+- Resumo técnico postado na Issue #11: https://github.com/DQM-BETA/omuletachou/issues/11#issuecomment-5003649743
+- Comentário 📍 Status atualizado (id 4962193361) para "Dev .NET (Sub-A — Autenticação)".
 
 ## Dev .NET
-Etapa pendente. Espera refinamento técnico + criação das 5 sub-issues reais no GitHub.
+Próxima etapa: spawnar Dev para Sub-A (#81) primeiro (bloqueante, sozinho). Após merge de #81 em `desenv` confirmado pelo LT, spawnar Devs em paralelo para Sub-B (#82), Sub-C (#83), Sub-D (#84), Sub-E (#85) — ordem entre estas quatro é livre (sem dependência sequencial forte).
 
 ## Sub-issues
-sub_issues: []
+sub_issues: [#81 (stack:dotnet, task_id:Sub-A), #82 (stack:dotnet, task_id:Sub-B), #83 (stack:dotnet, task_id:Sub-C), #84 (stack:dotnet, task_id:Sub-D), #85 (stack:dotnet, task_id:Sub-E)]
 desenv_tasks_merged: []
 
 ## Historico de etapas
@@ -79,6 +85,7 @@ desenv_tasks_merged: []
 | 2 | PM Fase 1 | pm-analista-negocios | concluido — perguntas de levantamento postadas na Issue #11 (comentário 4962241310), comentario 📍 Status atualizado para Gate 1, aguardando resposta do Gerente |
 | 3 | PM Fase 2 | pm-analista-negocios | concluido — Gate 1 respondido (comentário 5003551503), proposal.md + criterios-aceite.md escritos (46 CAs em 5 sub-issues), sumário do PRD postado (comentário 5003577610), comentario 📍 Status atualizado para Arquiteto, ambiguidade=sim (escopo focado: JWT signing/refresh, mascaramento de secrets, rate limit atrás de proxy) |
 | 4 | Arquiteto | arquiteto | concluido — design.md escrito (JWT HS256/env var/sem refresh, mascaramento suficiente + log recomendado, rate limit com ForwardedHeadersMiddleware), resumo postado na Issue #11 (comentário 5003608110), comentario 📍 Status atualizado para Líder Técnico |
+| 5 | Líder Técnico — refinamento | lider-tecnico | concluido — decisão de ordem sequencial (Sub-A bloqueante), especificacao-tecnica.md + tasks.md escritos, 5 sub-issues criadas (#81-#85), resumo postado (comentário 5003649743), comentario 📍 Status atualizado para Dev .NET (Sub-A) |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -87,8 +94,9 @@ desenv_tasks_merged: []
 | 2 | PM Fase 1 | pm | sonnet | 30761 | 9 | 68s |
 | 3 | PM Fase 2 | pm | sonnet | 55923 | 21 | 253s |
 | 4 | Arquiteto | arquiteto | sonnet | 55194 | 12 | 181s |
+| 5 | Líder Técnico — refinamento | lider-tecnico | sonnet | PREENCHER (usage do HANDOFF) | PREENCHER | PREENCHER |
 
 **Consolidação (quiescência):** A preencher pela sessão principal após cada etapa.
 
 ---
-_Última atualização: 2026-07-17 — mantido pelo Arquiteto._
+_Última atualização: 2026-07-17 — mantido pelo Líder Técnico._
