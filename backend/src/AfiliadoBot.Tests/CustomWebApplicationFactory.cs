@@ -29,6 +29,12 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable("Jwt__Issuer", "omuletachou-api");
         Environment.SetEnvironmentVariable("Jwt__Audience", "omuletachou-dashboard");
         Environment.SetEnvironmentVariable("Jwt__ExpirationHours", "24");
+        // Issue #11 / Sub-D: TestServer nao roda atras de um proxy Docker real, entao o CIDR de
+        // producao (rede do nginx) nunca bateria com a conexao do host de teste. "0.0.0.0/0"
+        // confia em qualquer origem SOMENTE no host de teste (exclusivo daqui, nunca fora dos
+        // testes), permitindo simular IPs de cliente distintos via X-Forwarded-For nos testes de
+        // rate limit/ForwardedHeaders (CA-D11/CA-D12).
+        Environment.SetEnvironmentVariable("ForwardedHeaders__KnownNetworks__0", "0.0.0.0/0");
     }
 
     // Nome fixo por INSTANCIA da factory (nao por scope/request) — AddDbContext invoca a
