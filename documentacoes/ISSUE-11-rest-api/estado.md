@@ -72,7 +72,18 @@ Concluído em 2026-07-17.
 - Comentário 📍 Status atualizado (id 4962193361) para "Dev .NET (Sub-A — Autenticação)".
 
 ## Dev .NET
-Próxima etapa: spawnar Dev para Sub-A (#81) primeiro (bloqueante, sozinho). Após merge de #81 em `desenv` confirmado pelo LT, spawnar Devs em paralelo para Sub-B (#82), Sub-C (#83), Sub-D (#84), Sub-E (#85) — ordem entre estas quatro é livre (sem dependência sequencial forte).
+Sub-A (#81) concluída pelo Dev .NET em 2026-07-17. PR feature/81-auth → desenv aberto (aguardando número/link do `gh pr create`, ver HANDOFF). Implementado:
+- Entidade `User` (Domain) + `UserConfiguration` (Infrastructure) + migration `AddUsersTable` (tabela `users`: email unique index, password_hash bcrypt, created_at).
+- `UserSeeder.SeedIfEmpty` (Api/Auth): seed idempotente via `Seed__UserEmail`/`Seed__UserPassword`, só roda se a tabela estiver vazia; senha sempre hash bcrypt (workFactor 12).
+- `JwtOptions`/`JwtTokenService` (Api/Auth): emissão HS256, claims `sub`/`email`, expiração 24h configurável.
+- `AuthController`: `POST /api/auth/login` (público, mensagem genérica em qualquer falha — CA-A2/CA-A3) e `GET /api/auth/me` (`[Authorize]`, smoke-test ponta a ponta que desbloqueia Sub-B a Sub-E).
+- `Program.cs`: fail-fast se `Jwt:SigningKey` ausente/vazia em qualquer ambiente; `AddAuthentication().AddJwtBearer()` + `AddAuthorization()`; pipeline `UseAuthentication()`→`UseAuthorization()`→`MapControllers()` (base da ordem completa de especificacao-tecnica.md §3 — CORS/RateLimiter completos ficam para Sub-D); `options.MapInboundClaims = false` (preserva claims curtos do token).
+- `appsettings.json` (chave vazia, versionado) / `appsettings.Development.json` (chave fixa documentada, uso local apenas) / `docker-compose.yml` + `.env.example` (`JWT_SIGNING_KEY`, `SEED_USER_EMAIL`, `SEED_USER_PASSWORD`).
+- Testes: `AuthControllerTests` (login sucesso/senha incorreta/email inexistente, `/me` sem token/token válido/token expirado/assinatura inválida) + `UserSeederTests` (idempotência, hash bcrypt, sem env vars não cria usuário) — 197 testes totais (187 pré-existentes + 10 novos), 100% passando.
+- **Bug latente corrigido en passant**: `CustomWebApplicationFactory` gerava um novo nome de banco InMemory a cada resolução de `DbContextOptions` (Guid dentro da lambda de `AddDbContext`, reavaliado por scope), isolando silenciosamente cada scope/request em um banco vazio diferente — inofensivo para os testes anteriores (não persistiam dados entre scopes), mas quebrava qualquer fluxo de seed+consulta em scopes distintos. Corrigido gerando o nome uma única vez por instância da factory.
+- Boot Docker validado via `docker compose up --build`: migration aplicada, seed executado, `/health` 200, login válido/inválido, `/api/auth/me` sem token (401)/com token válido (200), endpoints de trigger existentes (200) — tudo confirmado via curl real contra o container.
+
+Próxima etapa: Líder Técnico — merge de #81 (feature/81-auth) em `desenv` ANTES de qualquer outra sub-issue. Após confirmado, spawnar Devs em paralelo para Sub-B (#82), Sub-C (#83), Sub-D (#84), Sub-E (#85) — ordem entre estas quatro é livre (sem dependência sequencial forte).
 
 ## Sub-issues
 sub_issues: [#81 (stack:dotnet, task_id:Sub-A), #82 (stack:dotnet, task_id:Sub-B), #83 (stack:dotnet, task_id:Sub-C), #84 (stack:dotnet, task_id:Sub-D), #85 (stack:dotnet, task_id:Sub-E)]
