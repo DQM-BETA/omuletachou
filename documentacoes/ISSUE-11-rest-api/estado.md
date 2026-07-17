@@ -5,13 +5,13 @@ issue: 11
 repo: omuletachou
 titulo: feat: REST API (Dashboard + Endpoints Publicos)
 rota: normal
-etapa_atual: Dev .NET — Sub-A (#81) e Sub-B parcial (#82, PR #87) mergeadas em desenv; Sub-B aguarda 2ª rodada (CA-B5/B6/B8/B9/B10); Sub-C (#83, PR #88) e Sub-D (#84, PR #90) aguardando merge; Sub-E (#85, PR #89) aguardando merge
+etapa_atual: Dev .NET — Sub-A (#81), Sub-C (#83, PR #88) mergeadas em desenv; Sub-B parcial (#82, PR #87) mergeada em desenv (sub-issue mantida aberta, aguarda 2ª rodada CA-B5/B6/B8/B9/B10); Sub-D (#84, PR #90) aguardando merge (conflito esperado em Program.cs com Sub-C, já resolvida em desenv); Sub-E (#85, PR #89) aguardando merge
 docs_path: repos/omuletachou/documentacoes/ISSUE-11-rest-api
 openspec_path: repos/omuletachou/openspec/changes/issue-11-rest-api
 openspec_change: repos/omuletachou/openspec/changes/issue-11-rest-api
 ultimo_agente: lider-tecnico
 status_comment_id: 4962193361
-pr_feature: #86 (merged), #87 (merged)
+pr_feature: #86 (merged), #87 (merged), #88 (merged)
 pr_homologacao: ~
 pr_release: ~
 qa_status: ~
@@ -129,13 +129,22 @@ Concluído em 2026-07-17. PR #88 (`feature/83-settings-jobs` → `desenv`). Impl
 - Boot Docker validado via containers standalone (`docker run` — `afiliado_db`/`afiliado_api` já em uso por outro Dev em paralelo no momento do teste, evitado com nomes/rede isolados): `/health` 200; smoke real via curl — `GET /api/settings` sem token (401), login → token JWT real, `GET /api/settings` com token (mascaramento correto, `telegram.bot_token` etc. como `null` quando vazio), `PUT /api/settings/telegram.bot_token` com token (retorna `****************1234`, nunca o valor pleno enviado), `POST /api/jobs/processor/trigger` sem token (401). Containers/rede/imagem/volumes removidos ao final.
 - Não tocados: `ProductsController`, `QueueController`, `PublicController`, `PushController`, `ReportsController` (fora do escopo de Sub-C, conforme instrução de minimizar conflito de merge).
 
+## Líder Técnico — merge Sub-C (#83, PR #88)
+Concluído em 2026-07-17.
+- `desenv` já continha Sub-A e Sub-B (parcial) mergeadas; `mergeStateStatus: CLEAN`, `mergeable: MERGEABLE` confirmados — nenhum rebase/conflito necessário (Sub-B e Sub-C tocam arquivos diferentes, conforme esperado).
+- Revisão do PR #88: `SettingsMasker.Mask` confirmado — 16 asteriscos fixos + últimos 4 caracteres reais, `IsSensitive` cobre sufixos `_key`/`_secret`/`_token`/`_password` case-insensitive. Atenção especial ao requisito crítico de segurança: `SettingsControllerTests` contém asserção `raw.Should().NotContain(secretValue)` sobre o corpo bruto da resposta JSON (não apenas o campo desserializado), tanto em `GET` quanto em `PUT`, confirmando que o valor completo de uma chave sensível nunca vaza em `/api/settings`.
+- Build e suíte de testes rodados localmente via `git worktree` isolado antes do merge: `dotnet test` → 220/220 passando (100%), `dotnet build` sem erros (apenas 1 warning pré-existente não relacionado, `CS0618` do Hangfire). Boot Docker com smoke test real já documentado pelo Dev.
+- PR #88 mergeado (squash) em `desenv`. Sub-issue #83 fechada (`completed`) — escopo completo, sem pendências reportadas pelo Dev.
+- **PR desenv→homolog NÃO criado** — 2/5 sub-issues concluídas (#81, #83); Sub-B mantida aberta (parcial), Sub-D (#84, PR #90) e Sub-E (#85, PR #89) ainda aguardando merge.
+- **Aviso para o próximo merge (Sub-D, #84, PR #90)**: conflito esperado em `Program.cs` — Sub-D reordena o pipeline de middlewares (ForwardedHeaders → CORS → Authentication → Authorization → RateLimiter) e Sub-C removeu os endpoints soltos de trigger de `Program.cs` (agora em `JobsController`). Resolver mesclando os dois blocos de `builder.Services`/pipeline, preservando a ordem de middlewares da Sub-D e os controllers da Sub-C intactos (nenhum código de trigger deve voltar a existir solto em `Program.cs`).
+
 ## Dev .NET — Sub-D (#84)
 Concluído em 2026-07-17. PR #90 (`feature/84-public-cors-ratelimit` → `desenv`). Implementado:
 - `PublicController` (`api/public/deals`, `[AllowAnonymous]`): `GET /` (paginado, apenas `Status=Published`, ordenado internamente por `AiScore` desc — nunca exposto), `GET /{slug}` (404 se inexistente/não publicado), `GET /category/{categoria}` (paginado, filtro exato de categoria). Sempre via `PublicDealDto` (nunca serializa `Product`): `Title`, `SalePrice`, `OriginalPrice`, `DiscountPct`, `AffiliateLink`, `MediaUrl`, `MediaLocalPath` (convertido de caminho físico em disco para URL pública via `/media`, mesmo mapeamento estático já usado pelo `InstagramPublisher`), `Slug`, `Category`, `CollectedAt` (= `Product.CreatedAt`), `Platform`. Nunca `ExternalId`/`AiScore`/`AiReason`/`app_settings` — coberto por teste explícito de string contida no JSON bruto.
 - CORS: `AfiliadoBot.Api.Cors.CorsConfigurator`, policy nomeada `"public-cors"`, lista de 5 origins default (produção + www + dashboard + 2 hosts locais), configurável via `Cors:AllowedOrigins` em appsettings por ambiente. Nunca `AllowAnyOrigin`.
 - Rate limiting: `AfiliadoBot.Api.RateLimiting.RateLimiterConfigurator` — policy `"public-read"` (60 req/min/IP, `.RequireRateLimiting` no `PublicController`) e policy `"public-write"` (10 req/min/IP) **já registrada e pronta** para a Sub-E consumir (constante pública `RateLimiterConfigurator.PublicWritePolicy`). **Ação de merge para o LT**: a Sub-E (#85, PR #89) implementou `PushController.Subscribe` **sem** `.RequireRateLimiting("public-write")` porque esta sub-issue (#84) ainda não estava em `desenv` no momento — no merge final, adicionar `[EnableRateLimiting(RateLimiterConfigurator.PublicWritePolicy)]` (ou equivalente) ao `PushController.Subscribe` para fechar CA-E4.
 - `ForwardedHeadersMiddleware`: `AfiliadoBot.Api.Proxy.ForwardedHeadersConfigurator`, `KnownNetworks` configurável via `ForwardedHeaders:KnownNetworks` (default `172.16.0.0/12`, CIDR privado padrão do Docker — o `docker-compose.yml` do repo ainda não define uma rede/nginx explícitos, então foi usado o range privado padrão em vez de um CIDR fixo; se um nginx com rede customizada for adicionado depois, ajustar esse appsetting), `ForwardLimit=1`.
-- **Program.cs**: pipeline reordenado (`especificacao-tecnica.md` §3) — `UseForwardedHeaders()` → `UseCors()` → `UseAuthentication()` → `UseAuthorization()` → `UseRateLimiter()` → `MapControllers()`. `UseHttpsRedirection()` **não** foi adicionado (nginx já termina TLS, container roda HTTP puro — adicionar geraria apenas warning ruidoso sem porta HTTPS configurada). **Atenção para o LT no merge**: Sub-C (#83, PR #88) também mexeu em `Program.cs` — conflito esperado e não trivial (ambas adicionam blocos após `AddAuthorization()`/antes do `app.Build()` e mexem na ordem de middlewares); resolver mesclando os dois blocos de `builder.Services` e mantendo a ordem de pipeline desta sub-issue (ForwardedHeaders/CORS/RateLimiter) com os controllers/middlewares da Sub-C intactos.
+- **Program.cs**: pipeline reordenado (`especificacao-tecnica.md` §3) — `UseForwardedHeaders()` → `UseCors()` → `UseAuthentication()` → `UseAuthorization()` → `UseRateLimiter()` → `MapControllers()`. `UseHttpsRedirection()` **não** foi adicionado (nginx já termina TLS, container roda HTTP puro — adicionar geraria apenas warning ruidoso sem porta HTTPS configurada). **Atenção para o LT no merge**: Sub-C (#83, PR #88, já mergeada) também mexeu em `Program.cs` — conflito esperado e não trivial (ambas adicionam blocos após `AddAuthorization()`/antes do `app.Build()` e mexem na ordem de middlewares); resolver mesclando os dois blocos de `builder.Services` e mantendo a ordem de pipeline desta sub-issue (ForwardedHeaders/CORS/RateLimiter) com os controllers/middlewares da Sub-C intactos.
 - `PagedResult<T>`/`PaginationExtensions` (`AfiliadoBot.Api.Common`): implementação **idêntica** à já publicada pela Sub-B (#82) na branch paralela (arquivo copiado tal qual, mesmo namespace/conteúdo) — minimiza conflito de merge quando ambas chegarem em `desenv` (git resolve como adição idêntica).
 - Testes: `PublicControllerTests` (8 casos — CA-D1 a CA-D7, incluindo asserção explícita de que `externalId`/`aiScore`/`aiReason` nunca aparecem no JSON), `CorsTests` (7 casos — CA-D8/D9/D10, preflight real via `WebApplicationFactory`), `RateLimiterConfiguratorTests` (4 casos unitários isolados do limiter, sem HTTP — valida `public-read` 60/min e `public-write` 10/min), `PublicDealsRateLimitIntegrationTests` (2 casos de integração HTTP real via factory com permit limit baixo injetado por `ConfigureAppConfiguration`, confirmando 429 real no pipeline completo e isolamento por IP via `X-Forwarded-For`) — 218/218 testes totais (209 pré-existentes de Sub-A/B + 9 novos; Sub-C/Sub-E ainda não mergeadas na base usada por esta branch — delta líquido real será resolvido no merge), 100% passando.
 - **Cuidado de isolamento de teste (documentado no código)**: `CustomWebApplicationFactory` recebeu um override de ambiente (`ForwardedHeaders__KnownNetworks__0=0.0.0.0/0`, uniforme entre todas as factories) para permitir simular IPs de cliente via `X-Forwarded-For` nos testes. O permit limit do rate limiter para o teste de 429 real foi injetado via `ConfigureAppConfiguration` (escopado à factory de teste), não via variável de ambiente de processo — variável de ambiente teria vazado (processo compartilhado entre classes de teste paralelas) e derrubado o limite de 60 usado pelos demais testes (bug encontrado e corrigido durante a implementação).
@@ -143,8 +152,8 @@ Concluído em 2026-07-17. PR #90 (`feature/84-public-cors-ratelimit` → `desenv
 - Não tocados: `ProductsController`, `QueueController`, `SettingsController`, `JobsController`, `PushController`, `ReportsController` (fora do escopo de Sub-D).
 
 ## Sub-issues
-sub_issues: [#81 (stack:dotnet, task_id:Sub-A) — MERGED, #82 (stack:dotnet, task_id:Sub-B) — PR #87 merged (parcial: CA-B1/B2/B3/B4/B7/B11), sub-issue ABERTA aguardando 2ª rodada (CA-B5/B6/B8/B9/B10), #83 (stack:dotnet, task_id:Sub-C) — PR #88 aberto, aguardando merge, #84 (stack:dotnet, task_id:Sub-D) — PR #90 aberto, aguardando merge, #85 (stack:dotnet, task_id:Sub-E) — PR aberto, aguardando merge]
-desenv_tasks_merged: [#81]
+sub_issues: [#81 (stack:dotnet, task_id:Sub-A) — MERGED, #82 (stack:dotnet, task_id:Sub-B) — PR #87 merged (parcial: CA-B1/B2/B3/B4/B7/B11), sub-issue ABERTA aguardando 2ª rodada (CA-B5/B6/B8/B9/B10), #83 (stack:dotnet, task_id:Sub-C) — MERGED (PR #88), #84 (stack:dotnet, task_id:Sub-D) — PR #90 aberto, aguardando merge (conflito esperado em Program.cs com Sub-C, resolução documentada acima), #85 (stack:dotnet, task_id:Sub-E) — PR aberto, aguardando merge]
+desenv_tasks_merged: [#81, #83]
 
 ## Historico de etapas
 | # | Etapa | Agente | Status |
@@ -159,6 +168,8 @@ desenv_tasks_merged: [#81]
 | 8 | Dev .NET Sub-B #82 (PR #87) | dev-dotnet | concluido — PR #87 (feature/82-products-queue → desenv), 209/209 testes, boot Docker validado; escopo reduzido aos 3 endpoints GET do spawn message (CA-B5/B6/B8/B9/B10 não implementados) |
 | 9 | Dev .NET Sub-D #84 (PR #90) | dev-dotnet | concluido — PR #90 (feature/84-public-cors-ratelimit → desenv), 218/218 testes, boot Docker validado; policy "public-write" pronta para Sub-E consumir no merge; conflito esperado em Program.cs com Sub-C (#83) |
 | 10 | Líder Técnico — merge Sub-B #82 (PR #87) | lider-tecnico | concluido — PR #87 mergeado (squash) em desenv; CA-B5/B6/B8/B9/B10 formais e não implementados (endpoints de escrita); decisão: sub-issue #82 mantida ABERTA para 2ª rodada de Dev .NET na mesma sub-issue (não follow-up separado); comentário de decisão postado em #82 (5003999621); #82 NÃO adicionada a desenv_tasks_merged |
+| 11 | Dev .NET Sub-C #83 (PR #88) | dev-dotnet | concluido — PR #88 (feature/83-settings-jobs → desenv), 220/220 testes, boot Docker validado (mascaramento correto via curl real); teste dedicado confirma que valor completo de secret nunca vaza no JSON de `/api/settings` |
+| 12 | Líder Técnico — merge Sub-C #83 (PR #88) | lider-tecnico | concluido — build+testes revalidados localmente via worktree isolado (220/220), teste crítico de não-vazamento de secret confirmado; PR #88 mergeado (squash) em desenv; sub-issue #83 fechada (completed, escopo completo); PR desenv→homolog NÃO criado (2/5 sub-issues concluídas); próximo merge é Sub-D (#84, PR #90) com conflito esperado em Program.cs |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -175,6 +186,7 @@ desenv_tasks_merged: [#81]
 | 10 | Dev .NET Sub-C #83 (PR #88) — atenção: mexeu em Program.cs | dev-dotnet | sonnet | 124773 | 59 | 466s |
 | 11 | Dev .NET Sub-D #84 (PR #90) — conflito esperado com Sub-C em Program.cs | dev-dotnet | sonnet | 158710 | 73 | 781s |
 | 12 | Líder Técnico — merge Sub-B #82 (PR #87), mantida aberta | lider-tecnico | sonnet | 62650 | 14 | 199s |
+| 13 | Líder Técnico — merge Sub-C #83 (PR #88) | lider-tecnico | sonnet | PREENCHER_USAGE | PREENCHER_USAGE | PREENCHER_USAGE |
 
 **Consolidação (quiescência):** A preencher pela sessão principal após cada etapa.
 
