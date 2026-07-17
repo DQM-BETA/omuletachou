@@ -106,6 +106,7 @@ desenv_tasks_merged: []
 | 3 | PM Fase 2 | pm | sonnet | 55923 | 21 | 253s |
 | 4 | Arquiteto | arquiteto | sonnet | 55194 | 12 | 181s |
 | 5 | Líder Técnico — refinamento | lider-tecnico | sonnet | 76208 | 20 | 257s |
+| 6 | Dev .NET Sub-A #81 (PR #86) | dev-dotnet | sonnet | 159882 | 103 | 1133s |
 
 **Consolidação (quiescência):** A preencher pela sessão principal após cada etapa.
 
