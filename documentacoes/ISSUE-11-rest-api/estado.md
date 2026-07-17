@@ -5,11 +5,11 @@ issue: 11
 repo: omuletachou
 titulo: feat: REST API (Dashboard + Endpoints Publicos)
 rota: normal
-etapa_atual: Arquiteto — revisão focada (JWT signing key/refresh, mascaramento de secrets, rate limit atrás de proxy reverso)
+etapa_atual: Líder Técnico — refinamento técnico (aguarda início; sub-issues A–E a criar no GitHub)
 docs_path: repos/omuletachou/documentacoes/ISSUE-11-rest-api
 openspec_path: repos/omuletachou/openspec/changes/issue-11-rest-api
 openspec_change: repos/omuletachou/openspec/changes/issue-11-rest-api
-ultimo_agente: pm-analista-negocios
+ultimo_agente: arquiteto
 status_comment_id: 4962193361
 pr_feature: ~
 pr_homologacao: ~
@@ -54,11 +54,16 @@ Motivo: primeira introdução de autenticação/autorização no sistema. 3 pont
 2. Suficiência do mascaramento de secrets (últimos 4 caracteres) — avaliar necessidade de camada adicional (ex.: auditoria de acesso a `GET /api/settings`).
 3. Rate limiting nativo do .NET 8 atrás de proxy reverso (Oracle Cloud VM) — particionamento por IP precisa considerar `X-Forwarded-For`/`X-Real-IP` corretamente.
 
-## Arquiteto (chamado)
-Etapa atual. Escopo focado nos 3 pontos acima — não é revisão de todo o PRD (regras de negócio já fechadas com o Gerente). Deve produzir/completar `design.md` em `repos/omuletachou/openspec/changes/issue-11-rest-api/`.
+## Arquiteto — revisão focada
+Concluído em 2026-07-17. `design.md` escrito em `repos/omuletachou/openspec/changes/issue-11-rest-api/design.md`, cobrindo exclusivamente os 3 pontos escalados pelo PM (nenhuma regra de negócio já fechada foi revisitada):
+1. **JWT**: HS256 (chave simétrica ≥256 bits); chave de assinatura via variável de ambiente (`Jwt__SigningKey`), nunca em `app_settings` (tabela de domínio exposta via API) nem hardcoded; ausência de refresh token mantida (risco residual aceitável dado usuário único/24h/sem multi-dispositivo — revogação futura, se necessária, via rotação da signing key).
+2. **Mascaramento de settings**: últimos 4 caracteres é suficiente como controle primário; sem tabela de auditoria dedicada (usuário único não agrega valor de accountability); recomendação de baixo custo não bloqueante — log estruturado via `ILogger` em GET/PUT de `/api/settings` (metadados apenas, nunca o valor).
+3. **Rate limit atrás de proxy**: `ForwardedHeadersMiddleware` com `KnownNetworks`/`KnownProxies` = rede Docker do nginx, `ForwardLimit=1`, registrado antes de `UseRateLimiter()`; nginx deve sobrescrever `X-Forwarded-For` com `$remote_addr` (evita spoofing e vazamento de rate limit compartilhado no IP do proxy).
+
+Resumo postado na Issue #11: https://github.com/DQM-BETA/omuletachou/issues/11#issuecomment-5003608110
 
 ## Líder Técnico — refinamento técnico
-Etapa pendente. Aguarda conclusão do Arquiteto. Ao refinar, avaliar dependência de ordem entre Sub-A (autenticação) e as demais sub-issues (podem rodar em paralelo com stub de auth, ou há dependência sequencial real) — ver nota em `proposal.md`.
+Etapa atual. Aguarda início. Ao refinar, avaliar dependência de ordem entre Sub-A (autenticação) e as demais sub-issues (podem rodar em paralelo com stub de auth, ou há dependência sequencial real) — ver nota em `proposal.md`. Deve criar as 5 sub-issues reais no GitHub (Sub-A a Sub-E) e considerar a recomendação de log estruturado (não bloqueante) do `design.md` no refinamento da Sub-C.
 
 ## Dev .NET
 Etapa pendente. Espera refinamento técnico + criação das 5 sub-issues reais no GitHub.
@@ -73,6 +78,7 @@ desenv_tasks_merged: []
 | 1 | Preparacao | coordenador | concluido — Issue #11 preparada, estado.md criado, comentario 📍 Status adicionado (id 4962193361), Issue adicionada ao Project em Backlog, card movido para Em Desenvolvimento (kickoff) |
 | 2 | PM Fase 1 | pm-analista-negocios | concluido — perguntas de levantamento postadas na Issue #11 (comentário 4962241310), comentario 📍 Status atualizado para Gate 1, aguardando resposta do Gerente |
 | 3 | PM Fase 2 | pm-analista-negocios | concluido — Gate 1 respondido (comentário 5003551503), proposal.md + criterios-aceite.md escritos (46 CAs em 5 sub-issues), sumário do PRD postado (comentário 5003577610), comentario 📍 Status atualizado para Arquiteto, ambiguidade=sim (escopo focado: JWT signing/refresh, mascaramento de secrets, rate limit atrás de proxy) |
+| 4 | Arquiteto | arquiteto | concluido — design.md escrito (JWT HS256/env var/sem refresh, mascaramento suficiente + log recomendado, rate limit com ForwardedHeadersMiddleware), resumo postado na Issue #11 (comentário 5003608110), comentario 📍 Status atualizado para Líder Técnico |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -80,8 +86,9 @@ desenv_tasks_merged: []
 | 1 | Preparacao | coordenador | haiku | 61934 | 56 | 302s |
 | 2 | PM Fase 1 | pm | sonnet | 30761 | 9 | 68s |
 | 3 | PM Fase 2 | pm | sonnet | 55923 | 21 | 253s |
+| 4 | Arquiteto | arquiteto | sonnet | 55194 | 12 | 181s |
 
 **Consolidação (quiescência):** A preencher pela sessão principal após cada etapa.
 
 ---
-_Última atualização: 2026-07-17 — mantido pelo PM (pm-analista-negocios)_
+_Última atualização: 2026-07-17 — mantido pelo Arquiteto._
