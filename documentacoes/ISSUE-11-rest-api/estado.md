@@ -5,13 +5,13 @@ issue: 11
 repo: omuletachou
 titulo: feat: REST API (Dashboard + Endpoints Publicos)
 rota: normal
-etapa_atual: Dev .NET — Sub-A (#81) bloqueante primeiro; Sub-B/C/D/E (#82-#85) paralelizáveis após merge de #81
+etapa_atual: Dev .NET — Sub-A (#81) mergeada em desenv; Sub-B/C/D/E (#82-#85) desbloqueadas, paralelizáveis
 docs_path: repos/omuletachou/documentacoes/ISSUE-11-rest-api
 openspec_path: repos/omuletachou/openspec/changes/issue-11-rest-api
 openspec_change: repos/omuletachou/openspec/changes/issue-11-rest-api
 ultimo_agente: lider-tecnico
 status_comment_id: 4962193361
-pr_feature: ~
+pr_feature: #86 (merged)
 pr_homologacao: ~
 pr_release: ~
 qa_status: ~
@@ -72,7 +72,7 @@ Concluído em 2026-07-17.
 - Comentário 📍 Status atualizado (id 4962193361) para "Dev .NET (Sub-A — Autenticação)".
 
 ## Dev .NET
-Sub-A (#81) concluída pelo Dev .NET em 2026-07-17. PR feature/81-auth → desenv aberto (aguardando número/link do `gh pr create`, ver HANDOFF). Implementado:
+Sub-A (#81) concluída pelo Dev .NET em 2026-07-17. PR #86 (`feature/81-auth` → `desenv`). Implementado:
 - Entidade `User` (Domain) + `UserConfiguration` (Infrastructure) + migration `AddUsersTable` (tabela `users`: email unique index, password_hash bcrypt, created_at).
 - `UserSeeder.SeedIfEmpty` (Api/Auth): seed idempotente via `Seed__UserEmail`/`Seed__UserPassword`, só roda se a tabela estiver vazia; senha sempre hash bcrypt (workFactor 12).
 - `JwtOptions`/`JwtTokenService` (Api/Auth): emissão HS256, claims `sub`/`email`, expiração 24h configurável.
@@ -83,11 +83,19 @@ Sub-A (#81) concluída pelo Dev .NET em 2026-07-17. PR feature/81-auth → desen
 - **Bug latente corrigido en passant**: `CustomWebApplicationFactory` gerava um novo nome de banco InMemory a cada resolução de `DbContextOptions` (Guid dentro da lambda de `AddDbContext`, reavaliado por scope), isolando silenciosamente cada scope/request em um banco vazio diferente — inofensivo para os testes anteriores (não persistiam dados entre scopes), mas quebrava qualquer fluxo de seed+consulta em scopes distintos. Corrigido gerando o nome uma única vez por instância da factory.
 - Boot Docker validado via `docker compose up --build`: migration aplicada, seed executado, `/health` 200, login válido/inválido, `/api/auth/me` sem token (401)/com token válido (200), endpoints de trigger existentes (200) — tudo confirmado via curl real contra o container.
 
-Próxima etapa: Líder Técnico — merge de #81 (feature/81-auth) em `desenv` ANTES de qualquer outra sub-issue. Após confirmado, spawnar Devs em paralelo para Sub-B (#82), Sub-C (#83), Sub-D (#84), Sub-E (#85) — ordem entre estas quatro é livre (sem dependência sequencial forte).
+## Líder Técnico — merge Sub-A (#81)
+Concluído em 2026-07-17.
+- Revisão do PR #86: confirmado que `appsettings.json` (base, versionado) mantém `Jwt:SigningKey` vazio e `Program.cs` lança `InvalidOperationException` fail-fast se `Jwt:SigningKey` ausente/vazia em qualquer ambiente — sem chave fraca de fallback. `appsettings.Development.json` só documenta chave fixa para uso local. 197/197 testes cobrindo os fluxos críticos (login, `/me`, seed, token expirado/inválido). Boot Docker validado com curl real pelo Dev.
+- `mergeStateStatus: CLEAN`, `mergeable: MERGEABLE` confirmados antes do merge.
+- PR #86 mergeado (squash) em `desenv`. Sub-issue #81 fechada (`completed`).
+- **PR desenv→homolog NÃO criado** — apenas 1/5 sub-issues concluída; aguardando #82-#85.
+- Sub-issues #82 (Sub-B), #83 (Sub-C), #84 (Sub-D), #85 (Sub-E) desbloqueadas — dependência de Sub-A resolvida em `desenv`. Podem rodar em paralelo (sem dependência sequencial forte entre si).
+
+Próxima etapa: sessão principal spawna Devs .NET em paralelo para Sub-B (#82), Sub-C (#83), Sub-D (#84), Sub-E (#85).
 
 ## Sub-issues
-sub_issues: [#81 (stack:dotnet, task_id:Sub-A), #82 (stack:dotnet, task_id:Sub-B), #83 (stack:dotnet, task_id:Sub-C), #84 (stack:dotnet, task_id:Sub-D), #85 (stack:dotnet, task_id:Sub-E)]
-desenv_tasks_merged: []
+sub_issues: [#81 (stack:dotnet, task_id:Sub-A) — MERGED, #82 (stack:dotnet, task_id:Sub-B), #83 (stack:dotnet, task_id:Sub-C), #84 (stack:dotnet, task_id:Sub-D), #85 (stack:dotnet, task_id:Sub-E)]
+desenv_tasks_merged: [#81]
 
 ## Historico de etapas
 | # | Etapa | Agente | Status |
@@ -97,6 +105,8 @@ desenv_tasks_merged: []
 | 3 | PM Fase 2 | pm-analista-negocios | concluido — Gate 1 respondido (comentário 5003551503), proposal.md + criterios-aceite.md escritos (46 CAs em 5 sub-issues), sumário do PRD postado (comentário 5003577610), comentario 📍 Status atualizado para Arquiteto, ambiguidade=sim (escopo focado: JWT signing/refresh, mascaramento de secrets, rate limit atrás de proxy) |
 | 4 | Arquiteto | arquiteto | concluido — design.md escrito (JWT HS256/env var/sem refresh, mascaramento suficiente + log recomendado, rate limit com ForwardedHeadersMiddleware), resumo postado na Issue #11 (comentário 5003608110), comentario 📍 Status atualizado para Líder Técnico |
 | 5 | Líder Técnico — refinamento | lider-tecnico | concluido — decisão de ordem sequencial (Sub-A bloqueante), especificacao-tecnica.md + tasks.md escritos, 5 sub-issues criadas (#81-#85), resumo postado (comentário 5003649743), comentario 📍 Status atualizado para Dev .NET (Sub-A) |
+| 6 | Dev .NET Sub-A | dev-dotnet | concluido — PR #86 (feature/81-auth → desenv), 197/197 testes, boot Docker validado |
+| 7 | Líder Técnico — merge Sub-A | lider-tecnico | concluido — PR #86 revisado (fail-fast JWT confirmado) e mergeado (squash) em desenv, sub-issue #81 fechada, Sub-B/C/D/E desbloqueadas |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -107,6 +117,7 @@ desenv_tasks_merged: []
 | 4 | Arquiteto | arquiteto | sonnet | 55194 | 12 | 181s |
 | 5 | Líder Técnico — refinamento | lider-tecnico | sonnet | 76208 | 20 | 257s |
 | 6 | Dev .NET Sub-A #81 (PR #86) | dev-dotnet | sonnet | 159882 | 103 | 1133s |
+| 7 | Líder Técnico — merge Sub-A #81 (PR #86) | lider-tecnico | sonnet | TBD | TBD | TBD |
 
 **Consolidação (quiescência):** A preencher pela sessão principal após cada etapa.
 
