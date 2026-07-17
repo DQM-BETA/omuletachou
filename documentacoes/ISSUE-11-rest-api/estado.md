@@ -209,7 +209,7 @@ desenv_tasks_merged: [#81, #83, #84]
 | 12 | Líder Técnico — merge Sub-B #82 (PR #87), mantida aberta | lider-tecnico | sonnet | 62650 | 14 | 199s |
 | 13 | Líder Técnico — merge Sub-C #83 (PR #88) | lider-tecnico | sonnet | 65942 | 19 | 241s |
 | 14 | Líder Técnico — merge Sub-D #84 (PR #90), conflito resolvido + bug infra contornado | lider-tecnico | sonnet | 85533 | 38 | 627s |
-| 15 | Líder Técnico — tentativa merge Sub-E #85 (PR #89), bloqueado (edição de código fora de escopo) | lider-tecnico | sonnet | ~ | ~ | ~ |
+| 15 | Líder Técnico — tentativa merge Sub-E #85 (PR #89), bloqueado (edição de código fora de escopo) | lider-tecnico | sonnet | 67757 | 7 | 213s |
 
 **Consolidação (quiescência):** A preencher pela sessão principal após cada etapa.
 
