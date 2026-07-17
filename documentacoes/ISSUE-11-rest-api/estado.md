@@ -198,7 +198,7 @@ desenv_tasks_merged: [#81, #83, #84]
 | 11 | Dev .NET Sub-D #84 (PR #90) — conflito esperado com Sub-C em Program.cs | dev-dotnet | sonnet | 158710 | 73 | 781s |
 | 12 | Líder Técnico — merge Sub-B #82 (PR #87), mantida aberta | lider-tecnico | sonnet | 62650 | 14 | 199s |
 | 13 | Líder Técnico — merge Sub-C #83 (PR #88) | lider-tecnico | sonnet | 65942 | 19 | 241s |
-| 14 | Líder Técnico — merge Sub-D #84 (PR #90), conflito resolvido + bug infra contornado | lider-tecnico | sonnet | PENDENTE (preencher com &lt;usage&gt; do HANDOFF) | PENDENTE | PENDENTE |
+| 14 | Líder Técnico — merge Sub-D #84 (PR #90), conflito resolvido + bug infra contornado | lider-tecnico | sonnet | 85533 | 38 | 627s |
 
 **Consolidação (quiescência):** A preencher pela sessão principal após cada etapa.
 
