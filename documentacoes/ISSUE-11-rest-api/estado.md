@@ -174,6 +174,7 @@ desenv_tasks_merged: [#81]
 | 9 | Dev .NET Sub-E #85 (PR #89) — policy public-write pendente | dev-dotnet | sonnet | 95367 | 55 | 399s |
 | 10 | Dev .NET Sub-C #83 (PR #88) — atenção: mexeu em Program.cs | dev-dotnet | sonnet | 124773 | 59 | 466s |
 | 11 | Dev .NET Sub-D #84 (PR #90) — conflito esperado com Sub-C em Program.cs | dev-dotnet | sonnet | 158710 | 73 | 781s |
+| 12 | Líder Técnico — merge Sub-B #82 (PR #87), mantida aberta | lider-tecnico | sonnet | 62650 | 14 | 199s |
 
 **Consolidação (quiescência):** A preencher pela sessão principal após cada etapa.
 
