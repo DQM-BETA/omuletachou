@@ -80,4 +80,4 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 3 | PM Fase 2 | pm | sonnet | 50226 | 21 | 228s |
 | 4 | Refinamento Tecnico | lider-tecnico | sonnet | 79581 | 28 | 242s |
 | 5 | UX/UI — spec visual | ux-ui | sonnet | 49326 | 7 | 118s |
-| 6 | Dev Sub-A #94 | dev-nodejs | sonnet | (ver <usage> do HANDOFF) | — | — |
+| 6 | Dev Sub-A #94 (PR #97) | dev-nodejs | sonnet | N/D (sessão interrompida por reinício do processo; PR #97 e estado.md confirmados manualmente pela sessão principal) | N/D | N/D |
