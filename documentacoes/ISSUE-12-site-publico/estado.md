@@ -100,4 +100,4 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 7 | Merge Sub-A #94 (LT) | lider-tecnico | sonnet | 38965 | 14 | 96s |
 | 8 | Dev Sub-B #95 (PR #98) | dev-nodejs | sonnet | 112977 | 79 | 740s |
 | 9 | Dev Sub-C #96 (PR #99) | dev-nodejs | sonnet | 125062 | 85 | 797s |
-| 10 | Merge Sub-B #95 (LT) | lider-tecnico | sonnet | (a preencher pela sessão principal a partir do &lt;usage&gt; deste HANDOFF) | | |
+| 10 | Merge Sub-B #95 (LT) | lider-tecnico | sonnet | 49583 | 10 | 107s |
