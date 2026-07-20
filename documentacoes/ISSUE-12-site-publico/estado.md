@@ -5,7 +5,7 @@ issue: 12
 repo: omuletachou
 titulo: feat: Site Publico Next.js (SSR + SEO)
 rota: normal
-etapa_atual: Em Desenvolvimento (aguardando UX/UI)
+etapa_atual: Em Desenvolvimento (UX/UI concluído, aguardando Dev Sub-A #94)
 docs_path: repos/omuletachou/documentacoes/ISSUE-12-site-publico
 openspec_path: repos/omuletachou/openspec/changes/issue-12-site-publico
 ultimo_agente: lider-tecnico
@@ -69,6 +69,7 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 3 | Gate 1 | Gerente | concluido |
 | 4 | PM Fase 2 | pm-analista-negocios | concluido |
 | 5 | Refinamento Tecnico | lider-tecnico | concluido |
+| 6 | UX/UI — spec visual | ux-ui | concluido — ux-ui-spec.md escrito (grid de cards, anatomia do DealCard, layout da página de oferta, tokens de cor/tipografia mobile-first) |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -77,3 +78,4 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 2 | PM Fase 1 | pm | sonnet | 29640 | 10 | 64s |
 | 3 | PM Fase 2 | pm | sonnet | 50226 | 21 | 228s |
 | 4 | Refinamento Tecnico | lider-tecnico | sonnet | 79581 | 28 | 242s |
+| 5 | UX/UI — spec visual | ux-ui | sonnet | 49326 | 7 | 118s |
