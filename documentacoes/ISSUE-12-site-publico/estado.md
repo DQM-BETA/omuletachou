@@ -93,6 +93,14 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 - Branch local `desenv` ja estava sincronizada com `origin/desenv` (HEAD em c511866 apos fetch).
 - Proximo: sessao principal roda /code-review + spawna agente Code Review no PR #100 (duas camadas).
 
+## Fix de segurança — XSS armazenado via JSON-LD (achado do `/code-review` no PR #100)
+- **Achado:** `website/app/oferta/[slug]/page.tsx` injetava JSON-LD via `dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}`. `JSON.stringify()` escapa aspas mas NÃO escapa `</script>`. Como `jsonLd` inclui `deal.title`/`deal.description` (dados coletados via scraping de Amazon/Mercado Livre/Shopee — Issue #6 — ou legendas geradas por IA, sem sanitização antes de persistir), um título malicioso contendo `</script><script>...` fecharia a tag `<script>` prematuramente e injetaria HTML/JS arbitrário no browser de qualquer visitante da página de oferta. **Stored XSS real**, não teórico.
+- **Correção:** nova função `safeJsonLdStringify()` em `website/lib/seo.ts` — escapa `<`, `>`, `&` como sequências Unicode (`<`, `>`, `&`) após `JSON.stringify()`. Continua JSON válido (parseável normalmente por browser/motores de busca), mas não fecha/abre tags HTML. `page.tsx` passou a usar `safeJsonLdStringify(jsonLd)` no lugar de `JSON.stringify(jsonLd)`.
+- **Testes de regressão:** 3 testes novos em `website/lib/seo.test.ts` (escapa `</script>`; preserva o valor original ao fazer round-trip via `JSON.parse`; comportamento idêntico a `JSON.stringify` para valores sem caracteres perigosos) + 1 teste end-to-end em `website/app/oferta/[slug]/page.test.tsx` (`CA-SEC1`, título literal `</script><script>alert(1)</script>` renderizado via `OfertaPage` real, confirma que `script.innerHTML` não contém `</script>` cru e que nenhum `<script>` extra foi injetado no DOM).
+- **Resultado:** `npm test` 61/61 passando (100%, 4 novos testes incluídos). Cobertura: `lib/seo.ts` 100%, `app/oferta/[slug]/page.tsx` 95.23% stmts / 100% branch/funcs/lines. `npm run build` (`next build`) compilou sem erro de TypeScript, 5 rotas geradas normalmente.
+- **Branch/PR:** worktree `.worktrees/fix-100-xss` a partir de `desenv` atualizado, branch `fix/100-jsonld-xss`. Commit `4725f4b`. PR #101 (`fix/100-jsonld-xss` → `desenv`) aberto: https://github.com/DQM-BETA/omuletachou/pull/101.
+- **Próximo:** Líder Técnico faz merge do PR #101 em `desenv` (squash) e, com o fix incorporado, **revalida/reabre o PR #100** (desenv→homolog) antes de a sessão principal rodar novamente o `/code-review` + Code Review dedicado.
+
 ## Historico de etapas
 | # | Etapa | Agente | Status |
 |---|---|---|---|
@@ -125,3 +133,4 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 11 | LT tentativa merge Sub-C #96 (PR #99) — bloqueado, conflito jest.config.js | lider-tecnico | sonnet | 35915 | 5 | 25s |
 | 12 | Dev fix conflito PR #99 (jest.config.js) | dev-nodejs | sonnet | 60472 | 56 | 499s |
 | 13 | Merge Sub-C #96 (PR #99) + PR release #100 (LT) | lider-tecnico | sonnet | 45492 | 20 | 120s |
+| 14 | Dev fix XSS JSON-LD (PR #101) — achado do /code-review plugin | dev-nodejs | sonnet | 53915 | 29 | 176s |
