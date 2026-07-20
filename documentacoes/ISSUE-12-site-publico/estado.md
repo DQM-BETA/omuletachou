@@ -71,4 +71,4 @@ Dependência: Sub-A entrega `lib/api.ts` e componentes de card compartilhados �
 |---|---|---|---|---|---|---|
 | 1 | Preparacao | Coordenador | haiku-4.5 | 32474 | 33 | 185s |
 | 2 | PM Fase 1 | pm | sonnet | 29640 | 10 | 64s |
-| 3 | PM Fase 2 | pm | sonnet | (preencher pela sessão principal a partir do usage) | | |
+| 3 | PM Fase 2 | pm | sonnet | 50226 | 21 | 228s |
