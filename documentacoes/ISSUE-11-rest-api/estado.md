@@ -5,15 +5,15 @@ issue: 11
 repo: omuletachou
 titulo: feat: REST API (Dashboard + Endpoints Publicos)
 rota: normal
-etapa_atual: QA aprovado (46/46 CAs, validação real end-to-end incl. rate limit e CORS reais) — próximo: LT cria PR homolog→main (Gate 2)
+etapa_atual: PR de release homolog→main criado (#93) — aguardando Gate 2 (Gerente)
 docs_path: repos/omuletachou/documentacoes/ISSUE-11-rest-api
 openspec_path: repos/omuletachou/openspec/changes/issue-11-rest-api
 openspec_change: repos/omuletachou/openspec/changes/issue-11-rest-api
-ultimo_agente: qa
+ultimo_agente: lider-tecnico
 status_comment_id: 4962193361
 pr_feature: #86 (merged), #87 (merged), #88 (merged), #89 (merged), #90 (merged), #91 (merged)
 pr_homologacao: 92
-pr_release: ~
+pr_release: 93
 qa_status: aprovado (46/46 CAs, end-to-end real)
 code_review_homolog_pr: 92 (aprovado, merge commit e861b28, mergedAt 2026-07-20T14:09:37Z)
 closedAt: ~
@@ -221,6 +221,13 @@ Concluído em 2026-07-20.
 - **Veredito: APROVADO.** PR #92 mergeado (merge commit, NUNCA squash) `desenv`→`homolog`, commit `e861b28064fcc2f37b6094602ae86a68d675fa9d`, `mergedAt: 2026-07-20T14:09:37Z`.
 - Nota sobre o histórico do processo: bug de infra reportado no merge da Sub-D (GitHub Pulls API com SHA desatualizado, contornado via push direto git/gh) não deixou nenhum artefato residual — `Program.cs` final revisado linha a linha, sem duplicação/conflito remanescente.
 
+## Líder Técnico — PR de release (homolog→main)
+Concluído em 2026-07-20.
+- Pré-condição confirmada: QA aprovou 46/46 CAs com evidência real end-to-end (Docker, Postgres, rate limit real, CORS real); 5/5 sub-issues completas e fechadas.
+- PR #93 criado (`homolog` → `main`), corpo resumindo a entrega: primeira introdução de autenticação/autorização (JWT) no sistema, REST API completa para o Dashboard (Products/Queue/Settings/Jobs/Reports) e endpoints públicos (deals/push), com mascaramento de secrets, CORS restrito e rate limiting; `Closes #81, #82, #83, #84, #85`, `Refs #11`.
+- **Merge NÃO executado** — exige aprovação humana do Gerente (Gate 2). LT apenas criou o PR, conforme escopo.
+- `pr_release` atualizado para `93` em `estado.md`.
+
 ## Sub-issues
 sub_issues: [#81 (stack:dotnet, task_id:Sub-A) — MERGED e FECHADA, #82 (stack:dotnet, task_id:Sub-B) — MERGED e FECHADA (PR #87 parcial CA-B1/B2/B3/B4/B7/B11 + PR #91 follow-up CA-B5/B6/B8/B9/B10, mergedAt 2026-07-20T14:01:51Z), #83 (stack:dotnet, task_id:Sub-C) — MERGED e FECHADA (PR #88), #84 (stack:dotnet, task_id:Sub-D) — MERGED e FECHADA (PR #90, merge local via git push em desenv devido a bug de infra na GitHub Pulls API), #85 (stack:dotnet, task_id:Sub-E) — MERGED e FECHADA (PR #89, squash, commit 45c05fc)]
 desenv_tasks_merged: [#81, #82, #83, #84, #85] — 5/5 completas
@@ -247,6 +254,7 @@ desenv_tasks_merged: [#81, #82, #83, #84, #85] — 5/5 completas
 | 17 | Dev .NET — Sub-B follow-up #82 (PR #91) | dev-dotnet | concluido — PR #91 (feature/82-followup-write-endpoints → desenv) aberto; `PATCH /api/products/{id}/status` (CA-B5/B6), `GET /api/queue/manual` (CA-B8), `POST /api/queue/{id}/retry` (CA-B9/B10) implementados; 280/280 testes passando (18 novos); boot Docker real validado via curl; sub-issue #82 permanece aberta até o próximo LT mergear e, com as 5 sub-issues completas, criar o PR desenv→homolog |
 | 18 | Líder Técnico — merge Sub-B follow-up #82 (PR #91) + PR de release | lider-tecnico | concluido — PR #91 mergeado (squash) em desenv (mergedAt 2026-07-20T14:01:51Z), sub-issue #82 fechada (CA-B1 a CA-B11 completos); **5/5 sub-issues completas**; PR de release #92 (desenv→homolog) criado. Nota: sessão LT teve queda de conexão de API após concluir estas ações, antes de escrever o HANDOFF final — trabalho confirmado diretamente via `gh`/`git` pela sessão principal, não perdido. Sem `<usage>` capturado para esta etapa (conexão perdida antes do retorno). |
 | 19 | Code Review — PR #92 (desenv→homolog) | code-review | concluido — build limpo, 280/280 testes (14 arquivos com WebApplicationFactory), boot Docker real com curl (auth/settings-mascaramento/public/CORS/jobs), migrations sem colisão (46 app_settings, users com índice único), revisão de segurança completa (JWT fail-fast, bcrypt, masking, CORS sem AllowAnyOrigin, rate limit, ordem do pipeline), checklist de veto 100% OK; PR #92 APROVADO e mergeado (merge commit e861b28) desenv→homolog; evidência completa postada no PR (comentário 5023187321) |
+| 20 | Líder Técnico — PR de release (homolog→main) | lider-tecnico | concluido — PR #93 (homolog→main) criado com resumo da entrega (auth JWT, REST API dashboard, endpoints públicos, CORS/rate limit/mascaramento); `pr_release` atualizado para 93; merge NÃO executado (Gate 2 — Gerente); aguardando aprovação |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -275,5 +283,6 @@ desenv_tasks_merged: [#81, #82, #83, #84, #85] — 5/5 completas
 **Consolidação (quiescência):** A preencher pela sessão principal após cada etapa.
 
 ---
-_Última atualização: 2026-07-20 — mantido pelo Code Review._
+_Última atualização: 2026-07-20 — mantido pelo Líder Técnico._
 </content>
+</invoke>
