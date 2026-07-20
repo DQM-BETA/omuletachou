@@ -143,4 +143,4 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 12 | Dev fix conflito PR #99 (jest.config.js) | dev-nodejs | sonnet | 60472 | 56 | 499s |
 | 13 | Merge Sub-C #96 (PR #99) + PR release #100 (LT) | lider-tecnico | sonnet | 45492 | 20 | 120s |
 | 14 | Dev fix XSS JSON-LD (PR #101) — achado do /code-review plugin | dev-nodejs | sonnet | 53915 | 29 | 176s |
-| 15 | Merge PR #101 + validação PR #100 (LT) | lider-tecnico | sonnet | (sessão principal preenche a partir do `<usage>` deste HANDOFF) | — | — |
+| 15 | Merge PR #101 + validação PR #100 (LT) | lider-tecnico | sonnet | 64920 | 18 | 251s |
