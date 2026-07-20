@@ -5,13 +5,13 @@ issue: 11
 repo: omuletachou
 titulo: feat: REST API (Dashboard + Endpoints Publicos)
 rota: normal
-etapa_atual: Dev .NET — Sub-A (#81), Sub-C (#83, PR #88), Sub-D (#84, PR #90) mergeadas em desenv; Sub-B parcial (#82, PR #87) mergeada em desenv (sub-issue mantida aberta, aguarda 2ª rodada CA-B5/B6/B8/B9/B10); Sub-E (#85, PR #89) BLOQUEADA aguardando Dev — precisa ganhar `.RequireRateLimiting("public-write")` em PushController.cs + teste CA-E4 (fora do escopo de ferramentas do LT)
+etapa_atual: Dev .NET — Sub-A (#81), Sub-C (#83, PR #88), Sub-D (#84, PR #90), Sub-E (#85, PR #89) mergeadas em desenv (4/5 sub-issues completas); Sub-B parcial (#82, PR #87) mergeada em desenv mas sub-issue mantida ABERTA, aguardando follow-up de Dev .NET (CA-B5/CA-B6 `PATCH /api/products/{id}/status`, CA-B8 `GET /api/queue/manual`, CA-B9/CA-B10 `POST /api/queue/{id}/retry`); PR desenv→homolog NÃO criado até #82 fechar
 docs_path: repos/omuletachou/documentacoes/ISSUE-11-rest-api
 openspec_path: repos/omuletachou/openspec/changes/issue-11-rest-api
 openspec_change: repos/omuletachou/openspec/changes/issue-11-rest-api
 ultimo_agente: lider-tecnico
 status_comment_id: 4962193361
-pr_feature: #86 (merged), #87 (merged), #88 (merged), #90 (merged)
+pr_feature: #86 (merged), #87 (merged), #88 (merged), #89 (merged), #90 (merged)
 pr_homologacao: ~
 pr_release: ~
 qa_status: ~
@@ -182,9 +182,19 @@ Concluído em 2026-07-17. Continuação da branch `feature/85-push-reports` (wor
 - Worktree `.worktrees/fix-85-ratelimit` removido ao final (`git worktree remove`).
 - **Sub-issue #85 permanece ABERTA** — quem fecha e mergeia é o próximo Líder Técnico.
 
+## Líder Técnico — merge Sub-E (#85, PR #89)
+Concluído em 2026-07-20.
+- Revisão do PR #89: confirmado via `gh pr diff` que `[EnableRateLimiting(RateLimiterConfigurator.PublicWritePolicy)]` está aplicado corretamente em `PushController.Subscribe` (`POST /api/public/push/subscribe`), mesmo padrão de atributo usado por `PublicController` para `"public-read"` (Sub-D). Dev já reportou 262/262 testes passando (100%), incluindo `PushSubscribeRateLimitIntegrationTests` cobrindo CA-E4 (429 após exceder limite) e não regressão de particionamento por IP, e boot Docker real validado via curl. Repo não tem CI configurado (`gh pr checks` → "no checks reported"), consistente com o padrão dos merges anteriores desta issue — validação funcional já feita pelo Dev, revisão desta invocação por diff/leitura de código (LT não roda testes/Docker, fora do escopo de ferramentas).
+- PR #89 mergeado (squash) em `desenv` — commit `45c05fc1871fa9e70628671173d0b12fc4d09a2f`.
+- Sub-issue #85 fechada (`completed`).
+- `desenv_tasks_merged` atualizado para `[#81, #83, #84, #85]` — 4 de 5 sub-issues completas.
+- **PR desenv→homolog NÃO criado**: sub-issue #82 (Sub-B) segue ABERTA, com follow-up formal pendente (CA-B5/CA-B6 `PATCH /api/products/{id}/status`, CA-B8 `GET /api/queue/manual`, CA-B9/CA-B10 `POST /api/queue/{id}/retry`) — são CAs de escrita explicitamente listados em `criterios-aceite.md`, não débito cosmético, e a issue-pai #11 é guarda-chuva que só deveria promover a homolog com os 46 CAs cobertos. Decisão consistente com a registrada pelo LT anterior na etapa "merge Sub-B (#82, PR #87)" (comentário https://github.com/DQM-BETA/omuletachou/issues/82#issuecomment-5003999621).
+- Branch local: verificado `git status` em `repos/omuletachou` — `On branch desenv`, `up to date with 'origin/desenv'`, working tree limpo (só diretório `.worktrees/` untracked, não relacionado a esta invocação). Branch local `feature/85-push-reports` (já squash-mergeada) removida (`git branch -d`, aceito o warning esperado de squash merge).
+- **Próximo passo real**: sessão principal deve spawnar um **Dev .NET** para completar o follow-up de Sub-B (#82) — escopo: `PATCH /api/products/{id}/status` (CA-B5/CA-B6), `GET /api/queue/manual` (CA-B8), `POST /api/queue/{id}/retry` (CA-B9/CA-B10), a partir de `desenv` atualizado (já contém `PagedResult<T>`/`ProductsController`/`QueueController`/toda a stack de Sub-A/C/D/E). Só depois disso — sub-issue #82 fechada — o próximo LT cria o PR `desenv→homolog`.
+
 ## Sub-issues
-sub_issues: [#81 (stack:dotnet, task_id:Sub-A) — MERGED, #82 (stack:dotnet, task_id:Sub-B) — PR #87 merged (parcial: CA-B1/B2/B3/B4/B7/B11), sub-issue ABERTA aguardando 2ª rodada (CA-B5/B6/B8/B9/B10), #83 (stack:dotnet, task_id:Sub-C) — MERGED (PR #88), #84 (stack:dotnet, task_id:Sub-D) — MERGED (PR #90, merge local via git push em desenv devido a bug de infra na GitHub Pulls API), #85 (stack:dotnet, task_id:Sub-E) — PR #89 atualizado (rate limit public-write + teste CA-E4 aplicados, fix pontual pós-Sub-D), pronto para merge pelo próximo LT]
-desenv_tasks_merged: [#81, #83, #84]
+sub_issues: [#81 (stack:dotnet, task_id:Sub-A) — MERGED, #82 (stack:dotnet, task_id:Sub-B) — PR #87 merged (parcial: CA-B1/B2/B3/B4/B7/B11), sub-issue ABERTA aguardando 2ª rodada (CA-B5/B6/B8/B9/B10), #83 (stack:dotnet, task_id:Sub-C) — MERGED (PR #88), #84 (stack:dotnet, task_id:Sub-D) — MERGED (PR #90, merge local via git push em desenv devido a bug de infra na GitHub Pulls API), #85 (stack:dotnet, task_id:Sub-E) — MERGED (PR #89, squash, commit 45c05fc)]
+desenv_tasks_merged: [#81, #83, #84, #85]
 
 ## Historico de etapas
 | # | Etapa | Agente | Status |
@@ -204,6 +214,7 @@ desenv_tasks_merged: [#81, #83, #84]
 | 13 | Líder Técnico — merge Sub-D #84 (PR #90) | lider-tecnico | concluido — conflito em Program.cs resolvido automaticamente (3-way merge sem marcadores textuais) via `gh pr update-branch`; verificado linha a linha (pipeline ForwardedHeaders→CORS→Auth→Authz→RateLimiter→MapControllers correto, sem triggers remanescentes de Sub-C, sem AllowAnyOrigin); bug de infra na GitHub Pulls API (head.sha stale) impediu `gh pr merge`, contornado com merge local (`--no-ff`, commit 558365f) + push direto em `desenv` (não protegida); GitHub reconheceu PR #90 como MERGED automaticamente; sub-issue #84 fechada; desenv_tasks_merged agora [#81,#83,#84]; PR desenv→homolog NÃO criado (falta #85/Sub-E, que precisa da policy public-write) |
 | 14 | Líder Técnico — tentativa de merge Sub-E #85 (PR #89) | lider-tecnico | bloqueado — spawn pedia edição de PushController.cs + novo teste CA-E4, fora do escopo de ferramentas do LT (sem Edit; Bash só git/gh); nenhuma ação destrutiva tomada (PR não rebaseado/mergeado, sub-issue não fechada); recomenda spawn de Dev .NET para aplicar `.RequireRateLimiting("public-write")` + teste CA-E4 antes do próximo merge; follow-up de Sub-B (#82) permanece pendente separadamente |
 | 15 | Dev .NET — fix pontual Sub-E #85 (PR #89) rate limit CA-E4 | dev-dotnet | concluido — rebase limpo contra desenv (Sub-D incorporada), `[EnableRateLimiting("public-write")]` aplicado em `PushController.Subscribe`, novo teste `PushSubscribeRateLimitIntegrationTests` (CA-E4 + não regressão de particionamento por IP), 262/262 testes passando, boot Docker real validado (curl 201), push --force-with-lease no PR #89 existente (mesma branch) |
+| 16 | Líder Técnico — merge Sub-E #85 (PR #89) | lider-tecnico | concluido — PR #89 revisado (`[EnableRateLimiting]` confirmado no diff), mergeado (squash) em desenv (commit 45c05fc), sub-issue #85 fechada; desenv_tasks_merged agora [#81,#83,#84,#85] (4/5); PR desenv→homolog NÃO criado — sub-issue #82 (Sub-B) segue aberta com follow-up formal pendente (CA-B5/B6/B8/B9/B10); próximo passo é Dev .NET completar #82 |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -224,11 +235,12 @@ desenv_tasks_merged: [#81, #83, #84]
 | 14 | Líder Técnico — merge Sub-D #84 (PR #90), conflito resolvido + bug infra contornado | lider-tecnico | sonnet | 85533 | 38 | 627s |
 | 15 | Líder Técnico — tentativa merge Sub-E #85 (PR #89), bloqueado (edição de código fora de escopo) | lider-tecnico | sonnet | 67757 | 7 | 213s |
 | 16 | Dev .NET — fix pontual Sub-E #85 (PR #89), rate limit CA-E4 | dev-dotnet | sonnet | 82404 | 37 | 304s |
+| 17 | Líder Técnico — merge Sub-E #85 (PR #89) | lider-tecnico | sonnet | (preencher via `<usage>` do HANDOFF abaixo) | | |
 
 **Consolidação (quiescência):** A preencher pela sessão principal após cada etapa.
 
-**Nota (linha 15):** tokens/tools/tempo desta invocação a preencher pela sessão principal a partir do `<usage>` retornado no HANDOFF abaixo.
+**Nota (linha 17):** tokens/tools/tempo desta invocação a preencher pela sessão principal a partir do `<usage>` retornado no HANDOFF abaixo.
 
 ---
-_Última atualização: 2026-07-17 — mantido pelo Líder Técnico._
+_Última atualização: 2026-07-20 — mantido pelo Líder Técnico._
 </content>
