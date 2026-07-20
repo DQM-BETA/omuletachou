@@ -124,3 +124,4 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 10 | Merge Sub-B #95 (LT) | lider-tecnico | sonnet | 49583 | 10 | 107s |
 | 11 | LT tentativa merge Sub-C #96 (PR #99) — bloqueado, conflito jest.config.js | lider-tecnico | sonnet | 35915 | 5 | 25s |
 | 12 | Dev fix conflito PR #99 (jest.config.js) | dev-nodejs | sonnet | 60472 | 56 | 499s |
+| 13 | Merge Sub-C #96 (PR #99) + PR release #100 (LT) | lider-tecnico | sonnet | 45492 | 20 | 120s |
