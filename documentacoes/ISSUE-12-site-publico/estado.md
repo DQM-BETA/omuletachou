@@ -5,10 +5,10 @@ issue: 12
 repo: omuletachou
 titulo: feat: Site Publico Next.js (SSR + SEO)
 rota: normal
-etapa_atual: Refinamento Técnico
+etapa_atual: Em Desenvolvimento (aguardando UX/UI)
 docs_path: repos/omuletachou/documentacoes/ISSUE-12-site-publico
 openspec_path: repos/omuletachou/openspec/changes/issue-12-site-publico
-ultimo_agente: pm-analista-negocios
+ultimo_agente: lider-tecnico
 status_comment_id: 5025494280
 pr_homologacao: ~
 code_review_homolog_pr: ~
@@ -47,16 +47,19 @@ Resumo:
 
 **Avaliação de ambiguidade arquitetural: SEM ambiguidade.** O Gate 1 já resolveu as decisões que poderiam ser arquiteturais (estratégia de renderização — ISR 300s em vez de SSR puro; escopo de SEO; integração via rede interna Docker). Os pontos técnicos remanescentes (fetch em Server Components com `next: { revalidate }`, fallback do ISR quando a API está fora do ar, `notFound()` para slug inexistente) são padrões bem estabelecidos do Next.js App Router, não decisões de arquitetura que exijam revisão do Arquiteto. Próximo agente: **Líder Técnico** (refinamento técnico + task breakdown; LT decide quando o UX/UI da squad entra no fluxo, antes dos Devs).
 
+## Refinamento Técnico (LT) — concluído
+- `design.md` (resumido, PM roteou sem Arquiteto): repos/omuletachou/openspec/changes/issue-12-site-publico/design.md
+- `especificacao-tecnica.md`: repos/omuletachou/documentacoes/ISSUE-12-site-publico/especificacao-tecnica.md — contrato definitivo de `lib/api.ts`/`lib/types.ts` (espelha `PublicDealDto`/`PagedResult<T>` do backend, Issue #11), estrutura de componentes por sub-issue, estratégia de fallback do ISR, `notFound()`, pontos de SEO.
+- `tasks.md`: repos/omuletachou/openspec/changes/issue-12-site-publico/tasks.md (T-01/T-02/T-03, mapeados às sub-issues reais)
+- **Decisão de sequenciamento:** Sub-A (contrato `lib/api.ts` real) mergeada em `desenv` primeiro; Sub-B e Sub-C dependem dela e podem paralelizar entre si depois — contrato já fechado na especificação técnica desde já, evitando o dev "descobrir" a interface, mas a implementação real evita 2 devs no mesmo arquivo/conflito de build integrado (CA-T1).
+- **Decisão de UX/UI:** demanda tem UI real e o Gate 1 delegou o layout ao UX/UI da squad (não ao critério do dev, "sem Figma — UX/UI define layout"). UX/UI entra no fluxo ANTES dos Devs, produzindo wireframe/tokens mínimo (grid de cards, página de produto, paleta/tipografia) a partir dos critérios funcionais do Gate 1.
+- Comentário de resumo técnico postado na Issue #12: https://github.com/DQM-BETA/omuletachou/issues/12#issuecomment-5025948289
+
 ## Sub-issues
-sub_issues: []
+sub_issues: [#94 (stack:nodejs, task_id:T-01, Sub-A: Integração de dados + Home), #95 (stack:nodejs, task_id:T-02, Sub-B: Página de oferta + SEO — depende de #94), #96 (stack:nodejs, task_id:T-03, Sub-C: Página de categoria + sitemap/robots — depende de #94)]
 desenv_tasks_merged: []
 
-Agrupamento sugerido pelo PM (LT decide o breakdown técnico final):
-- **Sub-A — Integração de dados + Home**: `lib/api.ts` (fetchDeals/fetchDeal/fetchByCategory), `DealCard.tsx`, `Header.tsx`, Home com ISR, filtros de plataforma/categoria, paginação.
-- **Sub-B — Página de oferta + SEO de produto**: `DealDetail.tsx`, `oferta/[slug]/page.tsx` com ISR, `generateMetadata`, Open Graph, JSON-LD `Product`, 404 de slug inexistente.
-- **Sub-C — Página de categoria + sitemap/robots**: `categoria/[categoria]/page.tsx` com ISR, `app/sitemap.ts` dinâmico, `robots.txt` estático.
-
-Dependência: Sub-A entrega `lib/api.ts` e componentes de card compartilhados — Sub-B/Sub-C dependem dela, mas podem iniciar em paralelo com contrato de `lib/api.ts` acordado antecipadamente.
+Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) → após merge de #94, Dev #95 e Dev #96 em paralelo.
 
 ## Historico de etapas
 | # | Etapa | Agente | Status |
@@ -65,6 +68,7 @@ Dependência: Sub-A entrega `lib/api.ts` e componentes de card compartilhados �
 | 2 | PM Fase 1 | pm-analista-negocios | concluido |
 | 3 | Gate 1 | Gerente | concluido |
 | 4 | PM Fase 2 | pm-analista-negocios | concluido |
+| 5 | Refinamento Tecnico | lider-tecnico | concluido |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -72,3 +76,4 @@ Dependência: Sub-A entrega `lib/api.ts` e componentes de card compartilhados �
 | 1 | Preparacao | Coordenador | haiku-4.5 | 32474 | 33 | 185s |
 | 2 | PM Fase 1 | pm | sonnet | 29640 | 10 | 64s |
 | 3 | PM Fase 2 | pm | sonnet | 50226 | 21 | 228s |
+| 4 | Refinamento Tecnico | lider-tecnico | sonnet | PENDENTE (preencher com <usage> deste HANDOFF) | PENDENTE | PENDENTE |
