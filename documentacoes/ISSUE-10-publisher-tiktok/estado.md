@@ -5,18 +5,18 @@ issue: 10
 repo: omuletachou
 titulo: feat: Publisher TikTok (Content Posting API)
 rota: normal
-etapa_atual: Code Review
+etapa_atual: Concluído — merge main via PR #80 (2026-07-13)
 docs_path: repos/omuletachou/documentacoes/ISSUE-10-publisher-tiktok
 openspec_path: repos/omuletachou/openspec/changes/issue-10-publisher-tiktok
 openspec_change: repos/omuletachou/openspec/changes/issue-10-publisher-tiktok
-ultimo_agente: lider-tecnico
+ultimo_agente: coordenador
 status_comment_id: 4959102860
 pr_feature: 78
 pr_homologacao: 79
-pr_release: ~
-qa_status: ~
-code_review_homolog_pr: ~
-closedAt: ~
+pr_release: 80
+qa_status: aprovado (CA1-CA19; CA20 equivalente pendente de aprovação TikTok, não-bloqueante)
+code_review_homolog_pr: 79
+closedAt: 2026-07-13T19:58:38Z
 
 ## Contexto
 Stack: .NET 8, TikTok Content Posting API (upload chunked), OAuth2
@@ -74,6 +74,45 @@ Comentário: https://github.com/DQM-BETA/omuletachou/issues/10#issuecomment-4959
 - **CA20 (validação em conta real do TikTok) confirmado como débito de acompanhamento, registrado no Gate 1 acima — explicitamente NÃO bloqueante para o Gate 2 desta issue (decisão do Gerente).** Sem ação adicional necessária aqui.
 - Branch local `desenv` limpa após merge (sem alterações pendentes; apenas diretório `.worktrees/` não rastreado, pré-existente).
 
+## Code Review — PR #79 homologação (concluído, aprovado)
+- Build limpo (`dotnet build`): 0 erros, 1 warning pré-existente (CS0618, Hangfire, não relacionado ao PR).
+- Suíte completa (`dotnet test`): **187/187 aprovados** (confirmado independentemente, bate com o reportado pelo Dev).
+- **Regressão Instagram confirmada:** `InstagramPublisherTests.cs` não foi modificado neste PR; rodado isoladamente (`--filter FullyQualifiedName~InstagramPublisherTests`) → **20/20 passando**, sem alteração no arquivo de teste. Refactor do `InstagramPublisher` para consumir `SocialDisclosureHelper.AppendIfMissing` preserva regex (`#publi\b|#publicidade\b`) e lógica de anexação — comportamento idêntico.
+- `Mp4DurationReader`: não foi prático testar contra MP4 real neste ambiente (sem ffmpeg/amostra disponível). Confirmado que `Mp4DurationReaderTests.cs` cobre todos os casos de borda exigidos: `mvhd` v0 (32-bit) e v1 (64-bit), `moov` ausente, `mvhd` ausente dentro de `moov`, arquivo corrompido/inválido, arquivo inexistente, timescale zero.
+- **Boot Docker real:** `docker compose up -d --build db api` → build e subida OK. `/health` → 200, `/api/jobs/processor/trigger` → 200, `/api/jobs/publisher/trigger` → 200 (logs Hangfire confirmam execução real dos jobs contra Postgres real).
+- **Migration `SeedTikTokCredentials` confirmada aplicada** via `__EFMigrationsHistory` (psql). Novas chaves seedadas corretamente (ids 41-46: `client_key`/`client_secret`/`refresh_token` vazios sem segredo commitado, `privacy_level=SELF_ONLY`, `min_duration_seconds=3`, `max_duration_seconds=600`). **Confirmado que `tiktok.access_token`/`tiktok.open_id` (ids 18/19, pré-existentes) não foram duplicados nem sobrescritos** — mesmos ids e valores de antes.
+- Nenhum comentário do plugin `/code-review` encontrado no PR no momento da revisão (nada a incorporar).
+- Checklist de veto: sem teste-lixo, sem segredo commitado, sem uso de `.first()`/`.nth()` (PR 100% backend, sem E2E/Playwright), integração real coberta na medida do possível (boot Docker + Postgres real; HTTP externo do TikTok mockado via fake `HttpMessageHandler`, mesmo padrão de `YoutubePublisherTests`/`InstagramPublisherTests`), conformidade com `design.md`/`criterios-aceite.md` confirmada.
+- **CA20 reconfirmado como débito não-bloqueante** (decisão do Gerente no Gate 1 desta issue) — nenhuma ação adicional necessária.
+- Evidência completa postada no PR: https://github.com/DQM-BETA/omuletachou/pull/79#issuecomment-4959862215
+- **Merge executado:** PR #79 mergeado (`--merge`, merge commit `b6149d8`) `desenv` → `homolog`.
+
+## QA (homolog) — concluído, aprovado
+- 187/187 testes confirmados via `dotnet test`. Docker Compose real (`db`+`api`), `/health` 200, triggers de jobs 200.
+- Seeds `tiktok.*` confirmados via psql: `privacy_level=SELF_ONLY`, `min_duration_seconds=3`, `max_duration_seconds=600`, `networks.tiktok.enabled=true`.
+- CA1-CA18 confirmados por inspeção de código + suíte de testes (init com brand_content_toggle, upload chunked com Content-Range, polling 15s/10min, disclosure via SocialDisclosureHelper, refresh reativo em 401, backoff 429).
+- **Regressão do Instagram reconfirmada em ambiente real:** repetido o teste do fallback "sem vídeo" contra o container (`GET /media/{inexistente}` → 404), suíte do Instagram passando.
+- Gate visual N/A (sem UI no diff, confirmado via package.json).
+- **CA20 (equivalente) marcado "não avaliado nesta rodada — pendente de aprovação do app TikTok"**, não contabilizado como reprovação (decisão do Gate 1).
+- Relatório: `relatorio-qa.md`. Comentário "✅ QA aprovado" postado na Issue #10.
+- Próximo: Líder Técnico cria PR de release `homolog` → `main`.
+
+## Líder Técnico — PR de release homolog→main (concluído)
+- PR #80 criado (`homolog` → `main`, título "[ISSUE-10] Release: Publisher TikTok"), merge commit (NUNCA squash) a ser usado no merge final pelo Coordenador após o Gate 2.
+- Corpo do PR documenta o escopo completo (TikTokPublisher, Mp4DurationReader, SocialDisclosureHelper compartilhado, retry/refresh, migration SeedTikTokCredentials) e a qualidade validada (187/187 testes, Code Review e QA aprovados).
+- **Débito de acompanhamento registrado no PR sem linguagem de bloqueio:** validação em conta real do TikTok (CA20 equivalente) segue pendente de aprovação do app pelo TikTok Developer Portal, mas explicitamente NÃO bloqueia este release — decisão do Gerente no Gate 1 desta issue. PR pode ser mergeado normalmente assim que o Gate 2 for aprovado.
+- `Closes #10` incluído no corpo do PR (fechamento da Issue ocorre no merge final para `main`, feito pelo Coordenador após aprovação do Gerente).
+- NÃO mergeado — aguarda aprovação do Gerente (Gate 2). NÃO mexido comentário 📍 Status nem Kanban (fora do escopo desta invocação).
+
+## Gate 2 — Aprovação do Gerente e merge para main (concluído)
+- **Gerente aprovou Gate 2 com decisão explícita:** "faz o merge e segue o backlog" (CA20 confirmado novamente como não-bloqueante, aprendizado incorporado do fluxo desta issue).
+- **Merge executado:** PR #80 mergeado (`--merge`, merge commit) `homolog` → `main` via `gh pr merge 80 --repo DQM-BETA/omuletachou --merge`.
+- **Issue auto-fechada:** Closes #10 no corpo do PR disparou o fechamento automático (closedAt: 2026-07-13T19:58:38Z).
+- **Comentário de entrega postado** na Issue #10 (TikTokPublisher + fluxo FILE_UPLOAD + Mp4DurationReader dependency-free + SocialDisclosureHelper compartilhado com Instagram; débito de validação TikTok Developer Portal documentado e explicitamente não-bloqueante).
+- **Tabela de custo consolidada postada** na Issue #10 (701.405 tokens, 2.811s de processamento, 9 etapas sem rejeição de Code Review/QA).
+- **Campos do board atualizados**: Custo (tokens) = 701405, Tempo proc. (min) = 47.
+- **Comentário 📍 Status editado** para refletir conclusão ("✅ Concluído (Card aguardando Gerente mover manualmente para Concluído no board)").
+
 ## Sub-issues
 sub_issues: [#77 (stack:dotnet, task_id:T-01)]
 desenv_tasks_merged: [#77]
@@ -87,6 +126,10 @@ desenv_tasks_merged: [#77]
 | 4 | Refinamento Técnico | lider-tecnico | concluido — design.md + especificacao-tecnica.md + tasks.md escritos; sub-issue #77 criada (stack:dotnet, T-01); comentario de resumo postado; 📍 Status atualizado para Em Desenvolvimento |
 | 5 | Dev .NET (sub-issue #77) | dev-dotnet | concluido — `TikTokPublisher` (init/upload chunked/polling), `Mp4DurationReader` (parser MP4 dependency-free), `SocialDisclosureHelper` compartilhado (InstagramPublisher refatorado, regressão confirmada), retry 429 local, refresh reativo em 401, migration `SeedTikTokCredentials`, DI registrado. 187 testes passando (100%). Boot Docker Compose validado (`/health`, `/api/jobs/processor/trigger`, `/api/jobs/publisher/trigger` → 200; seed confirmado via psql). PR feature→desenv #78 aberto. CA20 registrado como débito não-bloqueante. |
 | 6 | Merge sub-issue #77 + PR release | lider-tecnico | concluido — PR #78 revisado e squash-merged em `desenv` (892edd2); sub-issue #77 fechada; todas as sub-issues concluídas; PR #79 (desenv→homolog) criado; CA20 confirmado não-bloqueante no estado; branch local limpa |
+| 7 | Code Review (PR #79 homologação) | code-review | concluido — build limpo, 187/187 testes (independente), regressão Instagram confirmada (20/20 isolado, arquivo de teste inalterado), Mp4DurationReader com edge cases cobertos por unit tests, boot Docker real validado (/health, triggers 200), migration SeedTikTokCredentials confirmada via psql (ids 18/19 preservados, ids 41-46 novos), CA20 reconfirmado não-bloqueante, checklist de veto ok. Merge #79 → homolog executado (merge commit b6149d8). |
+| 8 | QA (homolog) | qa | concluido — 187/187 testes, Docker Compose real, seeds tiktok.* confirmados via psql, CA1-CA19 aprovados com evidência real, CA20 equivalente marcado não avaliado/não-bloqueante (decisão Gate 1). Relatório relatorio-qa.md + comentário "✅ QA aprovado" na Issue #10. |
+| 9 | PR de release (homolog→main) | lider-tecnico | concluido — PR #80 criado, corpo com débito de acompanhamento sem linguagem de bloqueio (CA20 equivalente), Closes #10 incluído. Aguardando Gate 2 (Gerente). Sem merge, sem alteração no comentário 📍 Status/Kanban. |
+| 10 | Gate 2 e merge main | coordenador | concluido — PR #80 mergeado (merge commit, homolog→main), Issue auto-fechada (closedAt 2026-07-13 19:58:38 UTC), comentário de entrega + tabela de custo postados, campos de custo do board atualizados (tokens=701405, tempo=47min), comentário 📍 Status editado para "Concluído". Card aguarda Gerente mover manualmente para Concluído no board. |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -97,5 +140,15 @@ desenv_tasks_merged: [#77]
 | 4 | Refinamento Técnico | lider-tecnico | sonnet | 92271 | 28 | 307s |
 | 5 | Dev .NET (#77, PR #78) | dev-dotnet | sonnet | 177846 | 77 | 980s |
 | 6 | Merge #77 + PR release #79 | lider-tecnico | sonnet | 42558 | 11 | 124s |
+| 7 | Code Review PR #79 (aprovado, merge homolog) | code-review | sonnet | 103906 | 43 | 410s |
+| 8 | QA (homolog) — aprovado (CA1-19, CA20 pendente) | qa | sonnet | 69803 | 19 | 214s |
+| 9 | PR release #80 (homolog→main) | lider-tecnico | sonnet | 44737 | 7 | 122s |
+| 10 | Gate 2 + merge main | coordenador | haiku | ~ | ~ | ~ |
 
-**Consolidação:** a preencher ao fecho da issue.
+**Consolidação (quiescência):**
+- Total de tokens: 701.405 (subagent_tokens agregado)
+- Tempo de processamento (soma dos agentes): 2.811s (~47 min)
+- Tempo decorrido (issue aberta → fechamento): 2026-07-03 12:44 UTC → 2026-07-13 19:58 UTC (10 dias 7h 14 min)
+- Rota: normal
+- Pipeline: 9 etapas de agente + Gate 2, nenhuma reprovação de Code Review ou QA
+- Aprendizado incorporado: CA20 (validação em produção do TikTok) confirmado como não-bloqueante desde o Gate 1, evitando fricção vista na Issue #9. SocialDisclosureHelper compartilhado com Instagram, reuso efetivo.

@@ -1,4 +1,9 @@
+using System.Text;
+using AfiliadoBot.Api.Auth;
+using AfiliadoBot.Api.Cors;
 using AfiliadoBot.Api.Hangfire;
+using AfiliadoBot.Api.Proxy;
+using AfiliadoBot.Api.RateLimiting;
 using AfiliadoBot.Application.Jobs;
 using AfiliadoBot.Domain.Interfaces;
 using AfiliadoBot.Infrastructure.Data;
@@ -9,8 +14,11 @@ using AfiliadoBot.Infrastructure.Storage;
 using global::Hangfire;
 using global::Hangfire.Dashboard;
 using global::Hangfire.PostgreSql;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,9 +29,63 @@ var builder = WebApplication.CreateBuilder(args);
 var hangfireEnabled = builder.Configuration.GetValue("Hangfire:Enabled", true);
 
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddControllers();
 
 builder.Services.AddDbContext<AfiliadoBotDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Autenticacao JWT (Issue #11 / Sub-A). Fail-fast se a chave de assinatura estiver
+// ausente/vazia em QUALQUER ambiente — nunca sobe com uma chave fraca/default silenciosa
+// (especificacao-tecnica.md §2). Em Development, o valor vem de appsettings.Development.json
+// (chave fixa documentada, apenas para uso local); em Production, exclusivamente da variavel
+// de ambiente Jwt__SigningKey (nunca versionada com secret real).
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
+
+var signingKey = builder.Configuration["Jwt:SigningKey"];
+if (string.IsNullOrWhiteSpace(signingKey))
+    throw new InvalidOperationException("Jwt:SigningKey nao configurada (env var Jwt__SigningKey ausente).");
+
+var jwtIssuer = builder.Configuration["Jwt:Issuer"];
+var jwtAudience = builder.Configuration["Jwt:Audience"];
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        // Preserva os nomes de claim originais do token ("sub", "email") em vez do
+        // remapeamento legado do .NET para URIs longas (ClaimTypes.*) — o AuthController le
+        // JwtRegisteredClaimNames.Email diretamente do ClaimsPrincipal.
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtIssuer,
+            ValidateAudience = true,
+            ValidAudience = jwtAudience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(1),
+        };
+    });
+
+builder.Services.AddAuthorization();
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+
+// ForwardedHeaders (Issue #11 / Sub-D, design.md §3): reescreve RemoteIpAddress/Scheme a partir
+// de X-Forwarded-For/X-Forwarded-Proto, confiando apenas na rede Docker do nginx
+// ("ForwardedHeaders:KnownNetworks" em appsettings; default = CIDR privado do Docker Compose).
+// ForwardLimit=1 evita que um cliente malicioso spoofe o proprio IP para escapar do rate limit.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    ForwardedHeadersConfigurator.Configure(options, builder.Configuration));
+
+// CORS (Issue #11 / Sub-D, CA-D8/CA-D9/CA-D10): lista explicita de origins, nunca AllowAnyOrigin
+// — configuravel via "Cors:AllowedOrigins" em appsettings.json por ambiente.
+builder.Services.AddCors(options => options.AddPublicCorsPolicy(builder.Configuration));
+
+// Rate limiting (Issue #11 / Sub-D, CA-D11/CA-D12/CA-E4): policies nomeadas "public-read"
+// (60 req/min/IP, PublicController) e "public-write" (10 req/min/IP, deixada pronta para a
+// Sub-E consumir em POST /api/public/push/subscribe).
+builder.Services.AddRateLimiter(options => options.AddPublicPolicies(builder.Configuration));
 
 // AI Service
 builder.Services.AddScoped<IAnthropicClientWrapper>(sp =>
@@ -135,8 +197,33 @@ using (var scope = app.Services.CreateScope())
                 j => j.ExecuteAsync(CancellationToken.None),
                 string.IsNullOrWhiteSpace(publisherCron) ? "0 9,12,15,18,20 * * *" : publisherCron);
         }
+
+        // Seed do usuario unico do operador (Issue #11 / Sub-A, CA-A4/CA-A5). So roda se a
+        // tabela "users" estiver vazia (idempotente); email/senha vem exclusivamente de
+        // variavel de ambiente (Seed__UserEmail / Seed__UserPassword) — se ausentes, a
+        // aplicacao sobe normalmente sem usuario (login retorna 401 ate seed manual).
+        var seedEmail = builder.Configuration["Seed:UserEmail"];
+        var seedPassword = builder.Configuration["Seed:UserPassword"];
+        UserSeeder.SeedIfEmpty(db, seedEmail, seedPassword);
     }
 }
+
+// Ordem do pipeline (especificacao-tecnica.md §3): ForwardedHeaders -> Https -> CORS ->
+// Authentication -> Authorization -> RateLimiter -> MapControllers. ForwardedHeaders sempre
+// primeiro — CORS e RateLimiter dependem (direta ou indiretamente) do IP/scheme corrigido.
+// Https: nginx ja termina TLS na frente da API (container-to-container e HTTP puro), por isso
+// UseHttpsRedirection nao e adicionado aqui (seria um no-op ruidoso sem porta HTTPS configurada).
+app.UseForwardedHeaders();
+
+app.UseCors(CorsConfigurator.PolicyName);
+
+// UseAuthentication precisa vir antes de UseAuthorization (HttpContext.User precisa estar
+// populado antes de [Authorize] ser avaliado). CORS antes de Authentication: preflight OPTIONS
+// nao carrega Authorization e nao deve ser barrado antes do CORS responder Access-Control-Allow-*.
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.UseRateLimiter();
 
 // Midia publica (Issue #9 / #73): expoe o mesmo diretorio fisico usado pelo LocalMediaStorage
 // em /media, necessario para o InstagramPublisher montar video_url publicamente acessivel.
@@ -157,43 +244,12 @@ if (hangfireEnabled)
     });
 }
 
+app.MapControllers();
+
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
-app.MapPost("/api/jobs/collector/trigger", async (CollectorJob job, CancellationToken ct) =>
-{
-    await job.ExecuteAsync(ct);
-    return Results.Ok();
-});
-
-app.MapPost("/api/jobs/collector/amazon/trigger", async (AmazonCollector collector, CancellationToken ct) =>
-{
-    var products = await collector.CollectAsync(ct);
-    return Results.Ok(new { count = products.Count() });
-});
-
-app.MapPost("/api/jobs/collector/mercadolivre/trigger", async (MercadoLivreCollector collector, CancellationToken ct) =>
-{
-    var products = await collector.CollectAsync(ct);
-    return Results.Ok(new { count = products.Count() });
-});
-
-app.MapPost("/api/jobs/collector/shopee/trigger", async (ShopeeCollector collector, CancellationToken ct) =>
-{
-    var products = await collector.CollectAsync(ct);
-    return Results.Ok(new { count = products.Count() });
-});
-
-app.MapPost("/api/jobs/processor/trigger", async (ProcessorJob job, CancellationToken ct) =>
-{
-    await job.ExecuteAsync(ct);
-    return Results.Ok();
-});
-
-app.MapPost("/api/jobs/publisher/trigger", async (PublisherJob job, CancellationToken ct) =>
-{
-    await job.ExecuteAsync(ct);
-    return Results.Ok();
-});
+// Disparo manual dos jobs (Issue #11 / Sub-C): movido para JobsController (protegido por
+// [Authorize], CA-C10) — os endpoints minimos que existiam aqui nao exigiam token.
 
 app.Run();
 

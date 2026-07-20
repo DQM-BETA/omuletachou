@@ -573,6 +573,40 @@ namespace AfiliadoBot.Infrastructure.Migrations
                     b.ToTable("push_subscriptions", (string)null);
                 });
 
+            modelBuilder.Entity("AfiliadoBot.Domain.Entities.User", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("password_hash");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique()
+                        .HasDatabaseName("ix_users_email");
+
+                    b.ToTable("users", (string)null);
+                });
+
             modelBuilder.Entity("AfiliadoBot.Domain.Entities.PublicationLog", b =>
                 {
                     b.HasOne("AfiliadoBot.Domain.Entities.PublicationQueue", "PublicationQueue")
