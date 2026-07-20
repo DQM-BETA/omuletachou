@@ -5,17 +5,17 @@ issue: 11
 repo: omuletachou
 titulo: feat: REST API (Dashboard + Endpoints Publicos)
 rota: normal
-etapa_atual: Todas as 5 sub-issues completas e mergeadas em desenv (#81-#85). PR de release #92 (desenv→homolog) criado — aguardando Code Review (2 camadas)
+etapa_atual: Code Review (2 camadas) aprovado — PR #92 (desenv→homolog) mergeado (merge commit e861b28). Aguardando QA.
 docs_path: repos/omuletachou/documentacoes/ISSUE-11-rest-api
 openspec_path: repos/omuletachou/openspec/changes/issue-11-rest-api
 openspec_change: repos/omuletachou/openspec/changes/issue-11-rest-api
-ultimo_agente: lider-tecnico
+ultimo_agente: code-review
 status_comment_id: 4962193361
 pr_feature: #86 (merged), #87 (merged), #88 (merged), #89 (merged), #90 (merged)
 pr_homologacao: 92
 pr_release: ~
 qa_status: ~
-code_review_homolog_pr: ~
+code_review_homolog_pr: 92 (aprovado, merge commit e861b28, mergedAt 2026-07-20T14:09:37Z)
 closedAt: ~
 
 ## Contexto
@@ -202,6 +202,25 @@ Concluído em 2026-07-20. Continuação de `feature/82-followup-write-endpoints`
 - PR #91 (`feature/82-followup-write-endpoints` → `desenv`) aberto. Worktree removido (`git worktree remove`).
 - **Sub-issue #82 permanece ABERTA** — quem fecha e mergeia é o próximo Líder Técnico. Com este PR mergeado, as 5 sub-issues estarão completas (46 CAs) e o próximo LT deve criar o PR `desenv→homolog`.
 
+## Code Review — PR #92 (desenv→homolog)
+Concluído em 2026-07-20.
+- Ambiente: worktree local (`../omuletachou-cr-92`) checkout no HEAD exato do PR (`baf2c80`, mesmo SHA de `desenv`), removido ao final.
+- **Build**: `dotnet build` limpo, 0 erros (1 warning pré-existente `CS0618` Hangfire, não relacionado).
+- **Suíte**: `dotnet test` → **280/280 passando (100%)**, bate com o esperado. 14 arquivos de teste usam `WebApplicationFactory`/`TestServer` (integração HTTP real, não mock-only) cobrindo login, `/me`, settings (com asserção de não-vazamento no corpo bruto via `raw.Should().NotContain`), públicos, CORS, rate limit.
+- **Boot Docker real** (`docker compose -p cr92 up -d --build db api`, `.env` local temporário removido ao final): logs confirmam migration `AddUsersTable` aplicada, seed do usuário executado, `Application started` sem exceções.
+  - `GET /health` → 200.
+  - `POST /api/auth/login` (credenciais do seed via `.env` local) → 200 + JWT; senha incorreta → 401.
+  - `GET /api/auth/me` sem token → 401; com token → 200.
+  - `GET /api/settings` com token → 200, mascaramento real confirmado no JSON (`****************1234`); chaves não configuradas → `null`. `PUT /api/settings/telegram.bot_token` com valor de teste → corpo bruto da resposta **não contém** o valor completo (checado via `grep` na string crua). `PUT` em chave inexistente → 404.
+  - `GET /api/public/deals` sem token → 200 (público).
+  - `POST /api/jobs/processor/trigger` sem token → 401; com token → 200.
+  - CORS: origin autorizado (`https://omuletachou.com.br`) → `Access-Control-Allow-Origin` presente; origin não autorizado (`https://evil.com`) → nenhum header `Access-Control-Allow-*` (rejeitado).
+- **Migrations sem colisão**: `__EFMigrationsHistory` mostra apenas 1 migration nova (`AddUsersTable`); Sub-C não criou migration nova para `app_settings` (tabela preexistente das Issues #7-#10). `GROUP BY key HAVING count(*) > 1` → 0 linhas (46 chaves, sem duplicação). `users` com índice único em `email`.
+- **Revisão de código de segurança**: `JwtTokenService.cs` (HS256, sem chave hardcoded), `Program.cs` (fail-fast confirmado em execução real — sem `Jwt__SigningKey` o container não sobe; `appsettings.json` versionado com chave vazia; `appsettings.Development.json` só uso local), `UserSeeder.cs` (idempotente, bcrypt workFactor 12), `SettingsMasker.cs` (16 asteriscos fixos + 4 chars, vazio→null), `CorsConfigurator.cs` (sem `AllowAnyOrigin` em nenhum branch), `RateLimiterConfigurator.cs` (public-read 60/min, public-write 10/min, partição por IP pós-ForwardedHeaders), `ForwardedHeadersConfigurator.cs` (ForwardLimit=1, KnownNetworks configurável). Ordem final do pipeline em `Program.cs` conferida linha a linha: `UseForwardedHeaders()` → `UseCors()` → `UseAuthentication()` → `UseAuthorization()` → `UseRateLimiter()` → `MapControllers()` — bate com `especificacao-tecnica.md` §3/`design.md` §3.
+- **Checklist de veto**: todos os itens OK (compila e sobe; integração real via WebApplicationFactory; conformidade com spec — 46 CAs cobertos; sem teste-lixo/segredo commitado/AllowAnyOrigin; `.first()`/E2E N/A — PR 100% backend .NET, sem specs Playwright tocados). Evidência completa postada no PR (comentário https://github.com/DQM-BETA/omuletachou/pull/92#issuecomment-5023187321).
+- **Veredito: APROVADO.** PR #92 mergeado (merge commit, NUNCA squash) `desenv`→`homolog`, commit `e861b28064fcc2f37b6094602ae86a68d675fa9d`, `mergedAt: 2026-07-20T14:09:37Z`.
+- Nota sobre o histórico do processo: bug de infra reportado no merge da Sub-D (GitHub Pulls API com SHA desatualizado, contornado via push direto git/gh) não deixou nenhum artefato residual — `Program.cs` final revisado linha a linha, sem duplicação/conflito remanescente.
+
 ## Sub-issues
 sub_issues: [#81 (stack:dotnet, task_id:Sub-A) — MERGED e FECHADA, #82 (stack:dotnet, task_id:Sub-B) — MERGED e FECHADA (PR #87 parcial CA-B1/B2/B3/B4/B7/B11 + PR #91 follow-up CA-B5/B6/B8/B9/B10, mergedAt 2026-07-20T14:01:51Z), #83 (stack:dotnet, task_id:Sub-C) — MERGED e FECHADA (PR #88), #84 (stack:dotnet, task_id:Sub-D) — MERGED e FECHADA (PR #90, merge local via git push em desenv devido a bug de infra na GitHub Pulls API), #85 (stack:dotnet, task_id:Sub-E) — MERGED e FECHADA (PR #89, squash, commit 45c05fc)]
 desenv_tasks_merged: [#81, #82, #83, #84, #85] — 5/5 completas
@@ -227,6 +246,7 @@ desenv_tasks_merged: [#81, #82, #83, #84, #85] — 5/5 completas
 | 16 | Líder Técnico — merge Sub-E #85 (PR #89) | lider-tecnico | concluido — PR #89 revisado (`[EnableRateLimiting]` confirmado no diff), mergeado (squash) em desenv (commit 45c05fc), sub-issue #85 fechada; desenv_tasks_merged agora [#81,#83,#84,#85] (4/5); PR desenv→homolog NÃO criado — sub-issue #82 (Sub-B) segue aberta com follow-up formal pendente (CA-B5/B6/B8/B9/B10); próximo passo é Dev .NET completar #82 |
 | 17 | Dev .NET — Sub-B follow-up #82 (PR #91) | dev-dotnet | concluido — PR #91 (feature/82-followup-write-endpoints → desenv) aberto; `PATCH /api/products/{id}/status` (CA-B5/B6), `GET /api/queue/manual` (CA-B8), `POST /api/queue/{id}/retry` (CA-B9/B10) implementados; 280/280 testes passando (18 novos); boot Docker real validado via curl; sub-issue #82 permanece aberta até o próximo LT mergear e, com as 5 sub-issues completas, criar o PR desenv→homolog |
 | 18 | Líder Técnico — merge Sub-B follow-up #82 (PR #91) + PR de release | lider-tecnico | concluido — PR #91 mergeado (squash) em desenv (mergedAt 2026-07-20T14:01:51Z), sub-issue #82 fechada (CA-B1 a CA-B11 completos); **5/5 sub-issues completas**; PR de release #92 (desenv→homolog) criado. Nota: sessão LT teve queda de conexão de API após concluir estas ações, antes de escrever o HANDOFF final — trabalho confirmado diretamente via `gh`/`git` pela sessão principal, não perdido. Sem `<usage>` capturado para esta etapa (conexão perdida antes do retorno). |
+| 19 | Code Review — PR #92 (desenv→homolog) | code-review | concluido — build limpo, 280/280 testes (14 arquivos com WebApplicationFactory), boot Docker real com curl (auth/settings-mascaramento/public/CORS/jobs), migrations sem colisão (46 app_settings, users com índice único), revisão de segurança completa (JWT fail-fast, bcrypt, masking, CORS sem AllowAnyOrigin, rate limit, ordem do pipeline), checklist de veto 100% OK; PR #92 APROVADO e mergeado (merge commit e861b28) desenv→homolog; evidência completa postada no PR (comentário 5023187321) |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -249,11 +269,12 @@ desenv_tasks_merged: [#81, #82, #83, #84, #85] — 5/5 completas
 | 16 | Dev .NET — fix pontual Sub-E #85 (PR #89), rate limit CA-E4 | dev-dotnet | sonnet | 82404 | 37 | 304s |
 | 17 | Líder Técnico — merge Sub-E #85 (PR #89) | lider-tecnico | sonnet | 77663 | 18 | 292s |
 | 18 | Dev .NET — Sub-B follow-up #82 (PR #91) | dev-dotnet | sonnet | 117728 | 65 | 493s |
+| 19 | Code Review — PR #92 (desenv→homolog) | code-review | sonnet | USAGE_PLACEHOLDER | TOOLS_PLACEHOLDER | TIME_PLACEHOLDER |
 
 **Consolidação (quiescência):** A preencher pela sessão principal após cada etapa.
 
-**Nota (linha 17):** tokens/tools/tempo desta invocação a preencher pela sessão principal a partir do `<usage>` retornado no HANDOFF abaixo.
+**Nota (linha 19):** tokens/tools/tempo desta invocação (Code Review PR #92) a preencher pela sessão principal a partir do `<usage>` retornado no HANDOFF abaixo.
 
 ---
-_Última atualização: 2026-07-20 — mantido pelo Líder Técnico._
+_Última atualização: 2026-07-20 — mantido pelo Code Review._
 </content>
