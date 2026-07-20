@@ -78,6 +78,7 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 6 | UX/UI — spec visual | ux-ui | concluido — ux-ui-spec.md escrito (grid de cards, anatomia do DealCard, layout da página de oferta, tokens de cor/tipografia mobile-first) |
 | 7 | Dev Sub-A #94 | dev-nodejs | concluido — PR #97 (feature/94-integracao-home→desenv), lib/api.ts contrato definitivo, DealCard/Header, Home com ISR, 22 testes (100%), smoke test Docker real com dado no Postgres |
 | 8 | Merge Sub-A #94 | lider-tecnico | concluido — PR #97 squash merge em desenv (e718fdd), sub-issue #94 fechada, #95/#96 desbloqueadas |
+| 9 | Dev Sub-B #95 | dev-nodejs | concluido — PR #98 (feature/95-oferta-seo→desenv): `app/oferta/[slug]/page.tsx` (fetchDeal, revalidate 300, notFound), `components/DealDetail.tsx`, `lib/related-deals.ts` (fetchByCategory, 4 relacionados), `lib/seo.ts` (title/description/canonical/og-image/JSON-LD Product), `public/og-default.png` novo; 46 testes (100%), cobertura global 96.4%; smoke test Docker real (db+api+website, produto inserido no Postgres, GET /oferta/{slug} 200 com OG+JSON-LD confirmados no HTML, slug inexistente 404) |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
