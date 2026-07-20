@@ -80,6 +80,28 @@ describe('OfertaPage', () => {
     expect(jsonLd.offers['@type']).toBe('Offer');
   });
 
+  it('CA-SEC1: título malicioso com </script> não escapa da tag JSON-LD (regressão XSS)', async () => {
+    const maliciousTitle = '</script><script>alert(1)</script>';
+    fetchDealMock.mockResolvedValueOnce(buildDeal({ title: maliciousTitle }));
+    fetchByCategoryMock.mockResolvedValueOnce(pagedResult([]));
+
+    const jsx = await OfertaPage({ params: { slug: 'fone-bluetooth-xyz' } });
+    const { container } = render(jsx);
+
+    const script = container.querySelector('script[type="application/ld+json"]');
+    expect(script).not.toBeNull();
+
+    // O conteúdo bruto do script não pode conter uma tag de fechamento prematura.
+    expect(script?.innerHTML).not.toContain('</script>');
+
+    // Ainda deve ser JSON válido, e o valor original deve ser preservado ao parsear.
+    const jsonLd = JSON.parse(script?.innerHTML ?? '{}');
+    expect(jsonLd.name).toBe(maliciousTitle);
+
+    // Nenhum <script> extra deve ter sido injetado no documento.
+    expect(container.querySelectorAll('script').length).toBe(1);
+  });
+
   describe('generateMetadata', () => {
     it('CA-B5: title/description dinâmicos por produto', async () => {
       fetchDealMock.mockResolvedValueOnce(buildDeal());
