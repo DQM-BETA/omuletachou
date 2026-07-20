@@ -50,4 +50,32 @@ public class PublicationQueueTests
         queue.Status.Should().Be(PublicationStatus.Scheduled);
         queue.CanRetry.Should().BeFalse();
     }
+
+    [Fact]
+    public void Retry_SetsScheduled_AndResetsRetryCountAndError_WhenFailed()
+    {
+        var queue = CriarQueue();
+        queue.RegisterAttempt(success: false, errorMessage: "err1");
+        queue.RegisterAttempt(success: false, errorMessage: "err2");
+        queue.RegisterAttempt(success: false, errorMessage: "err3");
+        queue.Status.Should().Be(PublicationStatus.Failed);
+        queue.RetryCount.Should().Be(3);
+
+        var before = DateTime.UtcNow;
+        queue.Retry();
+
+        queue.Status.Should().Be(PublicationStatus.Scheduled);
+        queue.RetryCount.Should().Be(0);
+        queue.ErrorMessage.Should().BeNull();
+        queue.ScheduledAt.Should().BeOnOrAfter(before);
+    }
+
+    [Fact]
+    public void Retry_ThrowsWhen_StatusIsNotFailed()
+    {
+        var queue = CriarQueue();
+        // Status = Scheduled (inicial), nao Failed.
+        var act = () => queue.Retry();
+        act.Should().Throw<InvalidOperationException>();
+    }
 }

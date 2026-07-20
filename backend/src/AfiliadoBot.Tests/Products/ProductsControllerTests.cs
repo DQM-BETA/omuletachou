@@ -200,4 +200,80 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
+
+    [Fact]
+    public async Task UpdateStatus_ComValorValido_AtualizaProdutoERetorna204()
+    {
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var product = NewProduct("Produto Para Rejeitar", Platform.Amazon);
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            db.Products.Add(product);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.PatchAsJsonAsync($"/api/products/{product.Id}/status", new { status = "rejected" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var updated = await db.Products.AsNoTracking().FirstAsync(p => p.Id == product.Id);
+            updated.Status.Should().Be(ProductStatus.Rejected);
+        }
+    }
+
+    [Fact]
+    public async Task UpdateStatus_ComValorForaDoEnumPermitido_Retorna400ESemAlterar()
+    {
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var product = NewProduct("Produto Status Invalido", Platform.Amazon);
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            db.Products.Add(product);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.PatchAsJsonAsync($"/api/products/{product.Id}/status", new { status = "published" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var untouched = await db.Products.AsNoTracking().FirstAsync(p => p.Id == product.Id);
+            untouched.Status.Should().Be(ProductStatus.Pending);
+        }
+    }
+
+    [Fact]
+    public async Task UpdateStatus_ProdutoInexistente_Retorna404()
+    {
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await client.PatchAsJsonAsync($"/api/products/{Guid.NewGuid()}/status", new { status = "rejected" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_SemToken_Retorna401()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PatchAsJsonAsync($"/api/products/{Guid.NewGuid()}/status", new { status = "rejected" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
 }

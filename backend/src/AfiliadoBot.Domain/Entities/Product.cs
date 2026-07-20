@@ -198,6 +198,23 @@ public class Product
     }
 
     /// <summary>
+    /// Atualiza o status manualmente via acao do operador no dashboard (Issue #11 / Sub-B,
+    /// CA-B5/CA-B6, #82). Restrito a Pending/Rejected — os demais valores do enum sao
+    /// transicoes de sistema (Queued/Processing/Published/Error) geridas pelos jobs, nao pelo
+    /// endpoint manual. O controller ja valida o valor recebido antes de chamar este metodo;
+    /// esta checagem e defesa em profundidade (nunca deve disparar via fluxo normal da API).
+    /// </summary>
+    public void UpdateStatusManually(ProductStatus status)
+    {
+        if (status != ProductStatus.Pending && status != ProductStatus.Rejected)
+            throw new ArgumentException(
+                "Status manual deve ser Pending ou Rejected.", nameof(status));
+
+        Status = status;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
     /// Preenche o link de afiliado apos aprovacao do scoring (usado pelo ProcessorJob, Issue #6).
     /// </summary>
     public void SetAffiliateLink(string link)
