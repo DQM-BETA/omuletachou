@@ -5,12 +5,12 @@ issue: 12
 repo: omuletachou
 titulo: feat: Site Publico Next.js (SSR + SEO)
 rota: normal
-etapa_atual: Em Desenvolvimento (Sub-A #94 e Sub-B #95 mergeadas em desenv; Sub-C #96 com PR #99 aberto e conflito RESOLVIDO — mergeStateStatus CLEAN/MERGEABLE — pronto para merge do LT e abertura do PR desenv→homolog)
+etapa_atual: Code Review (todas as 3 sub-issues mergeadas em desenv; PR #100 desenv→homolog aberto)
 docs_path: repos/omuletachou/documentacoes/ISSUE-12-site-publico
 openspec_path: repos/omuletachou/openspec/changes/issue-12-site-publico
 ultimo_agente: lider-tecnico
 status_comment_id: 5025494280
-pr_homologacao: ~
+pr_homologacao: 100
 code_review_homolog_pr: ~
 pr_release: ~
 
@@ -57,7 +57,7 @@ Resumo:
 
 ## Sub-issues
 sub_issues: [#94 (stack:nodejs, task_id:T-01, Sub-A: Integração de dados + Home) — MERGED, #95 (stack:nodejs, task_id:T-02, Sub-B: Página de oferta + SEO — depende de #94) — MERGED, #96 (stack:nodejs, task_id:T-03, Sub-C: Página de categoria + sitemap/robots — depende de #94, PR #99 aberto, aguardando merge)]
-desenv_tasks_merged: [#94, #95]
+desenv_tasks_merged: [#94, #95, #96]
 
 Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) → após merge de #94, Dev #95 e Dev #96 em paralelo. Restante: LT faz merge de #96 (PR #99) e, com todas as sub-issues mergeadas, abre o PR desenv→homolog.
 
@@ -85,6 +85,14 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 - Push: `feature/96-categoria-sitemap` atualizada no remoto (`3c3a738..cd84b58`). PR #99 confirmado `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`.
 - Worktree `.worktrees/fix-96-conflict` removido ao final.
 
+## Merge Sub-C #96 (LT) — todas as sub-issues concluidas
+- `mergeStateStatus` reconfirmado imediatamente antes do merge: primeira consulta retornou `UNKNOWN` (cache do GitHub), segunda consulta (5s depois) retornou `CLEAN`/`MERGEABLE` — evitado o erro de mergear com status desatualizado.
+- PR #99 (`feature/96-categoria-sitemap` -> `desenv`): mergeado via squash. Merge commit: `c511866508f9a66b6712f74c05440718be104925`, mergedAt: 2026-07-20T21:12:31Z.
+- Sub-issue #96 fechada (`gh issue close 96 --reason completed`).
+- **Todas as 3 sub-issues (#94, #95, #96) mergeadas em `desenv`.** PR de release criado: #100 (`desenv` -> `homolog`, merge commit conforme convencao, NUNCA squash).
+- Branch local `desenv` ja estava sincronizada com `origin/desenv` (HEAD em c511866 apos fetch).
+- Proximo: sessao principal roda /code-review + spawna agente Code Review no PR #100 (duas camadas).
+
 ## Historico de etapas
 | # | Etapa | Agente | Status |
 |---|---|---|---|
@@ -99,6 +107,7 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 9 | Dev Sub-B #95 | dev-nodejs | concluido — PR #98 (feature/95-oferta-seo→desenv): `app/oferta/[slug]/page.tsx` (fetchDeal, revalidate 300, notFound), `components/DealDetail.tsx`, `lib/related-deals.ts` (fetchByCategory, 4 relacionados), `lib/seo.ts` (title/description/canonical/og-image/JSON-LD Product), `public/og-default.png` novo; 46 testes (100%), cobertura global 96.4%; smoke test Docker real (db+api+website, produto inserido no Postgres, GET /oferta/{slug} 200 com OG+JSON-LD confirmados no HTML, slug inexistente 404) |
 | 10 | Dev Sub-C #96 | dev-nodejs | concluido — PR #99 (feature/96-categoria-sitemap→desenv): `app/categoria/[categoria]/page.tsx` (fetchByCategory, revalidate 300, generateMetadata "{Categoria} \| O Mulet Achou", estado vazio CA-C4 sem notFound()), `app/sitemap.ts` (dinâmico, pagina fetchDeals até esgotar totalPages, Home+categorias+ofertas com lastModified, `export const dynamic = 'force-dynamic'` para não quebrar `next build` no Dockerfile sem API disponível no estágio de build), `public/robots.txt` estático (Allow: /, referencia sitemap); 33 testes (100%), cobertura ≥80%; build TS sem erros; smoke test Docker real em stack isolada (`docker-compose.smoke96.yml` temporário, projeto `omuletachou96`, containers/portas distintas para não colidir com a stack da Sub-B rodando em paralelo — arquivo removido ao final, não commitado), dados reais no Postgres, `/categoria/eletronicos` 200 com grade real, `/categoria/inexistente-xyz` 200 com estado vazio (sem 404), `/sitemap.xml` e `/robots.txt` 200 com conteúdo correto. Ambas Sub-B (#95) e Sub-C (#96) concluídas — próximo: LT faz merge das duas e PR desenv→homolog. |
 | 11 | Merge Sub-B #95 | lider-tecnico | concluido — PR #98 squash merge em desenv (84a24c8), sub-issue #95 fechada. Falta merge de Sub-C #96 (PR #99) para então abrir PR desenv→homolog. |
+| 12 | Merge Sub-C #96 + PR release | lider-tecnico | concluido — mergeStateStatus reconfirmado (UNKNOWN→CLEAN apos 5s), PR #99 squash merge em desenv (c511866), sub-issue #96 fechada. Todas as 3 sub-issues mergeadas. PR #100 (desenv→homolog) criado — proximo: Code Review (duas camadas). |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
