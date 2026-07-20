@@ -93,4 +93,33 @@ public class ProductTests
         product.MarkAsPublished();
         product.Status.Should().Be(ProductStatus.Published);
     }
+
+    [Fact]
+    public void UpdateStatusManually_SetsRejected_WhenValueIsRejected()
+    {
+        var product = CriarProdutoValido();
+        product.UpdateStatusManually(ProductStatus.Rejected);
+        product.Status.Should().Be(ProductStatus.Rejected);
+    }
+
+    [Fact]
+    public void UpdateStatusManually_SetsPending_WhenValueIsPending()
+    {
+        var product = CriarProdutoValido();
+        product.UpdateStatusManually(ProductStatus.Rejected);
+        product.UpdateStatusManually(ProductStatus.Pending);
+        product.Status.Should().Be(ProductStatus.Pending);
+    }
+
+    [Theory]
+    [InlineData(ProductStatus.Queued)]
+    [InlineData(ProductStatus.Published)]
+    [InlineData(ProductStatus.Processing)]
+    [InlineData(ProductStatus.Error)]
+    public void UpdateStatusManually_ThrowsWhen_StatusNotPendingOrRejected(ProductStatus status)
+    {
+        var product = CriarProdutoValido();
+        var act = () => product.UpdateStatusManually(status);
+        act.Should().Throw<ArgumentException>().WithParameterName("status");
+    }
 }

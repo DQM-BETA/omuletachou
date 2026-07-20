@@ -24,6 +24,13 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=afiliadoBot;Username=${DB_USER};Password=${DB_PASSWORD}"
+      # Issue #11 / Sub-A: chave de assinatura JWT — obrigatoria (fail-fast no Program.cs se
+      # ausente), gerar com `openssl rand -base64 32`, nunca versionar o valor real (.env local).
+      Jwt__SigningKey: "${JWT_SIGNING_KEY}"
+      # Seed do usuario operador unico (CA-A4) — so roda se a tabela "users" estiver vazia;
+      # sem estas vars a API sobe normalmente, mas o login retorna 401 ate seed manual.
+      Seed__UserEmail: "${SEED_USER_EMAIL:-}"
+      Seed__UserPassword: "${SEED_USER_PASSWORD:-}"
     volumes:
       - media_files:/app/media
     ports:
