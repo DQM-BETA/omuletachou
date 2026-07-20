@@ -5,7 +5,7 @@ issue: 12
 repo: omuletachou
 titulo: feat: Site Publico Next.js (SSR + SEO)
 rota: normal
-etapa_atual: Code Review (todas as 3 sub-issues mergeadas em desenv; PR #100 desenv→homolog aberto)
+etapa_atual: Code Review (fix de XSS #101 mergeado em desenv; PR #100 desenv→homolog atualizado e MERGEABLE — aguardando Code Review dedicado revalidar especificamente o fix)
 docs_path: repos/omuletachou/documentacoes/ISSUE-12-site-publico
 openspec_path: repos/omuletachou/openspec/changes/issue-12-site-publico
 ultimo_agente: lider-tecnico
@@ -56,10 +56,10 @@ Resumo:
 - Comentário de resumo técnico postado na Issue #12: https://github.com/DQM-BETA/omuletachou/issues/12#issuecomment-5025948289
 
 ## Sub-issues
-sub_issues: [#94 (stack:nodejs, task_id:T-01, Sub-A: Integração de dados + Home) — MERGED, #95 (stack:nodejs, task_id:T-02, Sub-B: Página de oferta + SEO — depende de #94) — MERGED, #96 (stack:nodejs, task_id:T-03, Sub-C: Página de categoria + sitemap/robots — depende de #94, PR #99 aberto, aguardando merge)]
+sub_issues: [#94 (stack:nodejs, task_id:T-01, Sub-A: Integração de dados + Home) — MERGED, #95 (stack:nodejs, task_id:T-02, Sub-B: Página de oferta + SEO — depende de #94) — MERGED, #96 (stack:nodejs, task_id:T-03, Sub-C: Página de categoria + sitemap/robots — depende de #94) — MERGED]
 desenv_tasks_merged: [#94, #95, #96]
 
-Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) → após merge de #94, Dev #95 e Dev #96 em paralelo. Restante: LT faz merge de #96 (PR #99) e, com todas as sub-issues mergeadas, abre o PR desenv→homolog.
+Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) → após merge de #94, Dev #95 e Dev #96 em paralelo. Todas as sub-issues concluídas; PR #100 desenv→homolog aberto e atualizado (inclui fix de XSS #101).
 
 ## Merge Sub-A #94 (LT)
 - PR #97 (`feature/94-integracao-home` → `desenv`): mergeado via squash. `mergeStateStatus` confirmado `CLEAN`/`MERGEABLE` antes do merge (estava `UNKNOWN` na checagem anterior, resolvido após nova consulta). Merge commit: `e718fdda9c882b39004aff9379bb255c4928e721`, mergedAt: 2026-07-20T20:42:42Z.
@@ -99,7 +99,14 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 - **Testes de regressão:** 3 testes novos em `website/lib/seo.test.ts` (escapa `</script>`; preserva o valor original ao fazer round-trip via `JSON.parse`; comportamento idêntico a `JSON.stringify` para valores sem caracteres perigosos) + 1 teste end-to-end em `website/app/oferta/[slug]/page.test.tsx` (`CA-SEC1`, título literal `</script><script>alert(1)</script>` renderizado via `OfertaPage` real, confirma que `script.innerHTML` não contém `</script>` cru e que nenhum `<script>` extra foi injetado no DOM).
 - **Resultado:** `npm test` 61/61 passando (100%, 4 novos testes incluídos). Cobertura: `lib/seo.ts` 100%, `app/oferta/[slug]/page.tsx` 95.23% stmts / 100% branch/funcs/lines. `npm run build` (`next build`) compilou sem erro de TypeScript, 5 rotas geradas normalmente.
 - **Branch/PR:** worktree `.worktrees/fix-100-xss` a partir de `desenv` atualizado, branch `fix/100-jsonld-xss`. Commit `4725f4b`. PR #101 (`fix/100-jsonld-xss` → `desenv`) aberto: https://github.com/DQM-BETA/omuletachou/pull/101.
-- **Próximo:** Líder Técnico faz merge do PR #101 em `desenv` (squash) e, com o fix incorporado, **revalida/reabre o PR #100** (desenv→homolog) antes de a sessão principal rodar novamente o `/code-review` + Code Review dedicado.
+
+## Merge PR #101 (fix XSS) + validação PR #100 (LT)
+- Revisão do diff do PR #101: lógica confirmada correta. Teste de regressão (`CA-SEC1` em `page.test.tsx` + 3 testes em `seo.test.ts`) exercita exatamente o payload malicioso (`</script><script>alert(1)</script>` no título), validando: (1) `script.innerHTML` não contém `</script>` cru, (2) o JSON permanece válido e parseável via `JSON.parse`, preservando o valor original, (3) nenhum `<script>` extra injetado no DOM, (4) comportamento idêntico a `JSON.stringify` para valores sem caracteres perigosos. Sem o fix, o teste falharia (o `</script>` apareceria literalmente no `innerHTML`, quebrando a asserção `not.toContain('</script>')`).
+- PR #101 mergeado via squash em `desenv`. Merge commit: `98b87ca4f0b707fc5bec46cd47b93c60221e7a9b`, mergedAt: 2026-07-20T21:19:55Z. Branch remota `fix/100-jsonld-xss` deletada automaticamente (`--delete-branch`); branch local removida (`git branch -D`, squash não é "fully merged" por hash, mas mergeada de fato).
+- **PR #100 (desenv→homolog) confirmado atualizado automaticamente** (mesma base `desenv`, sem PR novo necessário): commit `98b87ca` aparece na lista de commits do PR #100. `mergeStateStatus`: primeira consulta `UNKNOWN` (cache do GitHub), segunda consulta (~5s depois) `CLEAN`/`mergeable: MERGEABLE`.
+- Branch local `desenv` sincronizada com `origin/desenv` via `git pull` (ef78906..98b87ca).
+- **NÃO** editado o comentário 📍 Status (fora do escopo desta invocação).
+- **Próximo:** sessão principal roda o Code Review dedicado no PR #100, revalidando especificamente o fix de XSS (não é necessário reabrir/recriar o PR).
 
 ## Historico de etapas
 | # | Etapa | Agente | Status |
@@ -116,6 +123,8 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 10 | Dev Sub-C #96 | dev-nodejs | concluido — PR #99 (feature/96-categoria-sitemap→desenv): `app/categoria/[categoria]/page.tsx` (fetchByCategory, revalidate 300, generateMetadata "{Categoria} \| O Mulet Achou", estado vazio CA-C4 sem notFound()), `app/sitemap.ts` (dinâmico, pagina fetchDeals até esgotar totalPages, Home+categorias+ofertas com lastModified, `export const dynamic = 'force-dynamic'` para não quebrar `next build` no Dockerfile sem API disponível no estágio de build), `public/robots.txt` estático (Allow: /, referencia sitemap); 33 testes (100%), cobertura ≥80%; build TS sem erros; smoke test Docker real em stack isolada (`docker-compose.smoke96.yml` temporário, projeto `omuletachou96`, containers/portas distintas para não colidir com a stack da Sub-B rodando em paralelo — arquivo removido ao final, não commitado), dados reais no Postgres, `/categoria/eletronicos` 200 com grade real, `/categoria/inexistente-xyz` 200 com estado vazio (sem 404), `/sitemap.xml` e `/robots.txt` 200 com conteúdo correto. Ambas Sub-B (#95) e Sub-C (#96) concluídas — próximo: LT faz merge das duas e PR desenv→homolog. |
 | 11 | Merge Sub-B #95 | lider-tecnico | concluido — PR #98 squash merge em desenv (84a24c8), sub-issue #95 fechada. Falta merge de Sub-C #96 (PR #99) para então abrir PR desenv→homolog. |
 | 12 | Merge Sub-C #96 + PR release | lider-tecnico | concluido — mergeStateStatus reconfirmado (UNKNOWN→CLEAN apos 5s), PR #99 squash merge em desenv (c511866), sub-issue #96 fechada. Todas as 3 sub-issues mergeadas. PR #100 (desenv→homolog) criado — proximo: Code Review (duas camadas). |
+| 13 | Dev fix XSS JSON-LD | dev-nodejs | concluido — PR #101 (fix/100-jsonld-xss→desenv), safeJsonLdStringify() em lib/seo.ts, 4 testes de regressão novos, 61/61 passando |
+| 14 | Merge PR #101 + validação PR #100 | lider-tecnico | concluido — PR #101 squash merge em desenv (98b87ca), PR #100 confirmado MERGEABLE/CLEAN com o fix incluído. Proximo: Code Review dedicado revalida o fix no PR #100. |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -134,3 +143,4 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 12 | Dev fix conflito PR #99 (jest.config.js) | dev-nodejs | sonnet | 60472 | 56 | 499s |
 | 13 | Merge Sub-C #96 (PR #99) + PR release #100 (LT) | lider-tecnico | sonnet | 45492 | 20 | 120s |
 | 14 | Dev fix XSS JSON-LD (PR #101) — achado do /code-review plugin | dev-nodejs | sonnet | 53915 | 29 | 176s |
+| 15 | Merge PR #101 + validação PR #100 (LT) | lider-tecnico | sonnet | (sessão principal preenche a partir do `<usage>` deste HANDOFF) | — | — |
