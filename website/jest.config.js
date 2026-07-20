@@ -23,7 +23,7 @@ const customJestConfig = {
   collectCoverageFrom: [
     'lib/**/*.{ts,tsx}',
     'components/**/*.{ts,tsx}',
-    'app/page.tsx',
+    'app/**/page.tsx',
     '!**/*.d.ts',
   ],
 };
