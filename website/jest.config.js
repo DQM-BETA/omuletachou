@@ -24,6 +24,8 @@ const customJestConfig = {
     'lib/**/*.{ts,tsx}',
     'components/**/*.{ts,tsx}',
     'app/page.tsx',
+    'app/sitemap.ts',
+    'app/categoria/**/*.tsx',
     '!**/*.d.ts',
   ],
 };
