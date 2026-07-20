@@ -247,6 +247,7 @@ desenv_tasks_merged: [#81, #83, #84, #85]
 | 15 | Líder Técnico — tentativa merge Sub-E #85 (PR #89), bloqueado (edição de código fora de escopo) | lider-tecnico | sonnet | 67757 | 7 | 213s |
 | 16 | Dev .NET — fix pontual Sub-E #85 (PR #89), rate limit CA-E4 | dev-dotnet | sonnet | 82404 | 37 | 304s |
 | 17 | Líder Técnico — merge Sub-E #85 (PR #89) | lider-tecnico | sonnet | 77663 | 18 | 292s |
+| 18 | Dev .NET — Sub-B follow-up #82 (PR #91) | dev-dotnet | sonnet | 117728 | 65 | 493s |
 
 **Consolidação (quiescência):** A preencher pela sessão principal após cada etapa.
 
