@@ -5,7 +5,7 @@ issue: 12
 repo: omuletachou
 titulo: feat: Site Publico Next.js (SSR + SEO)
 rota: normal
-etapa_atual: Em Desenvolvimento (Sub-A #94 e Sub-B #95 mergeadas em desenv; Sub-C #96 com PR #99 aberto — aguardando merge do LT para então abrir PR desenv→homolog)
+etapa_atual: Em Desenvolvimento (Sub-A #94 e Sub-B #95 mergeadas em desenv; Sub-C #96 com PR #99 aberto e conflito RESOLVIDO — mergeStateStatus CLEAN/MERGEABLE — pronto para merge do LT e abertura do PR desenv→homolog)
 docs_path: repos/omuletachou/documentacoes/ISSUE-12-site-publico
 openspec_path: repos/omuletachou/openspec/changes/issue-12-site-publico
 ultimo_agente: lider-tecnico
@@ -72,6 +72,18 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 - Sub-issue #95 fechada (`gh issue close 95 --reason completed`).
 - Branch local `desenv` sincronizada com `origin/desenv` (fast-forward 072338d..84a24c8).
 - PR desenv→homolog **ainda NÃO criado** — falta Sub-C #96 (PR #99), a ser processado em invocação separada do LT.
+
+## Fix de conflito PR #99 (Dev, fora do fluxo de sub-issue)
+- Causa: Sub-B (#95, PR #98) mergeou em `desenv` antes do PR #99 (Sub-C) atualizar sua branch, e ambas editaram `website/jest.config.js` (`collectCoverageFrom`).
+- Recuperação: worktree `.worktrees/fix-96-conflict` a partir de `feature/96-categoria-sitemap` (branch já existia no remoto).
+- `git merge origin/desenv` trouxe Sub-A (#94) e Sub-B (#95) já mergeadas; único conflito real foi `website/jest.config.js` — resolvido mesclando as duas listas de `collectCoverageFrom` (Sub-B: `app/**/page.tsx`; Sub-C: `app/page.tsx`, `app/sitemap.ts`, `app/categoria/**/*.tsx`), nenhuma configuração perdida. Demais arquivos (DealDetail, related-deals, seo, oferta/page.tsx, og-default.png) vieram limpos do merge, sem conflito.
+- Commit de merge: `cd84b58` (`merge(ISSUE-96): merge desenv (Sub-A + Sub-B) e resolve conflito em jest.config.js`).
+- `npm test`: 11 suites / 57 testes passando (100%) — soma de Sub-A + Sub-B + Sub-C juntas.
+- `npx jest --coverage`: cobertura global 96.79% stmts / 92.85% branch / 100% funcs / 100% lines — acima do threshold 80% configurado no `jest.config.js` mesclado; todos os arquivos das 3 sub-issues aparecem no relatório (page.tsx, sitemap.ts, categoria/page.tsx, oferta/page.tsx, DealCard, DealDetail, Header, api.ts, format.ts, related-deals.ts, seo.ts).
+- `npm run build`: `next build` compilou sem erro de TypeScript, 5 rotas geradas (`/`, `/categoria/[categoria]`, `/oferta/[slug]`, `/sitemap.xml`, `/_not-found`).
+- Smoke test Docker real (stack completa `db`+`api`+`website` via `docker-compose.yml` da raiz, `.env` local temporário não commitado — removido ao final): produto real inserido no Postgres (status Published); API `/api/public/deals`, `/deals/{slug}`, `/deals/category/{categoria}` retornaram 200 com o produto; Home (`/`) 200 com `deals-grid` renderizando o produto (após limpar cache ISR em disco, que ainda continha o build anterior sem dados — comportamento normal do `revalidate: 300`, não bug do merge); `/oferta/fone-bluetooth-teste` 200 com o produto; `/categoria/eletronicos` 200 com o produto; `/sitemap.xml` e `/robots.txt` 200 com conteúdo correto. `docker compose down -v` ao final, produto de teste descartado junto com o volume do Postgres.
+- Push: `feature/96-categoria-sitemap` atualizada no remoto (`3c3a738..cd84b58`). PR #99 confirmado `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`.
+- Worktree `.worktrees/fix-96-conflict` removido ao final.
 
 ## Historico de etapas
 | # | Etapa | Agente | Status |
