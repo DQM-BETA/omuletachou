@@ -41,3 +41,10 @@ public record ProductDetailDto(
     [property: JsonPropertyName("ai_reason")] string? AiReason,
     DateTime CreatedAt,
     DateTime UpdatedAt);
+
+/// <summary>
+/// Body de PATCH /api/products/{id}/status (CA-B5/CA-B6). Valores aceitos: "pending" ou
+/// "rejected" (case-insensitive) — demais valores do enum ProductStatus sao transicoes de
+/// sistema, nao disponiveis via este endpoint manual.
+/// </summary>
+public record UpdateProductStatusRequest(string Status);

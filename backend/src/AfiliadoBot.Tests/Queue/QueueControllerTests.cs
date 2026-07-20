@@ -148,4 +148,151 @@ public class QueueControllerTests : IClassFixture<CustomWebApplicationFactory>
         items.Should().Contain(i => i.GetProperty("id").GetGuid() == matchingId);
         items.Should().NotContain(i => i.GetProperty("id").GetGuid() == wrongNetworkId);
     }
+
+    [Fact]
+    public async Task GetManualQueue_SemToken_Retorna401()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/api/queue/manual");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GetManualQueue_RetornaApenasItensManualPending()
+    {
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        Guid manualId;
+        Guid scheduledId;
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+
+            var productA = NewProduct("Produto Fila Manual");
+            var productB = NewProduct("Produto Fila Agendado");
+            db.Products.Add(productA);
+            db.Products.Add(productB);
+
+            var manual = new PublicationQueue(productA.Id, SocialNetwork.Facebook, DateTime.UtcNow);
+            manual.MarkAsManualPending();
+            var scheduled = new PublicationQueue(productB.Id, SocialNetwork.Telegram, DateTime.UtcNow);
+            manualId = manual.Id;
+            scheduledId = scheduled.Id;
+
+            db.PublicationQueues.Add(manual);
+            db.PublicationQueues.Add(scheduled);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync("/api/queue/manual");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var items = body.GetProperty("items").EnumerateArray().ToList();
+
+        items.Should().Contain(i => i.GetProperty("id").GetGuid() == manualId);
+        items.Should().NotContain(i => i.GetProperty("id").GetGuid() == scheduledId);
+        items.Should().OnlyContain(i => i.GetProperty("status").GetString() == "ManualPending");
+    }
+
+    [Fact]
+    public async Task RetryQueueItem_SemToken_Retorna401()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PostAsync($"/api/queue/{Guid.NewGuid()}/retry", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task RetryQueueItem_ItemComFalha_AtualizaParaScheduledERetorna204()
+    {
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        Guid itemId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var product = NewProduct("Produto Fila Falha");
+            db.Products.Add(product);
+
+            var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
+            item.RegisterAttempt(success: false, errorMessage: "Timeout ao publicar.");
+            itemId = item.Id;
+
+            db.PublicationQueues.Add(item);
+            await db.SaveChangesAsync();
+        }
+
+        var before = DateTime.UtcNow;
+        var response = await client.PostAsync($"/api/queue/{itemId}/retry", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var updated = await db.PublicationQueues.AsNoTracking().FirstAsync(q => q.Id == itemId);
+            updated.Status.Should().Be(PublicationStatus.Scheduled);
+            updated.RetryCount.Should().Be(0);
+            updated.ErrorMessage.Should().BeNull();
+            updated.ScheduledAt.Should().BeOnOrAfter(before);
+        }
+    }
+
+    [Fact]
+    public async Task RetryQueueItem_ItemQueNaoEstaEmFalha_Retorna409ESemAlterar()
+    {
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        Guid itemId;
+        DateTime originalScheduledAt;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var product = NewProduct("Produto Fila Nao Falha");
+            db.Products.Add(product);
+
+            var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(1));
+            itemId = item.Id;
+            originalScheduledAt = item.ScheduledAt;
+
+            db.PublicationQueues.Add(item);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.PostAsync($"/api/queue/{itemId}/retry", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var untouched = await db.PublicationQueues.AsNoTracking().FirstAsync(q => q.Id == itemId);
+            untouched.Status.Should().Be(PublicationStatus.Scheduled);
+            untouched.ScheduledAt.Should().BeCloseTo(originalScheduledAt, TimeSpan.FromSeconds(1));
+        }
+    }
+
+    [Fact]
+    public async Task RetryQueueItem_ItemInexistente_Retorna404()
+    {
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await client.PostAsync($"/api/queue/{Guid.NewGuid()}/retry", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
 }

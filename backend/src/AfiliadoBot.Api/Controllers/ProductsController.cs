@@ -101,4 +101,31 @@ public class ProductsController : ControllerBase
 
         return Ok(dto);
     }
+
+    /// <summary>
+    /// CA-B5 (valor valido, pending/rejected), CA-B6 (400 sem alterar quando fora do enum
+    /// permitido). CA-B4-like: 404 quando o produto nao existe (checado apos a validacao do
+    /// valor recebido, para nao vazar existencia de recurso em payload invalido).
+    /// </summary>
+    [HttpPatch("{id:guid}/status")]
+    public async Task<IActionResult> UpdateStatus(
+        Guid id,
+        [FromBody] UpdateProductStatusRequest request,
+        CancellationToken ct)
+    {
+        if (!Enum.TryParse<ProductStatus>(request.Status, ignoreCase: true, out var newStatus) ||
+            (newStatus != ProductStatus.Pending && newStatus != ProductStatus.Rejected))
+        {
+            return BadRequest(new { message = "Status invalido. Valores permitidos: pending, rejected." });
+        }
+
+        var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (product is null)
+            return NotFound();
+
+        product.UpdateStatusManually(newStatus);
+        await _db.SaveChangesAsync(ct);
+
+        return NoContent();
+    }
 }

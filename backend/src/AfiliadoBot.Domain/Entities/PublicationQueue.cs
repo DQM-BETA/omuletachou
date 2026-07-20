@@ -44,6 +44,25 @@ public class PublicationQueue
     }
 
     /// <summary>
+    /// Reprocessa manualmente um item com falha (Issue #11 / Sub-B, CA-B9/CA-B10, #82): volta a
+    /// Status=Scheduled com ScheduledAt=now, tornando o item elegivel novamente para o
+    /// PublisherJob (Issue #6/#7). RetryCount e ErrorMessage sao zerados — o retry manual e uma
+    /// nova tentativa "do zero", independente do limite automatico de 3 tentativas do job.
+    /// So permitido quando o item esta em Failed; chamador (controller) deve validar antes.
+    /// </summary>
+    public void Retry()
+    {
+        if (Status != PublicationStatus.Failed)
+            throw new InvalidOperationException(
+                "Somente itens com status Failed podem ser reprocessados manualmente.");
+
+        Status = PublicationStatus.Scheduled;
+        ScheduledAt = DateTime.UtcNow;
+        RetryCount = 0;
+        ErrorMessage = null;
+    }
+
+    /// <summary>
     /// Registra uma tentativa de publicacao.
     /// Sucesso: Status=Published, PublishedAt=UtcNow.
     /// Falha: RetryCount++, ErrorMessage=errorMessage, Status=Failed.
