@@ -279,6 +279,7 @@ desenv_tasks_merged: [#81, #82, #83, #84, #85] — 5/5 completas
 | 18 | Dev .NET — Sub-B follow-up #82 (PR #91) | dev-dotnet | sonnet | 117728 | 65 | 493s |
 | 19 | Code Review — PR #92 (desenv→homolog) | code-review | sonnet | 105934 | 42 | 344s |
 | 20 | QA (homolog) — aprovado 46/46 CAs | qa | sonnet | 86702 | 55 | 515s |
+| 21 | Líder Técnico — PR release #93 (homolog→main) | lider-tecnico | sonnet | 83227 | 12 | 314s |
 
 **Consolidação (quiescência):** A preencher pela sessão principal após cada etapa.
 
