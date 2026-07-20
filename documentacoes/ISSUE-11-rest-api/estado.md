@@ -5,16 +5,16 @@ issue: 11
 repo: omuletachou
 titulo: feat: REST API (Dashboard + Endpoints Publicos)
 rota: normal
-etapa_atual: Code Review (2 camadas) aprovado — PR #92 (desenv→homolog) mergeado (merge commit e861b28). Aguardando QA.
+etapa_atual: QA aprovado (46/46 CAs, validação real end-to-end incl. rate limit e CORS reais) — próximo: LT cria PR homolog→main (Gate 2)
 docs_path: repos/omuletachou/documentacoes/ISSUE-11-rest-api
 openspec_path: repos/omuletachou/openspec/changes/issue-11-rest-api
 openspec_change: repos/omuletachou/openspec/changes/issue-11-rest-api
-ultimo_agente: code-review
+ultimo_agente: qa
 status_comment_id: 4962193361
-pr_feature: #86 (merged), #87 (merged), #88 (merged), #89 (merged), #90 (merged)
+pr_feature: #86 (merged), #87 (merged), #88 (merged), #89 (merged), #90 (merged), #91 (merged)
 pr_homologacao: 92
 pr_release: ~
-qa_status: ~
+qa_status: aprovado (46/46 CAs, end-to-end real)
 code_review_homolog_pr: 92 (aprovado, merge commit e861b28, mergedAt 2026-07-20T14:09:37Z)
 closedAt: ~
 
@@ -270,10 +270,9 @@ desenv_tasks_merged: [#81, #82, #83, #84, #85] — 5/5 completas
 | 17 | Líder Técnico — merge Sub-E #85 (PR #89) | lider-tecnico | sonnet | 77663 | 18 | 292s |
 | 18 | Dev .NET — Sub-B follow-up #82 (PR #91) | dev-dotnet | sonnet | 117728 | 65 | 493s |
 | 19 | Code Review — PR #92 (desenv→homolog) | code-review | sonnet | 105934 | 42 | 344s |
+| 20 | QA (homolog) — aprovado 46/46 CAs | qa | sonnet | 86702 | 55 | 515s |
 
 **Consolidação (quiescência):** A preencher pela sessão principal após cada etapa.
-
-**Nota (linha 19):** tokens/tools/tempo desta invocação (Code Review PR #92) a preencher pela sessão principal a partir do `<usage>` retornado no HANDOFF abaixo.
 
 ---
 _Última atualização: 2026-07-20 — mantido pelo Code Review._
