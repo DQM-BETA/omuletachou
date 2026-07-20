@@ -76,4 +76,4 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 1 | Preparacao | Coordenador | haiku-4.5 | 32474 | 33 | 185s |
 | 2 | PM Fase 1 | pm | sonnet | 29640 | 10 | 64s |
 | 3 | PM Fase 2 | pm | sonnet | 50226 | 21 | 228s |
-| 4 | Refinamento Tecnico | lider-tecnico | sonnet | PENDENTE (preencher com <usage> deste HANDOFF) | PENDENTE | PENDENTE |
+| 4 | Refinamento Tecnico | lider-tecnico | sonnet | 79581 | 28 | 242s |
