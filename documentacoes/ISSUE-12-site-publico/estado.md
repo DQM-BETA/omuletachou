@@ -5,13 +5,13 @@ issue: 12
 repo: omuletachou
 titulo: feat: Site Publico Next.js (SSR + SEO)
 rota: normal
-etapa_atual: Code Review (fix de XSS #101 mergeado em desenv; PR #100 desenv→homolog atualizado e MERGEABLE — aguardando Code Review dedicado revalidar especificamente o fix)
+etapa_atual: QA (Code Review aprovou e mergeou PR #100 desenv→homolog)
 docs_path: repos/omuletachou/documentacoes/ISSUE-12-site-publico
 openspec_path: repos/omuletachou/openspec/changes/issue-12-site-publico
 ultimo_agente: lider-tecnico
 status_comment_id: 5025494280
 pr_homologacao: 100
-code_review_homolog_pr: ~
+code_review_homolog_pr: 100
 pr_release: ~
 
 ## Contexto
@@ -107,6 +107,18 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 - Branch local `desenv` sincronizada com `origin/desenv` via `git pull` (ef78906..98b87ca).
 - **NÃO** editado o comentário 📍 Status (fora do escopo desta invocação).
 - **Próximo:** sessão principal roda o Code Review dedicado no PR #100, revalidando especificamente o fix de XSS (não é necessário reabrir/recriar o PR).
+
+
+## Code Review — PR #100 (desenv→homolog) — aprovado e mergeado
+- **Revalidação pessoal do fix de XSS (PR #101):** reverti `98b87ca` em worktree temporário (`.worktrees` fora do path final, removido ao final), mantendo os testes de regressão intactos — os 3 testes de `safeJsonLdStringify` falham imediatamente (`TypeError: not a function`, sinal ainda mais forte de regressão). Boot Docker real (`db`+`api`+`website`, `.env` local temporário não commitado) + produto inserido diretamente no Postgres com título literal `</script><script>alert(document.cookie)</script>` (status Published). `curl` na API confirma o título cru retornado (sem sanitização na origem, como esperado). `curl` em `/oferta/xss-test-slug` + parsing isolado do bloco `<script type="application/ld+json">`: conteúdo contém `</script>` escapado, **nenhum `</script>` cru** dentro do bloco. Title/meta/OG/Twitter/`<h1>`/`img alt` também escapam via `&lt;`/`&gt;` (defesa em profundidade do React). **Fix confirmado robusto.**
+- Build (`npm run build`) limpo, sem erros de TypeScript. Suíte completa (`npm test -- --ci`): **11 suítes, 61 testes, 100% passando.**
+- Boot Docker real: Home (`/`) renderiza grid com dado real do Postgres (após recriar volume `postgres_data` de execução local anterior stale — não é defeito do PR); `/oferta/{slug}` com OG+JSON-LD corretos e seguros; 404 real via `notFound()` para slug inexistente; `/categoria/{categoria}` com grid real e estado vazio (200, sem 404) para categoria sem ofertas; `/sitemap.xml` lista Home+categoria+oferta com `lastmod`; `/robots.txt` com `Allow: /` e referência ao sitemap.
+- `API_INTERNAL_URL`/`api:8080` nunca exposto ao HTML renderizado (`grep -c "api:8080"` → 0 em `/`, `/oferta/{slug}`, `/categoria/{categoria}`).
+- Revisão de código: `lib/api.ts`, `lib/seo.ts`, `app/sitemap.ts` (`force-dynamic` documentado e justificado), componentes — todos aderentes a `design.md`/`ux-ui-spec.md`/`criterios-aceite.md`.
+- Checklist de veto: todos os itens OK (ver comentário completo no PR). `.first()`/E2E não aplicável (sem specs Playwright no projeto ainda).
+- Evidência completa postada em: https://github.com/DQM-BETA/omuletachou/pull/100#issuecomment-5027521882
+- **PR #100 mergeado (merge commit, não squash) desenv→homolog.** Merge commit: `9894b7cc48b0b5c9d2936f7592f9d9bfdca5a73b`, mergedAt: 2026-07-20T21:36:07Z.
+- **Próximo:** QA.
 
 ## Historico de etapas
 | # | Etapa | Agente | Status |
