@@ -5,7 +5,7 @@ issue: 12
 repo: omuletachou
 titulo: feat: Site Publico Next.js (SSR + SEO)
 rota: normal
-etapa_atual: Em Desenvolvimento (Sub-A #94 mergeada em desenv via PR #97 squash — merge commit e718fdd; Sub-B #95 e Sub-C #96 desbloqueadas para prosseguir em paralelo, contrato lib/api.ts fechado)
+etapa_atual: Em Desenvolvimento (Sub-A #94 e Sub-B #95 mergeadas em desenv; Sub-C #96 com PR #99 aberto — aguardando merge do LT para então abrir PR desenv→homolog)
 docs_path: repos/omuletachou/documentacoes/ISSUE-12-site-publico
 openspec_path: repos/omuletachou/openspec/changes/issue-12-site-publico
 ultimo_agente: lider-tecnico
@@ -56,16 +56,22 @@ Resumo:
 - Comentário de resumo técnico postado na Issue #12: https://github.com/DQM-BETA/omuletachou/issues/12#issuecomment-5025948289
 
 ## Sub-issues
-sub_issues: [#94 (stack:nodejs, task_id:T-01, Sub-A: Integração de dados + Home) — MERGED, #95 (stack:nodejs, task_id:T-02, Sub-B: Página de oferta + SEO — depende de #94, DESBLOQUEADA), #96 (stack:nodejs, task_id:T-03, Sub-C: Página de categoria + sitemap/robots — depende de #94, DESBLOQUEADA)]
-desenv_tasks_merged: [#94]
+sub_issues: [#94 (stack:nodejs, task_id:T-01, Sub-A: Integração de dados + Home) — MERGED, #95 (stack:nodejs, task_id:T-02, Sub-B: Página de oferta + SEO — depende de #94) — MERGED, #96 (stack:nodejs, task_id:T-03, Sub-C: Página de categoria + sitemap/robots — depende de #94, PR #99 aberto, aguardando merge)]
+desenv_tasks_merged: [#94, #95]
 
-Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) → após merge de #94, Dev #95 e Dev #96 em paralelo.
+Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) → após merge de #94, Dev #95 e Dev #96 em paralelo. Restante: LT faz merge de #96 (PR #99) e, com todas as sub-issues mergeadas, abre o PR desenv→homolog.
 
 ## Merge Sub-A #94 (LT)
 - PR #97 (`feature/94-integracao-home` → `desenv`): mergeado via squash. `mergeStateStatus` confirmado `CLEAN`/`MERGEABLE` antes do merge (estava `UNKNOWN` na checagem anterior, resolvido após nova consulta). Merge commit: `e718fdda9c882b39004aff9379bb255c4928e721`, mergedAt: 2026-07-20T20:42:42Z.
 - Sub-issue #94 fechada (`gh issue close 94 --reason completed`).
 - Contrato `lib/api.ts`/`lib/types.ts` definitivo disponível em `desenv` para Sub-B e Sub-C.
 - Branch local `desenv` sincronizada com `origin/desenv` (fast-forward c3ad8f3..e718fdd).
+
+## Merge Sub-B #95 (LT)
+- PR #98 (`feature/95-oferta-seo` → `desenv`): revisado (build/testes/cobertura ok; Open Graph e JSON-LD `Product` confirmados no HTML real do smoke test Docker relatado pelo Dev — ver histórico item 9). `mergeStateStatus` `CLEAN`/`MERGEABLE` confirmado antes do merge. Mergeado via squash. Merge commit: `84a24c8b572c045d0929f5ce0bf958faa57f47e9`, mergedAt: 2026-07-20T20:59:22Z.
+- Sub-issue #95 fechada (`gh issue close 95 --reason completed`).
+- Branch local `desenv` sincronizada com `origin/desenv` (fast-forward 072338d..84a24c8).
+- PR desenv→homolog **ainda NÃO criado** — falta Sub-C #96 (PR #99), a ser processado em invocação separada do LT.
 
 ## Historico de etapas
 | # | Etapa | Agente | Status |
@@ -80,6 +86,7 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 8 | Merge Sub-A #94 | lider-tecnico | concluido — PR #97 squash merge em desenv (e718fdd), sub-issue #94 fechada, #95/#96 desbloqueadas |
 | 9 | Dev Sub-B #95 | dev-nodejs | concluido — PR #98 (feature/95-oferta-seo→desenv): `app/oferta/[slug]/page.tsx` (fetchDeal, revalidate 300, notFound), `components/DealDetail.tsx`, `lib/related-deals.ts` (fetchByCategory, 4 relacionados), `lib/seo.ts` (title/description/canonical/og-image/JSON-LD Product), `public/og-default.png` novo; 46 testes (100%), cobertura global 96.4%; smoke test Docker real (db+api+website, produto inserido no Postgres, GET /oferta/{slug} 200 com OG+JSON-LD confirmados no HTML, slug inexistente 404) |
 | 10 | Dev Sub-C #96 | dev-nodejs | concluido — PR #99 (feature/96-categoria-sitemap→desenv): `app/categoria/[categoria]/page.tsx` (fetchByCategory, revalidate 300, generateMetadata "{Categoria} \| O Mulet Achou", estado vazio CA-C4 sem notFound()), `app/sitemap.ts` (dinâmico, pagina fetchDeals até esgotar totalPages, Home+categorias+ofertas com lastModified, `export const dynamic = 'force-dynamic'` para não quebrar `next build` no Dockerfile sem API disponível no estágio de build), `public/robots.txt` estático (Allow: /, referencia sitemap); 33 testes (100%), cobertura ≥80%; build TS sem erros; smoke test Docker real em stack isolada (`docker-compose.smoke96.yml` temporário, projeto `omuletachou96`, containers/portas distintas para não colidir com a stack da Sub-B rodando em paralelo — arquivo removido ao final, não commitado), dados reais no Postgres, `/categoria/eletronicos` 200 com grade real, `/categoria/inexistente-xyz` 200 com estado vazio (sem 404), `/sitemap.xml` e `/robots.txt` 200 com conteúdo correto. Ambas Sub-B (#95) e Sub-C (#96) concluídas — próximo: LT faz merge das duas e PR desenv→homolog. |
+| 11 | Merge Sub-B #95 | lider-tecnico | concluido — PR #98 squash merge em desenv (84a24c8), sub-issue #95 fechada. Falta merge de Sub-C #96 (PR #99) para então abrir PR desenv→homolog. |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -93,3 +100,4 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 7 | Merge Sub-A #94 (LT) | lider-tecnico | sonnet | 38965 | 14 | 96s |
 | 8 | Dev Sub-B #95 (PR #98) | dev-nodejs | sonnet | 112977 | 79 | 740s |
 | 9 | Dev Sub-C #96 (PR #99) | dev-nodejs | sonnet | 125062 | 85 | 797s |
+| 10 | Merge Sub-B #95 (LT) | lider-tecnico | sonnet | (a preencher pela sessão principal a partir do &lt;usage&gt; deste HANDOFF) | | |
