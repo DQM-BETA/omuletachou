@@ -49,3 +49,21 @@ export function buildDealJsonLd(deal: Deal) {
     },
   };
 }
+
+/**
+ * Serializa um objeto JSON-LD para injeção segura via `dangerouslySetInnerHTML`.
+ *
+ * `JSON.stringify()` sozinho escapa aspas mas NÃO escapa a sequência `</script>`.
+ * Dados de origem externa (títulos/descrições coletados de Amazon/Mercado Livre/Shopee
+ * via scraping, ou gerados por IA) podem conter `</script><script>...`, o que fecharia
+ * a tag `<script>` prematuramente e permitiria a injeção de HTML/JS arbitrário
+ * (stored XSS). Escapamos `<`, `>` e `&` como sequências Unicode — continuam sendo
+ * JSON válido (o parser do browser/motores de busca as interpreta normalmente),
+ * mas não fecham/abrem tags HTML.
+ */
+export function safeJsonLdStringify(value: unknown): string {
+  return JSON.stringify(value)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026');
+}

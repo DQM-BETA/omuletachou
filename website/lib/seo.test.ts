@@ -4,6 +4,7 @@ import {
   buildDealCanonicalUrl,
   resolveDealOgImage,
   buildDealJsonLd,
+  safeJsonLdStringify,
 } from './seo';
 import type { Deal } from './types';
 
@@ -85,6 +86,34 @@ describe('lib/seo', () => {
       expect(jsonLd.offers.price).toBe(99.9);
       expect(jsonLd.offers.priceCurrency).toBe('BRL');
       expect(jsonLd.offers.availability).toBe('https://schema.org/InStock');
+    });
+  });
+
+  describe('safeJsonLdStringify', () => {
+    it('escapa </script> para evitar stored XSS via título malicioso', () => {
+      const deal = buildDeal({ title: '</script><script>alert(1)</script>' });
+      const jsonLd = buildDealJsonLd(deal);
+
+      const serialized = safeJsonLdStringify(jsonLd);
+
+      expect(serialized).not.toContain('</script>');
+      expect(serialized).not.toContain('<script>');
+    });
+
+    it('produz JSON válido que, ao ser parseado, preserva o valor original (incl. </script>)', () => {
+      const deal = buildDeal({ title: '</script><script>alert(1)</script>' });
+      const jsonLd = buildDealJsonLd(deal);
+
+      const serialized = safeJsonLdStringify(jsonLd);
+      const parsed = JSON.parse(serialized);
+
+      expect(parsed.name).toBe('</script><script>alert(1)</script>');
+    });
+
+    it('mantém o comportamento de JSON.stringify para valores sem caracteres perigosos', () => {
+      const jsonLd = buildDealJsonLd(buildDeal());
+
+      expect(safeJsonLdStringify(jsonLd)).toBe(JSON.stringify(jsonLd));
     });
   });
 });

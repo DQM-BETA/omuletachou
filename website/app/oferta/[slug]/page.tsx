@@ -9,6 +9,7 @@ import {
   buildDealJsonLd,
   buildDealTitle,
   resolveDealOgImage,
+  safeJsonLdStringify,
 } from '@/lib/seo';
 
 export const revalidate = 300;
@@ -60,7 +61,7 @@ export default async function OfertaPage({ params }: OfertaPageProps) {
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(jsonLd) }}
       />
       <DealDetail deal={deal} relatedDeals={relatedDeals} />
     </main>
