@@ -91,4 +91,5 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 5 | UX/UI — spec visual | ux-ui | sonnet | 49326 | 7 | 118s |
 | 6 | Dev Sub-A #94 (PR #97) | dev-nodejs | sonnet | N/D (sessão interrompida por reinício do processo; PR #97 e estado.md confirmados manualmente pela sessão principal) | N/D | N/D |
 | 7 | Merge Sub-A #94 (LT) | lider-tecnico | sonnet | 38965 | 14 | 96s |
-| 8 | Dev Sub-C #96 (PR #99) | dev-nodejs | sonnet | PENDENTE_USAGE | PENDENTE_USAGE | PENDENTE_USAGE |
+| 8 | Dev Sub-B #95 (PR #98) | dev-nodejs | sonnet | 112977 | 79 | 740s |
+| 9 | Dev Sub-C #96 (PR #99) | dev-nodejs | sonnet | PENDENTE_USAGE | PENDENTE_USAGE | PENDENTE_USAGE |
