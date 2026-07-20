@@ -269,7 +269,7 @@ desenv_tasks_merged: [#81, #82, #83, #84, #85] — 5/5 completas
 | 16 | Dev .NET — fix pontual Sub-E #85 (PR #89), rate limit CA-E4 | dev-dotnet | sonnet | 82404 | 37 | 304s |
 | 17 | Líder Técnico — merge Sub-E #85 (PR #89) | lider-tecnico | sonnet | 77663 | 18 | 292s |
 | 18 | Dev .NET — Sub-B follow-up #82 (PR #91) | dev-dotnet | sonnet | 117728 | 65 | 493s |
-| 19 | Code Review — PR #92 (desenv→homolog) | code-review | sonnet | USAGE_PLACEHOLDER | TOOLS_PLACEHOLDER | TIME_PLACEHOLDER |
+| 19 | Code Review — PR #92 (desenv→homolog) | code-review | sonnet | 105934 | 42 | 344s |
 
 **Consolidação (quiescência):** A preencher pela sessão principal após cada etapa.
 
