@@ -5,7 +5,7 @@ issue: 12
 repo: omuletachou
 titulo: feat: Site Publico Next.js (SSR + SEO)
 rota: normal
-etapa_atual: Em Desenvolvimento (UX/UI concluído, aguardando Dev Sub-A #94)
+etapa_atual: Em Desenvolvimento (Dev Sub-A #94 concluído — PR #97 feature/94-integracao-home→desenv aberto; aguardando merge do LT antes de paralelizar Sub-B #95 e Sub-C #96)
 docs_path: repos/omuletachou/documentacoes/ISSUE-12-site-publico
 openspec_path: repos/omuletachou/openspec/changes/issue-12-site-publico
 ultimo_agente: lider-tecnico
@@ -70,6 +70,7 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 4 | PM Fase 2 | pm-analista-negocios | concluido |
 | 5 | Refinamento Tecnico | lider-tecnico | concluido |
 | 6 | UX/UI — spec visual | ux-ui | concluido — ux-ui-spec.md escrito (grid de cards, anatomia do DealCard, layout da página de oferta, tokens de cor/tipografia mobile-first) |
+| 7 | Dev Sub-A #94 | dev-nodejs | concluido — PR #97 (feature/94-integracao-home→desenv), lib/api.ts contrato definitivo, DealCard/Header, Home com ISR, 22 testes (100%), smoke test Docker real com dado no Postgres |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -79,3 +80,4 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 3 | PM Fase 2 | pm | sonnet | 50226 | 21 | 228s |
 | 4 | Refinamento Tecnico | lider-tecnico | sonnet | 79581 | 28 | 242s |
 | 5 | UX/UI — spec visual | ux-ui | sonnet | 49326 | 7 | 118s |
+| 6 | Dev Sub-A #94 | dev-nodejs | sonnet | (ver <usage> do HANDOFF) | — | — |
