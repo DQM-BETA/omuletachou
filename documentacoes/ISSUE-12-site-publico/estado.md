@@ -5,7 +5,7 @@ issue: 12
 repo: omuletachou
 titulo: feat: Site Publico Next.js (SSR + SEO)
 rota: normal
-etapa_atual: Preparacao
+etapa_atual: Aguardando PM Fase 1
 docs_path: repos/omuletachou/documentacoes/ISSUE-12-site-publico
 openspec_path: repos/omuletachou/openspec/changes/ISSUE-12-site-publico
 ultimo_agente: coordenador
@@ -31,7 +31,7 @@ desenv_tasks_merged: []
 ## Historico de etapas
 | # | Etapa | Agente | Status |
 |---|---|---|---|
-| 1 | Preparacao | Coordenador | em_andamento |
+| 1 | Preparacao | Coordenador | concluido |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
