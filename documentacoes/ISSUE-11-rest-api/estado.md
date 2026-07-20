@@ -5,14 +5,14 @@ issue: 11
 repo: omuletachou
 titulo: feat: REST API (Dashboard + Endpoints Publicos)
 rota: normal
-etapa_atual: Dev .NET — Sub-A (#81), Sub-C (#83, PR #88), Sub-D (#84, PR #90), Sub-E (#85, PR #89) mergeadas em desenv (4/5 sub-issues completas); Sub-B parcial (#82, PR #87) mergeada em desenv mas sub-issue mantida ABERTA, aguardando follow-up de Dev .NET (CA-B5/CA-B6 `PATCH /api/products/{id}/status`, CA-B8 `GET /api/queue/manual`, CA-B9/CA-B10 `POST /api/queue/{id}/retry`); PR desenv→homolog NÃO criado até #82 fechar
+etapa_atual: Todas as 5 sub-issues completas e mergeadas em desenv (#81-#85). PR de release #92 (desenv→homolog) criado — aguardando Code Review (2 camadas)
 docs_path: repos/omuletachou/documentacoes/ISSUE-11-rest-api
 openspec_path: repos/omuletachou/openspec/changes/issue-11-rest-api
 openspec_change: repos/omuletachou/openspec/changes/issue-11-rest-api
 ultimo_agente: lider-tecnico
 status_comment_id: 4962193361
 pr_feature: #86 (merged), #87 (merged), #88 (merged), #89 (merged), #90 (merged)
-pr_homologacao: ~
+pr_homologacao: 92
 pr_release: ~
 qa_status: ~
 code_review_homolog_pr: ~
@@ -203,8 +203,8 @@ Concluído em 2026-07-20. Continuação de `feature/82-followup-write-endpoints`
 - **Sub-issue #82 permanece ABERTA** — quem fecha e mergeia é o próximo Líder Técnico. Com este PR mergeado, as 5 sub-issues estarão completas (46 CAs) e o próximo LT deve criar o PR `desenv→homolog`.
 
 ## Sub-issues
-sub_issues: [#81 (stack:dotnet, task_id:Sub-A) — MERGED, #82 (stack:dotnet, task_id:Sub-B) — PR #87 merged (parcial: CA-B1/B2/B3/B4/B7/B11) + PR #91 aberto (completa CA-B5/B6/B8/B9/B10), sub-issue ABERTA aguardando merge do PR #91, #83 (stack:dotnet, task_id:Sub-C) — MERGED (PR #88), #84 (stack:dotnet, task_id:Sub-D) — MERGED (PR #90, merge local via git push em desenv devido a bug de infra na GitHub Pulls API), #85 (stack:dotnet, task_id:Sub-E) — MERGED (PR #89, squash, commit 45c05fc)]
-desenv_tasks_merged: [#81, #83, #84, #85]
+sub_issues: [#81 (stack:dotnet, task_id:Sub-A) — MERGED e FECHADA, #82 (stack:dotnet, task_id:Sub-B) — MERGED e FECHADA (PR #87 parcial CA-B1/B2/B3/B4/B7/B11 + PR #91 follow-up CA-B5/B6/B8/B9/B10, mergedAt 2026-07-20T14:01:51Z), #83 (stack:dotnet, task_id:Sub-C) — MERGED e FECHADA (PR #88), #84 (stack:dotnet, task_id:Sub-D) — MERGED e FECHADA (PR #90, merge local via git push em desenv devido a bug de infra na GitHub Pulls API), #85 (stack:dotnet, task_id:Sub-E) — MERGED e FECHADA (PR #89, squash, commit 45c05fc)]
+desenv_tasks_merged: [#81, #82, #83, #84, #85] — 5/5 completas
 
 ## Historico de etapas
 | # | Etapa | Agente | Status |
@@ -226,6 +226,7 @@ desenv_tasks_merged: [#81, #83, #84, #85]
 | 15 | Dev .NET — fix pontual Sub-E #85 (PR #89) rate limit CA-E4 | dev-dotnet | concluido — rebase limpo contra desenv (Sub-D incorporada), `[EnableRateLimiting("public-write")]` aplicado em `PushController.Subscribe`, novo teste `PushSubscribeRateLimitIntegrationTests` (CA-E4 + não regressão de particionamento por IP), 262/262 testes passando, boot Docker real validado (curl 201), push --force-with-lease no PR #89 existente (mesma branch) |
 | 16 | Líder Técnico — merge Sub-E #85 (PR #89) | lider-tecnico | concluido — PR #89 revisado (`[EnableRateLimiting]` confirmado no diff), mergeado (squash) em desenv (commit 45c05fc), sub-issue #85 fechada; desenv_tasks_merged agora [#81,#83,#84,#85] (4/5); PR desenv→homolog NÃO criado — sub-issue #82 (Sub-B) segue aberta com follow-up formal pendente (CA-B5/B6/B8/B9/B10); próximo passo é Dev .NET completar #82 |
 | 17 | Dev .NET — Sub-B follow-up #82 (PR #91) | dev-dotnet | concluido — PR #91 (feature/82-followup-write-endpoints → desenv) aberto; `PATCH /api/products/{id}/status` (CA-B5/B6), `GET /api/queue/manual` (CA-B8), `POST /api/queue/{id}/retry` (CA-B9/B10) implementados; 280/280 testes passando (18 novos); boot Docker real validado via curl; sub-issue #82 permanece aberta até o próximo LT mergear e, com as 5 sub-issues completas, criar o PR desenv→homolog |
+| 18 | Líder Técnico — merge Sub-B follow-up #82 (PR #91) + PR de release | lider-tecnico | concluido — PR #91 mergeado (squash) em desenv (mergedAt 2026-07-20T14:01:51Z), sub-issue #82 fechada (CA-B1 a CA-B11 completos); **5/5 sub-issues completas**; PR de release #92 (desenv→homolog) criado. Nota: sessão LT teve queda de conexão de API após concluir estas ações, antes de escrever o HANDOFF final — trabalho confirmado diretamente via `gh`/`git` pela sessão principal, não perdido. Sem `<usage>` capturado para esta etapa (conexão perdida antes do retorno). |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
