@@ -36,4 +36,4 @@ desenv_tasks_merged: []
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
 |---|---|---|---|---|---|---|
-| 1 | Preparacao | Coordenador | haiku-4.5 | a preencher | a preencher | a preencher |
+| 1 | Preparacao | Coordenador | haiku-4.5 | 32474 | 33 | 185s |
