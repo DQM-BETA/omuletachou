@@ -5,7 +5,7 @@ issue: 12
 repo: omuletachou
 titulo: feat: Site Publico Next.js (SSR + SEO)
 rota: normal
-etapa_atual: Em Desenvolvimento (Dev Sub-A #94 concluído — PR #97 feature/94-integracao-home→desenv aberto; aguardando merge do LT antes de paralelizar Sub-B #95 e Sub-C #96)
+etapa_atual: Em Desenvolvimento (Sub-A #94 mergeada em desenv via PR #97 squash — merge commit e718fdd; Sub-B #95 e Sub-C #96 desbloqueadas para prosseguir em paralelo, contrato lib/api.ts fechado)
 docs_path: repos/omuletachou/documentacoes/ISSUE-12-site-publico
 openspec_path: repos/omuletachou/openspec/changes/issue-12-site-publico
 ultimo_agente: lider-tecnico
@@ -56,10 +56,16 @@ Resumo:
 - Comentário de resumo técnico postado na Issue #12: https://github.com/DQM-BETA/omuletachou/issues/12#issuecomment-5025948289
 
 ## Sub-issues
-sub_issues: [#94 (stack:nodejs, task_id:T-01, Sub-A: Integração de dados + Home), #95 (stack:nodejs, task_id:T-02, Sub-B: Página de oferta + SEO — depende de #94), #96 (stack:nodejs, task_id:T-03, Sub-C: Página de categoria + sitemap/robots — depende de #94)]
-desenv_tasks_merged: []
+sub_issues: [#94 (stack:nodejs, task_id:T-01, Sub-A: Integração de dados + Home) — MERGED, #95 (stack:nodejs, task_id:T-02, Sub-B: Página de oferta + SEO — depende de #94, DESBLOQUEADA), #96 (stack:nodejs, task_id:T-03, Sub-C: Página de categoria + sitemap/robots — depende de #94, DESBLOQUEADA)]
+desenv_tasks_merged: [#94]
 
 Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) → após merge de #94, Dev #95 e Dev #96 em paralelo.
+
+## Merge Sub-A #94 (LT)
+- PR #97 (`feature/94-integracao-home` → `desenv`): mergeado via squash. `mergeStateStatus` confirmado `CLEAN`/`MERGEABLE` antes do merge (estava `UNKNOWN` na checagem anterior, resolvido após nova consulta). Merge commit: `e718fdda9c882b39004aff9379bb255c4928e721`, mergedAt: 2026-07-20T20:42:42Z.
+- Sub-issue #94 fechada (`gh issue close 94 --reason completed`).
+- Contrato `lib/api.ts`/`lib/types.ts` definitivo disponível em `desenv` para Sub-B e Sub-C.
+- Branch local `desenv` sincronizada com `origin/desenv` (fast-forward c3ad8f3..e718fdd).
 
 ## Historico de etapas
 | # | Etapa | Agente | Status |
@@ -71,6 +77,7 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 5 | Refinamento Tecnico | lider-tecnico | concluido |
 | 6 | UX/UI — spec visual | ux-ui | concluido — ux-ui-spec.md escrito (grid de cards, anatomia do DealCard, layout da página de oferta, tokens de cor/tipografia mobile-first) |
 | 7 | Dev Sub-A #94 | dev-nodejs | concluido — PR #97 (feature/94-integracao-home→desenv), lib/api.ts contrato definitivo, DealCard/Header, Home com ISR, 22 testes (100%), smoke test Docker real com dado no Postgres |
+| 8 | Merge Sub-A #94 | lider-tecnico | concluido — PR #97 squash merge em desenv (e718fdd), sub-issue #94 fechada, #95/#96 desbloqueadas |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -81,3 +88,4 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 4 | Refinamento Tecnico | lider-tecnico | sonnet | 79581 | 28 | 242s |
 | 5 | UX/UI — spec visual | ux-ui | sonnet | 49326 | 7 | 118s |
 | 6 | Dev Sub-A #94 (PR #97) | dev-nodejs | sonnet | N/D (sessão interrompida por reinício do processo; PR #97 e estado.md confirmados manualmente pela sessão principal) | N/D | N/D |
+| 7 | Merge Sub-A #94 (LT) | lider-tecnico | sonnet | (ver usage do HANDOFF) | (ver usage) | (ver usage) |
