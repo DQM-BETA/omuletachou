@@ -77,6 +77,7 @@ Aguardando fluxo da rota normal (Dev, LT, Code Review, QA, Gate 2).
 |---|---|---|---|
 | 1 | Preparacao | Coordenador | ativo — Issue preparada, estado.md criado, comentário 📍 Status criado, card adicionado ao board em 💻 Em Desenvolvimento |
 | 2 | PM Fase 1 | pm-analista-negocios | concluído — perguntas de levantamento postadas na Issue, comentário 📍 Status atualizado para Gate 1 |
+| 4 | Refinamento Técnico (LT) | lider-tecnico | concluído — design.md + especificacao-tecnica.md + tasks.md escritos, decisão Angular Material, UX/UI não acionado, 4 sub-issues criadas (#103-#106), 3 gaps de contrato com a API #11 identificados e resolvidos como extensões aditivas |
 | 3 | PM Fase 2 | pm-analista-negocios | concluído — proposal.md e criterios-aceite.md escritos, investigação do contrato PUT /api/settings/{key} concluída (sem ajuste retroativo necessário), sem ambiguidade arquitetural identificada, sumário do PRD postado na Issue, comentário 📍 Status atualizado para Refinamento Técnico |
 | 4 | Refinamento Técnico | lider-tecnico | concluído — design.md/especificacao-tecnica.md/tasks.md escritos, 4 sub-issues criadas (#103-#106), 3 gaps de contrato com a API #11 resolvidos como extensões aditivas, UX/UI da squad não acionado (justificativa registrada), sumário postado na Issue, comentário 📍 Status atualizado para Em Desenvolvimento |
 
@@ -86,3 +87,4 @@ Aguardando fluxo da rota normal (Dev, LT, Code Review, QA, Gate 2).
 | 1 | Preparacao | Coordenador | haiku-4.5 | 45607 | 37 | 210s |
 | 2 | PM Fase 1 | pm | sonnet | 32806 | 10 | 85s |
 | 3 | PM Fase 2 | pm | sonnet | 66779 | 26 | 256s |
+| 4 | Refinamento LT | lt | sonnet | 109958 | 49 | 458s |
