@@ -45,6 +45,9 @@ services:
       - api
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:5000
+      # Issue #12 / Sub-A: usado server-side em lib/api.ts (Server Components/ISR) para
+      # chamar a API pública dentro da rede Docker — nunca exposto ao bundle do browser.
+      API_INTERNAL_URL: http://api:8080
     ports:
       - "3000:3000"
 
