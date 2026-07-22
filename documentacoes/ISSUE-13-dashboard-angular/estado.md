@@ -72,6 +72,20 @@ desenv_tasks_merged: []
 ## Merge e Encerramento
 Aguardando fluxo da rota normal (Dev, LT, Code Review, QA, Gate 2).
 
+### Sub-A (#103) — Autenticação — Dev concluído
+- Angular Material 17.3 instalado (`ng add @angular/material`). Nota técnica: a especificacao-tecnica.md §0 descreve a API M3 (`mat.theme(...)`), disponível a partir do Angular Material 18+; o scaffold está fixado em 17.3 (mesma major do restante do dashboard, Issue #17), cuja API estável é M2. Aplicado o mesmo espírito (tema light, paleta azul, sem guideline de marca) via `mat.define-light-theme` com `$blue-palette` em `src/styles.scss`. Registrado para o LT avaliar se aceita a divergência ou decide upgrade de major em issue futura.
+- `AuthService`, `authGuard`/`loginGuard`, `authInterceptor` implementados conforme especificacao-tecnica.md §1.1-1.3, em `dashboard/src/app/core/auth/`.
+- `ShellComponent` (`dashboard/src/app/core/shell/`) com `MatSidenav` + 6 itens de navegação (Products, Queue, Facebook Manual, Settings, Jobs, Reports) + botão de Logout.
+- `LoginComponent` (`dashboard/src/app/pages/login/`) com formulário reativo Material, sem menu lateral (CA-A8), redirecionamento em sucesso e mensagem de erro em credenciais inválidas.
+- `JobsComponent` criado como stub (rota `/jobs`, ainda sem lógica — escopo de Sub-C).
+- `app.routes.ts`/`app.config.ts` atualizados: `provideHttpClient(withInterceptors([authInterceptor]))`, `provideAnimationsAsync()`, rotas com `authGuard`/`loginGuard`.
+- `proxy.conf.json` criado para `ng serve` local (`/api` → `http://localhost:8080`), registrado em `angular.json` (`serve.options.proxyConfig`).
+- Testes: 31/31 passando (Jasmine/Karma) cobrindo CA-A1 a CA-A7 (login sucesso/falha, storage, guard, interceptor 401 dentro/fora de `/api/auth/login`).
+- Build (`ng build`): sem erros de TypeScript (1 warning de orçamento de bundle — 712kb vs budget de 500kb — não bloqueante, `maximumError` é 1mb).
+- Boot Docker validado: `docker compose up -d --build db api dashboard` a partir do worktree — smoke test real via `curl` contra a API real (seed `admin@omuletachou.com.br`, Issue #11): login válido (200 + JWT), login inválido (401), chamada sem token a `/api/products` (401), chamada com token (200) — todos via proxy nginx do container `dashboard` (porta 4200). Containers derrubados (`docker compose down -v`) ao final.
+- PR: feature/103-auth → desenv.
+- Worktree `.worktrees/feature-103-auth` a ser removido pelo LT após o merge (ou pela sessão principal).
+
 ## Historico de etapas
 | # | Etapa | Agente | Status |
 |---|---|---|---|
