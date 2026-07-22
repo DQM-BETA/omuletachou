@@ -157,3 +157,5 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 14 | Dev fix XSS JSON-LD (PR #101) — achado do /code-review plugin | dev-nodejs | sonnet | 53915 | 29 | 176s |
 | 15 | Merge PR #101 + validação PR #100 (LT) | lider-tecnico | sonnet | 64920 | 18 | 251s |
 | 16 | Code Review PR #100 (aprovado, XSS revalidado, merge homolog) | code-review | sonnet | 110027 | 88 | 751s |
+| 17 | QA (homolog) — tentativa 1, travou testando resiliência API-fora-do-ar | qa | sonnet | (falha — sem HANDOFF, sem custo capturável) | — | — |
+| 18 | QA (homolog) — tentativa 2, aprovado 26/26 CAs | qa | sonnet | 76212 | 34 | 487s |
