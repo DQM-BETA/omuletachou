@@ -155,6 +155,44 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
     }
 
     [Fact]
+    public async Task GetProducts_ProdutoComScore_RetornaAiScoreEAiReasonNaListagem()
+    {
+        // Issue #13/Sub-B (gap de contrato §2.1.1): GET /api/products (listagem) precisa expor
+        // ai_score/ai_reason (mesma projecao que ja existe no detalhe) para a tabela do dashboard.
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var marker = Guid.NewGuid().ToString("N")[..8];
+        var scored = NewProduct($"Produto Com Score Listagem {marker}", Platform.Amazon);
+        scored.UpdateAiResult(7, "Bom desconto para a categoria.", "Aproveite agora!");
+
+        var unscored = NewProduct($"Produto Sem Score Listagem {marker}", Platform.Amazon);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            db.Products.Add(scored);
+            db.Products.Add(unscored);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync("/api/products?pageSize=100");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var items = body.GetProperty("items").EnumerateArray().ToList();
+
+        var scoredItem = items.Single(i => i.GetProperty("id").GetGuid() == scored.Id);
+        scoredItem.GetProperty("ai_score").GetInt32().Should().Be(7);
+        scoredItem.GetProperty("ai_reason").GetString().Should().Be("Bom desconto para a categoria.");
+
+        var unscoredItem = items.Single(i => i.GetProperty("id").GetGuid() == unscored.Id);
+        unscoredItem.GetProperty("ai_score").ValueKind.Should().Be(JsonValueKind.Null);
+        unscoredItem.GetProperty("ai_reason").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    [Fact]
     public async Task GetProduct_Existente_RetornaDetalheComAiScoreEAiReason()
     {
         var client = _factory.CreateClient();
