@@ -78,4 +78,28 @@ public class PublicationQueueTests
         var act = () => queue.Retry();
         act.Should().Throw<InvalidOperationException>();
     }
+
+    [Fact]
+    public void MarkAsPublishedManually_SetsPublished_WhenManualPending()
+    {
+        var queue = CriarQueue();
+        queue.MarkAsManualPending();
+        queue.Status.Should().Be(PublicationStatus.ManualPending);
+
+        var before = DateTime.UtcNow;
+        queue.MarkAsPublishedManually();
+
+        queue.Status.Should().Be(PublicationStatus.Published);
+        queue.PublishedAt.Should().NotBeNull();
+        queue.PublishedAt.Should().BeOnOrAfter(before);
+    }
+
+    [Fact]
+    public void MarkAsPublishedManually_ThrowsWhen_StatusIsNotManualPending()
+    {
+        var queue = CriarQueue();
+        // Status = Scheduled (inicial), nao ManualPending.
+        var act = () => queue.MarkAsPublishedManually();
+        act.Should().Throw<InvalidOperationException>();
+    }
 }
