@@ -62,3 +62,4 @@ Aguardando fluxo da rota normal (Dev, LT, Code Review, QA, Gate 2).
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
 |---|---|---|---|---|---|---|
 | 1 | Preparacao | Coordenador | haiku-4.5 | 45607 | 37 | 210s |
+| 2 | PM Fase 1 | pm | sonnet | 32806 | 10 | 85s |
