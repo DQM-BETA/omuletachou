@@ -51,4 +51,4 @@ Aguardando fluxo da rota normal (Dev, LT, Code Review, QA, Gate 2).
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
 |---|---|---|---|---|---|---|
-| 1 | Preparacao | Coordenador | haiku-4.5 | a preencher pela sessão principal | a preencher | a preencher |
+| 1 | Preparacao | Coordenador | haiku-4.5 | 45607 | 37 | 210s |
