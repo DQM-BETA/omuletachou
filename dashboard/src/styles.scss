@@ -1,1 +1,28 @@
 /* You can add global styles to this file, and also import other style files */
+@use '@angular/material' as mat;
+
+// Nota técnica: especificacao-tecnica.md §0 descreve a API M3 (`mat.theme(...)`),
+// disponível a partir do Angular Material 18+. O scaffold desta issue está fixado
+// em Angular Material 17.3 (`ng add @angular/material`, mesma major do restante do
+// projeto — Issue #17), cuja API de theming estável é a M2 (`define-light-theme`).
+// Aplicamos o mesmo espírito da decisão (tema light, paleta azul, sem guideline de
+// marca) usando a API M2 disponível nesta versão.
+$dashboard-primary: mat.define-palette(mat.$blue-palette);
+$dashboard-accent: mat.define-palette(mat.$blue-palette, A200, A100, A400);
+$dashboard-warn: mat.define-palette(mat.$red-palette);
+
+$dashboard-theme: mat.define-light-theme((
+  color: (
+    primary: $dashboard-primary,
+    accent: $dashboard-accent,
+    warn: $dashboard-warn,
+  ),
+  typography: mat.define-typography-config(),
+  density: 0,
+));
+
+@include mat.core();
+@include mat.all-component-themes($dashboard-theme);
+
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }

@@ -1,0 +1,23 @@
+.shell-container {
+  height: 100vh;
+}
+
+.shell-sidenav {
+  width: 240px;
+}
+
+.shell-content {
+  padding: 16px;
+}
+
+.active-link {
+  font-weight: 600;
+}
+
+.logout-button {
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+}
