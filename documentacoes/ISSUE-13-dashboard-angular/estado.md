@@ -102,3 +102,4 @@ Aguardando fluxo da rota normal (Dev, LT, Code Review, QA, Gate 2).
 | 2 | PM Fase 1 | pm | sonnet | 32806 | 10 | 85s |
 | 3 | PM Fase 2 | pm | sonnet | 66779 | 26 | 256s |
 | 4 | Refinamento LT | lt | sonnet | 109958 | 49 | 458s |
+| 5 | Dev Sub-A #103 (PR #107) | dev-angular | sonnet | 116556 | 95 | 946s |
