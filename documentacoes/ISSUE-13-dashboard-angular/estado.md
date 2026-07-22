@@ -141,6 +141,18 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 - Boot Docker validado: stack isolada (`sub105_db`/`sub105_api`/`sub105_dashboard`, portas 5433/5001/4201) para não colidir com outra sub-issue rodando em paralelo (worktree de Sub-D usando os nomes/portas padrão simultaneamente). Smoke test real via `curl` contra a API real através do proxy nginx do dashboard: login, `GET/PUT /api/settings` com mascaramento confirmado (`****************real` após PUT), `POST /api/jobs/collector/amazon/trigger` retornou 500 real (credenciais Amazon não configuradas no ambiente de teste — tratado corretamente pela UI como erro), `POST /api/jobs/processor/trigger` 200, 401 sem token. `docker-compose.yml`/`.env` do worktree revertidos ao padrão após o teste (mudanças de porta/nome eram só locais, não commitadas). Containers e imagens de teste removidos ao final.
 - PR: #111 (`feature/105-settings-jobs` → `desenv`), aguardando merge do LT. Branch pushada para o remoto.
 
+### Dev Sub-D #106 — Facebook Manual + Reports (Angular) — Dev Angular
+- Confirmado por inspeção que o backend de #106 (`PATCH /api/queue/{id}/status`, `GET /api/reports/totals`) já estava mergeado em `desenv` (PR #109, fix backend) — nenhum ajuste de backend necessário nesta etapa, apenas consumo do contrato já disponível.
+- Novos services `core/services/`: `QueueService` (`list`/`listManualPending`/`retry`/`markPublished`), `ReportsService` (`summary`/`totals`), `ProductsService` (método `getById`, consumindo `GET /api/products/{id}` já existente desde a Issue #11 — necessário para exibir preview de mídia + legenda completa do produto associado a cada item `ManualPending`). `paged-result.model.ts` (`PagedResult<T>`/`cleanParams`) recriado (mesmo contrato documentado — possível colisão trivial no merge com a Sub-B/#104, que também cria este arquivo).
+- `FacebookManualComponent` (`/facebook-manual`): cards de posts pendentes filtrados por `status=ManualPending` + `socialNetwork='Facebook'` (`GET /api/queue/manual`), preview de mídia (imagem/vídeo, detecção por extensão) e legenda completa via `ProductsService.getById`, botão "Copiar legenda" (`navigator.clipboard.writeText`) e "Marcar como publicado" (`QueueService.markPublished` → remove o card da lista em sucesso). Feedback de loading/erro/vazio.
+- `ReportsComponent` (`/reports`): 3 cards de totais hoje/semana/mês (`ReportsService.totals()`), gráfico de barras de publicações por rede nos últimos 7 dias (`ng2-charts`+`Chart.js`, `ReportsService.summary()`), tabela de falhas recentes com botão Retry reaproveitando `QueueService.list({status:'Failed'})`/`retry()` — sem endpoint novo, conforme especificacao-tecnica.md §2.5.2. Dependências novas: `ng2-charts`, `chart.js`.
+- Convenção Angular Material M2 mantida (mesma decisão do LT para Sub-A).
+- Testes (Jasmine/Karma): 51/51 passando, cobertura 96.44% statements / 85.71% branches — cobrindo CA-D1 a CA-D6 + estados de loading/erro/vazio.
+- `ng build`: sem erros de TypeScript (mesmo warning de budget de bundle pré-existente, não bloqueante).
+- Boot Docker real validado: stack isolada (`sub106_db`/`sub106_api`/`sub106_dashboard`, portas 5434/5002/4202, via `docker-compose.override.yml` local não commitado) para não colidir com a Sub-C (#105) rodando em paralelo. Smoke test via `curl` com JWT real: login, `GET /api/reports/totals` (200, contagens zeradas em banco vazio), `GET /api/queue/manual` (200), `GET /api/queue?status=Failed` (200), `PATCH /api/queue/{id}/status` com id inexistente (404, esperado). Containers/volumes/override removidos ao final (`docker compose down -v`).
+- **Observação para o merge (LT):** `core/services/products.service.ts` e `queue.service.ts` seguem o mesmo contrato documentado em especificacao-tecnica.md §2.1/§2.2 usado pela Sub-B (#104) — colisão esperada no merge, resolução trivial (união de métodos, sem divergência de assinatura), registrada no corpo do PR.
+- PR: #112 (`feature/106-facebook-reports` → `desenv`), aguardando merge do LT. Branch pushada para o remoto. Worktree `.worktrees/106-facebook-reports` removido após o push.
+
 ## Historico de etapas
 | # | Etapa | Agente | Status |
 |---|---|---|---|
@@ -156,6 +168,7 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 | 10 | Merge fix backend #106 (PR #109) | lider-tecnico | concluído — squash-merged em desenv (commit 329e18c) em 2026-07-22T14:00:59Z, branch deletada, comentário postado na sub-issue #106 (permanece aberta — UI Angular pendente), git pull origin desenv fast-forward sem conflitos, worktrees fix-104/fix-106 removidos |
 | 11 | Dev Sub-B #104 (Angular) | dev-angular | concluído (dev) — PR #110 (feature/104-products-queue → desenv) aberto, 58/58 testes, boot Docker + smoke test real validados (login, ai_score/ai_reason, aprovar/rejeitar, retry), aguardando merge do LT |
 | 12 | Dev Sub-C #105 (Settings + Jobs) | dev-angular | concluído (dev) — PR #111 (feature/105-settings-jobs → desenv) aberto, 62/62 testes, boot Docker + smoke test real validados (login, mascaramento GET/PUT settings, jobs trigger sucesso/erro real), aguardando merge do LT |
+| 13 | Dev Sub-D #106 (Facebook Manual + Reports) | dev-angular | concluído (dev) — PR #112 (feature/106-facebook-reports → desenv) aberto, 51/51 testes, boot Docker + smoke test real validados (login, reports/totals, queue/manual, queue?status=Failed, PATCH status 404 esperado), aguardando merge do LT |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -170,3 +183,4 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 | 8 | Fix backend #106 (PR #109) | dev-dotnet | sonnet | 114084 | 60 | 623s |
 | 9 | Dev Sub-B #104 (PR #110) | dev-angular | sonnet | 129394 | 92 | 988s |
 | 10 | Dev Sub-C #105 (PR #111) | dev-angular | sonnet | 156389 | 114 | 1186s |
+| 11 | Dev Sub-D #106 (PR #112) | dev-angular | sonnet | | | |
