@@ -66,28 +66,29 @@ Concluído.
 - Comentário 📍 Status atualizado para "Em Desenvolvimento": https://github.com/DQM-BETA/omuletachou/issues/13#issuecomment-5045887889
 
 ## Sub-issues
-sub_issues: [#103 (stack:angular, task_id:T-01, Sub-A Autenticação, bloqueante) — MERGED em desenv, #104 (stack:angular, task_id:T-02, Sub-B Products+Queue) — desbloqueada, #105 (stack:angular, task_id:T-03, Sub-C Settings+Jobs manual) — desbloqueada, #106 (stack:angular, task_id:T-04, Sub-D Facebook Manual+Reports) — desbloqueada]
+sub_issues: [#103 (stack:angular, task_id:T-01, Sub-A Autenticação, bloqueante) — MERGED em desenv, #104 (stack:angular, task_id:T-02, Sub-B Products+Queue) — desbloqueada, backend do gap de contrato já mergeado (PR #108), parte Angular pendente, #105 (stack:angular, task_id:T-03, Sub-C Settings+Jobs manual) — desbloqueada, #106 (stack:angular, task_id:T-04, Sub-D Facebook Manual+Reports) — desbloqueada, backend do gap de contrato já mergeado (PR #109), parte Angular pendente]
 desenv_tasks_merged: [#103]
 
 ## Merge e Encerramento
 Aguardando fluxo da rota normal (Dev, LT, Code Review, QA, Gate 2) para Sub-B (#104), Sub-C (#105) e Sub-D (#106).
 
-### Fix backend #104 — ai_score/ai_reason na listagem GET /api/products (gap de contrato §2.1.1) — PR aberto (Dev .NET)
+### Fix backend #104 — ai_score/ai_reason na listagem GET /api/products (gap de contrato §2.1.1) — MERGED em desenv (LT)
 - Extensao aditiva de `ProductListItemDto` (`backend/src/AfiliadoBot.Api/Products/ProductDtos.cs`): campos `AiScore`/`AiReason` adicionados com `[JsonPropertyName("ai_score"/"ai_reason")]`, mesmo padrao do `ProductDetailDto`.
 - `ProductsController.GetProducts` (`backend/src/AfiliadoBot.Api/Controllers/ProductsController.cs`) projeta os dois novos campos na listagem.
 - Teste novo `GetProducts_ProdutoComScore_RetornaAiScoreEAiReasonNaListagem` (`backend/src/AfiliadoBot.Tests/Products/ProductsControllerTests.cs`) cobre produto com e sem score na listagem; teste de regressao do detalhe (`GetProduct_Existente_RetornaDetalheComAiScoreEAiReason`) confirmado intacto.
 - `dotnet test`: 281/281 passando (100%).
 - Boot Docker validado (`docker compose up -d --build db api`, worktree `.worktrees/fix-104-products-dto`) — API sobe sem excecao. Smoke test real: produto inserido via SQL com `ai_score`/`ai_reason`, `GET /api/products` autenticado confirmou os dois campos na resposta JSON. Containers derrubados (`docker compose down`) ao final.
-- Branch `fix/104-products-ai-score-ai-reason` (base `desenv`), PR #108 aberto — aguardando merge do LT. Esta e uma extensao pontual dentro do escopo de #104 (backend); o dev Angular de #104 (Sub-B, telas Products/Queue) segue em paralelo/depois consumindo o contrato ja com os campos.
+- **PR #108 (`fix/104-products-ai-score-ai-reason` → `desenv`) squash-merged pelo LT em 2026-07-22T14:00:37Z, commit `8fddef562bfd070576309f8f92a856bd333ed6b8`.** Branch remota e local deletadas. Esta é uma extensão pontual dentro do escopo de #104 (backend); o dev Angular de #104 (Sub-B, telas Products/Queue) segue consumindo o contrato já com os campos disponíveis em `desenv`. Sub-issue #104 permanece **aberta** (parte de UI Angular ainda pendente) — comentário registrado em https://github.com/DQM-BETA/omuletachou/issues/104#issuecomment-5046973606.
 
-### Fix backend #106 — PATCH /api/queue/{id}/status + GET /api/reports/totals (gaps de contrato §2.1.2 e §2.1.3) — PR aberto (Dev .NET)
+### Fix backend #106 — PATCH /api/queue/{id}/status + GET /api/reports/totals (gaps de contrato §2.1.2 e §2.1.3) — MERGED em desenv (LT)
 - `PublicationQueue.MarkAsPublishedManually()` (domínio): transição restrita `ManualPending → Published`.
 - `QueueController`: novo `PATCH /api/queue/{id}/status` (400 transição inválida, 404 não encontrado, 409 estado incompatível, `[Authorize]`).
 - `ReportsController`: novo `GET /api/reports/totals` (contagem hoje/semana ISO/mês de itens `Published`).
 - Teste de regressão `Summary_ComTokenValido_...` corrigido para asserções por delta (gap de isolamento de teste pré-existente no InMemory DB compartilhado, exposto pelo novo teste de Totals).
 - `dotnet test`: 289/289 passando (rodado 3x para descartar flakiness de ordenação).
 - Boot Docker validado (worktree `.worktrees/fix-106-queue-reports`) + smoke test real via `curl`/JWT/`psql`: login, 401 sem token, transição manual válida (204), transição inválida (400), republicação (409), `reports/totals` refletindo a nova contagem, `queue/manual` confirmando remoção da fila manual. Containers derrubados ao final.
-- Branch `fix/106-queue-status-reports-totals` (base `desenv`), PR #109 aberto — aguardando merge do LT. Trabalho isolado dos arquivos de #104 (Sub-B em paralelo).
+- **PR #109 (`fix/106-queue-status-reports-totals` → `desenv`) squash-merged pelo LT em 2026-07-22T14:00:59Z, commit `329e18cc7b67d205b9c120166e2c3aeb94a49144`.** Branch remota e local deletadas. Trabalho isolado dos arquivos de #104 (Sub-B em paralelo) — nenhum conflito. Sub-issue #106 permanece **aberta** (parte de UI Angular ainda pendente) — comentário registrado em https://github.com/DQM-BETA/omuletachou/issues/106#issuecomment-5046974107.
+- `git pull origin desenv` no repo compartilhado: fast-forward `ed81377..329e18c`, sem conflitos. Worktrees `.worktrees/fix-104-products-dto` e `.worktrees/fix-106-queue-reports` removidos (`git worktree remove`) após o merge.
 
 ### Sub-A (#103) — Autenticação — MERGED em desenv (LT)
 - Angular Material 17.3 instalado (`ng add @angular/material`). Nota técnica: a especificacao-tecnica.md §0 descreve a API M3 (`mat.theme(...)`), disponível a partir do Angular Material 18+; o scaffold está fixado em 17.3 (mesma major do restante do dashboard, Issue #17), cuja API estável é M2. Aplicado o mesmo espírito (tema light, paleta azul, sem guideline de marca) via `mat.define-light-theme` com `$blue-palette` em `src/styles.scss`. Registrado para o LT avaliar se aceita a divergência ou decide upgrade de major em issue futura.
@@ -116,7 +117,7 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 - Ajuste de teste pre-existente (Gate obrigatorio, nao é mudanca de comportamento): `ReportsControllerTests.Summary_ComTokenValido_...` convertido para asserts em delta (baseline antes/depois), pois `CustomWebApplicationFactory` compartilha o banco InMemory entre os testes da mesma classe — o novo teste de `Totals` tambem publica itens "hoje", o que quebrava a asserção de total absoluto do teste de `Summary` dependendo da ordem de execucao.
 - Boot Docker validado: `docker compose up -d --build db api` a partir do worktree (`.env` local criado so para o smoke test, removido ao final) — API sobe sem excecao. Smoke test real via `curl` com JWT: login, `reports/totals` sem/com token, item `ManualPending` inserido via `psql`, `PATCH .../status` com transicao invalida (400), publicacao valida (204), nova tentativa (409), `reports/totals` refletindo a contagem, `queue/manual` confirmando saida da fila. Containers derrubados (`docker compose down -v`) ao final.
 - Trabalho realizado em paralelo com outro Dev .NET (fix na Sub-B, `ProductsController`/DTO de produtos) — nenhum arquivo de `Products` tocado, sem sobreposicao.
-- PR: #109 (`fix/106-queue-status-reports-totals` → `desenv`), aguardando merge do Líder Técnico.
+- PR #109 squash-merged pelo LT em desenv — ver seção "Fix backend #106" acima.
 
 ## Historico de etapas
 | # | Etapa | Agente | Status |
@@ -129,6 +130,8 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 | 6 | Merge Sub-A #103 | lider-tecnico | concluído — PR #107 squash-merged em desenv, sub-issue #103 fechada, decisão M2/M3 documentada (M2 aceito, não bloqueante), Sub-B/C/D desbloqueadas, branch feature/103-auth removida |
 | 7 | Fix backend #104 (ai_score/ai_reason listagem) | dev-dotnet | concluído (dev) — PR #108 (fix/104-products-ai-score-ai-reason → desenv) aberto, 281/281 testes, boot Docker + smoke test real validados, aguardando merge do LT |
 | 8 | Fix backend #106 (status manual da fila + totais de reports) | dev-dotnet | concluído (dev) — PR #109 (fix/106-queue-status-reports-totals → desenv) aberto, 289/289 testes, boot Docker + smoke test real validados, aguardando merge do LT |
+| 9 | Merge fix backend #104 (PR #108) | lider-tecnico | concluído — squash-merged em desenv (commit 8fddef5) em 2026-07-22T14:00:37Z, branch deletada, comentário postado na sub-issue #104 (permanece aberta — UI Angular pendente) |
+| 10 | Merge fix backend #106 (PR #109) | lider-tecnico | concluído — squash-merged em desenv (commit 329e18c) em 2026-07-22T14:00:59Z, branch deletada, comentário postado na sub-issue #106 (permanece aberta — UI Angular pendente), git pull origin desenv fast-forward sem conflitos, worktrees fix-104/fix-106 removidos |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
