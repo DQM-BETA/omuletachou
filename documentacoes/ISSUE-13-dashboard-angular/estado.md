@@ -5,12 +5,12 @@ issue: 13
 repo: omuletachou
 titulo: feat: Dashboard Angular (Todas as Paginas Admin)
 rota: normal
-etapa_atual: Em Desenvolvimento
+etapa_atual: Em Desenvolvimento — PR de homologação #113 (desenv→homolog) aberto, aguardando Code Review
 docs_path: repos/omuletachou/documentacoes/ISSUE-13-dashboard-angular
 openspec_path: repos/omuletachou/openspec/changes/issue-13-dashboard-angular
 ultimo_agente: lider-tecnico
 status_comment_id: 5045887889
-pr_homologacao: ~
+pr_homologacao: 113
 code_review_homolog_pr: ~
 pr_release: ~
 closedAt: ~
@@ -66,11 +66,11 @@ Concluído.
 - Comentário 📍 Status atualizado para "Em Desenvolvimento": https://github.com/DQM-BETA/omuletachou/issues/13#issuecomment-5045887889
 
 ## Sub-issues
-sub_issues: [#103 (stack:angular, task_id:T-01, Sub-A Autenticação, bloqueante) — MERGED em desenv, #104 (stack:angular, task_id:T-02, Sub-B Products+Queue) — MERGED em desenv (PR #110), sub-issue fechada, #105 (stack:angular, task_id:T-03, Sub-C Settings+Jobs manual) — MERGED em desenv (PR #111, squash, commit `53490d80ea0a3d020f7b37fcc830aea6b6151382`), sub-issue fechada, #106 (stack:angular, task_id:T-04, Sub-D Facebook Manual+Reports) — PR #112 (feature/106-facebook-reports → desenv) aberto, aguardando merge do LT]
-desenv_tasks_merged: [#103, #104, #105]
+sub_issues: [#103 (stack:angular, task_id:T-01, Sub-A Autenticação, bloqueante) — MERGED em desenv, #104 (stack:angular, task_id:T-02, Sub-B Products+Queue) — MERGED em desenv (PR #110), sub-issue fechada, #105 (stack:angular, task_id:T-03, Sub-C Settings+Jobs manual) — MERGED em desenv (PR #111, squash, commit `53490d80ea0a3d020f7b37fcc830aea6b6151382`), sub-issue fechada, #106 (stack:angular, task_id:T-04, Sub-D Facebook Manual+Reports) — MERGED em desenv (PR #112, squash, commit `46927ad35c086e842c631f9c92ceb343a4ad634b`, mergedAt 2026-07-22T19:12:02Z), sub-issue fechada]
+desenv_tasks_merged: [#103, #104, #105, #106]
 
 ## Merge e Encerramento
-Aguardando fluxo da rota normal (Dev, LT, Code Review, QA, Gate 2) para Sub-D (#106, PR #112 aberto). Sub-A, Sub-B e Sub-C já merged em desenv.
+**As 4 sub-issues (#103-#106) estão completas e mergeadas em `desenv`.** PR de homologação #113 (`desenv` → `homolog`) criado pelo LT em 2026-07-22 (https://github.com/DQM-BETA/omuletachou/pull/113), resumindo a entrega completa das 4 sub-issues + os 2 gaps de contrato backend (#104: ai_score/ai_reason; #106: PATCH queue status + reports/totals). Aguardando `/code-review` + agente Code Review antes de avançar ao QA.
 
 ### Fix backend #104 — ai_score/ai_reason na listagem GET /api/products (gap de contrato §2.1.1) — MERGED em desenv (LT)
 - Extensao aditiva de `ProductListItemDto` (`backend/src/AfiliadoBot.Api/Products/ProductDtos.cs`): campos `AiScore`/`AiReason` adicionados com `[JsonPropertyName("ai_score"/"ai_reason")]`, mesmo padrao do `ProductDetailDto`.
@@ -209,6 +209,7 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 | 16 | Resolução do conflito Sub-C #105 (PR #111) | dev-angular | concluído — merge de origin/desenv na branch feature/105-settings-jobs, conflito add/add em paged-result.model.ts resolvido mantendo a versão canônica da Sub-B (já em uso por Products/Queue; versão da Sub-C nunca era chamada), 89/89 testes passando, ng build ok, push (053767a..6cbdc0c), PR #111 confirmado MERGEABLE, aguardando merge do LT |
 | 17 | Merge Sub-C #105 (PR #111) | lider-tecnico | concluído — squash-merged em desenv (commit 53490d8) em 2026-07-22T18:47:38Z, branch feature/105-settings-jobs deletada, git pull origin desenv fast-forward (96643ab..53490d8) sem conflitos, sub-issue #105 fechada (completed) com comentário de resumo. Sub-D (#106, PR #112) ainda pendente — risco de conflito adicional em paged-result.model.ts/products.service.ts/queue.service.ts sinalizado para a próxima rodada |
 | 18 | Resolução do conflito Sub-D #106 (PR #112) | dev-angular | concluído — merge de origin/desenv na branch feature/106-facebook-reports, conflito add/add em paged-result.model.ts/products.service.ts/queue.service.ts resolvido mantendo a versão canônica da Sub-B estendida aditivamente com ProductsService.getById() (único método ausente); corrigido também um erro de budget de bundle (1.13MB > 1MB) surgido da soma cumulativa das sub-issues, via conversão das rotas de app.routes.ts para lazy loading (loadComponent); 105/105 testes passando, ng build ok (apenas warning pré-existente), push, PR #112 confirmado MERGEABLE, aguardando merge do LT |
+| 19 | Merge Sub-D #106 (PR #112) | lider-tecnico | concluído — squash-merged em desenv (commit 46927ad) em 2026-07-22T19:12:02Z, branch feature/106-facebook-reports deletada, sub-issue #106 fechada (completed) com comentário de resumo. **As 4 sub-issues da Issue #13 estão completas.** PR de homologação #113 (desenv→homolog) criado, resumindo a entrega completa |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -228,3 +229,4 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 | 13 | Fix conflito paged-result.model.ts (PR #111) | dev-angular | sonnet | 59483 | 29 | 218s |
 | 14 | Merge Sub-C #105 (PR #111) | lt | sonnet | 76349 | 18 | 296s |
 | 15 | Fix conflito products/queue.service.ts + lazy loading (PR #112) | dev-angular | sonnet | 144598 | 106 | 1068s |
+| 16 | Merge Sub-D #106 (PR #112) + PR homologação #113 | lt | sonnet | (agente caiu por erro de conexão antes do HANDOFF final — usage não capturado; trabalho real confirmado via gh/git) | — | — |
