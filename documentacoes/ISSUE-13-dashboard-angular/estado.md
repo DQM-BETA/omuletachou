@@ -66,7 +66,7 @@ Concluído.
 - Comentário 📍 Status atualizado para "Em Desenvolvimento": https://github.com/DQM-BETA/omuletachou/issues/13#issuecomment-5045887889
 
 ## Sub-issues
-sub_issues: [#103 (stack:angular, task_id:T-01, Sub-A Autenticação, bloqueante) — MERGED em desenv, #104 (stack:angular, task_id:T-02, Sub-B Products+Queue) — desbloqueada, backend do gap de contrato já mergeado (PR #108), parte Angular pendente, #105 (stack:angular, task_id:T-03, Sub-C Settings+Jobs manual) — desbloqueada, #106 (stack:angular, task_id:T-04, Sub-D Facebook Manual+Reports) — desbloqueada, backend do gap de contrato já mergeado (PR #109), parte Angular pendente]
+sub_issues: [#103 (stack:angular, task_id:T-01, Sub-A Autenticação, bloqueante) — MERGED em desenv, #104 (stack:angular, task_id:T-02, Sub-B Products+Queue) — PR #110 (feature/104-products-queue → desenv) aberto, aguardando merge do LT, #105 (stack:angular, task_id:T-03, Sub-C Settings+Jobs manual) — desbloqueada, #106 (stack:angular, task_id:T-04, Sub-D Facebook Manual+Reports) — desbloqueada, backend do gap de contrato já mergeado (PR #109), parte Angular pendente]
 desenv_tasks_merged: [#103]
 
 ## Merge e Encerramento
@@ -119,6 +119,17 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 - Trabalho realizado em paralelo com outro Dev .NET (fix na Sub-B, `ProductsController`/DTO de produtos) — nenhum arquivo de `Products` tocado, sem sobreposicao.
 - PR #109 squash-merged pelo LT em desenv — ver seção "Fix backend #106" acima.
 
+### Dev Sub-B #104 — Products + Queue (Angular) — Dev Angular
+- `ProductsService`/`QueueService` (`dashboard/src/app/core/services/`) implementados conforme especificacao-tecnica.md §2.1/§2.2, reutilizando `AuthService`/`authInterceptor` da Sub-A (#103, já mergeada). `cleanParams()`/`PagedResult<T>` compartilhados em `core/services/paged-result.model.ts`.
+- Confirmado por inspeção que o gap de contrato `ai_score`/`ai_reason` em `GET /api/products` já foi resolvido pelo fix backend #104 (PR #108, squash-merged pelo LT) — nenhum ajuste de backend necessário nesta etapa, apenas consumo do contrato já disponível em `desenv`.
+- `ProductsComponent` (`/products`): `MatTable` com paginação/sort, filtros de plataforma/status (server-side, via query params) e data de coleta (client-side via `MatTableDataSource.filterPredicate`, já que `GET /api/products` não expõe filtro de data), badge de `ai_score` (verde ≥8, amarelo ≥6, vermelho <6) com `matTooltip` de `ai_reason`, ações de aprovar (`PATCH .../status` com `{status:"pending"}`) e rejeitar (`{status:"rejected"}`) recarregando a tabela após sucesso.
+- `QueueComponent` (`/queue`): `MatTable` com filtros de rede/status, badge de status por cor (cinza=Scheduled, verde=Published, vermelho=Failed, laranja=ManualPending), botão "Retry" (`POST /api/queue/{id}/retry`) visível apenas em itens `Failed`. Sem `markPublished`/Facebook Manual (escopo da Sub-D, #106).
+- Convenção Angular Material M2 mantida (mesma decisão do LT para Sub-A — ver seção acima).
+- Testes (Jasmine/Karma): 58/58 passando — `ProductsService`, `QueueService`, `ProductsComponent`, `QueueComponent`, cobrindo CA-B1 a CA-B8.
+- `ng build`: sem erros de TypeScript (warning de budget de bundle pré-existente, não bloqueante).
+- Boot Docker real validado a partir do worktree `.worktrees/104-products-queue` (`docker compose up -d --build db api dashboard`, `.env` local com seed de usuário criado só para o smoke test, removido ao final): login via `POST /api/auth/login`, produto inserido via `psql` com `ai_score`/`ai_reason`, `GET /api/products` confirmando os dois campos na listagem, `PATCH /api/products/{id}/status` (rejeitar, 204, refletido na listagem), item de fila inserido via `psql` com status `Failed`, `GET /api/queue` confirmando o item, `POST /api/queue/{id}/retry` (204, status mudou para `Scheduled`), proxy nginx do container `dashboard` (porta 4200) validado roteando `/api/*` corretamente (401 sem token, 200 no login). Containers derrubados (`docker compose down -v`) ao final.
+- PR #110 (`feature/104-products-queue` → `desenv`) aberto, aguardando merge do LT. Worktree `.worktrees/104-products-queue` removido após push.
+
 ## Historico de etapas
 | # | Etapa | Agente | Status |
 |---|---|---|---|
@@ -132,6 +143,7 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 | 8 | Fix backend #106 (status manual da fila + totais de reports) | dev-dotnet | concluído (dev) — PR #109 (fix/106-queue-status-reports-totals → desenv) aberto, 289/289 testes, boot Docker + smoke test real validados, aguardando merge do LT |
 | 9 | Merge fix backend #104 (PR #108) | lider-tecnico | concluído — squash-merged em desenv (commit 8fddef5) em 2026-07-22T14:00:37Z, branch deletada, comentário postado na sub-issue #104 (permanece aberta — UI Angular pendente) |
 | 10 | Merge fix backend #106 (PR #109) | lider-tecnico | concluído — squash-merged em desenv (commit 329e18c) em 2026-07-22T14:00:59Z, branch deletada, comentário postado na sub-issue #106 (permanece aberta — UI Angular pendente), git pull origin desenv fast-forward sem conflitos, worktrees fix-104/fix-106 removidos |
+| 11 | Dev Sub-B #104 (Angular) | dev-angular | concluído (dev) — PR #110 (feature/104-products-queue → desenv) aberto, 58/58 testes, boot Docker + smoke test real validados (login, ai_score/ai_reason, aprovar/rejeitar, retry), aguardando merge do LT |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -144,3 +156,4 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 | 6 | Merge Sub-A #103 (PR #107) | lt | sonnet | 48717 | 13 | 135s |
 | 7 | Fix backend #104 (PR #108) | dev-dotnet | sonnet | 76498 | 44 | 450s |
 | 8 | Fix backend #106 (PR #109) | dev-dotnet | sonnet | 114084 | 60 | 623s |
+| 9 | Dev Sub-B #104 (PR #110) | dev-angular | sonnet | 129394 | 92 | 988s |
