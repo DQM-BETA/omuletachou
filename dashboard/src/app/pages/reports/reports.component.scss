@@ -1,0 +1,40 @@
+.reports-page {
+  padding: 24px;
+}
+
+.status-feedback {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  color: rgba(0, 0, 0, 0.6);
+
+  &.error {
+    color: #b3261e;
+  }
+}
+
+.totals-cards {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.total-card {
+  flex: 1;
+  text-align: center;
+}
+
+.total-value {
+  font-size: 32px;
+  font-weight: 600;
+}
+
+.chart-card,
+.failures-card {
+  margin-bottom: 24px;
+}
+
+table {
+  width: 100%;
+}

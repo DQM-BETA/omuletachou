@@ -1,1 +1,66 @@
-<p>facebook-manual works!</p>
+<div class="facebook-manual-page">
+  <h1>Facebook Manual</h1>
+
+  <div class="status-feedback" *ngIf="loading" data-testid="loading">
+    <mat-spinner diameter="32"></mat-spinner>
+    <span>Carregando posts pendentes...</span>
+  </div>
+
+  <div class="status-feedback error" *ngIf="!loading && errorMessage" data-testid="error-message">
+    <mat-icon>error</mat-icon>
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <div class="status-feedback empty" *ngIf="!loading && !errorMessage && posts.length === 0" data-testid="empty-message">
+    <mat-icon>check_circle</mat-icon>
+    <span>Nenhum post pendente de publicacao manual no Facebook.</span>
+  </div>
+
+  <div class="posts-grid" *ngIf="!loading && posts.length > 0">
+    <mat-card class="post-card" *ngFor="let post of posts" [attr.data-testid]="'post-card-' + post.queueItem.id">
+      <div class="media-preview">
+        <video
+          *ngIf="isVideo(post.product?.mediaUrl); else imagePreview"
+          [src]="post.product?.mediaUrl"
+          controls
+          data-testid="media-video"
+        ></video>
+        <ng-template #imagePreview>
+          <img
+            *ngIf="post.product?.imageUrl || post.product?.mediaUrl"
+            [src]="post.product?.imageUrl || post.product?.mediaUrl"
+            [alt]="post.product?.title"
+            data-testid="media-image"
+          />
+        </ng-template>
+      </div>
+
+      <mat-card-content>
+        <p class="caption" data-testid="caption-text">{{ post.product?.description }}</p>
+      </mat-card-content>
+
+      <mat-card-actions>
+        <button
+          mat-stroked-button
+          color="primary"
+          (click)="copyCaption(post.product?.description || '')"
+          data-testid="copy-caption-button"
+        >
+          <mat-icon>content_copy</mat-icon>
+          Copiar legenda
+        </button>
+        <button
+          mat-flat-button
+          color="primary"
+          [disabled]="post.publishing"
+          (click)="markAsPublished(post)"
+          data-testid="mark-published-button"
+        >
+          <mat-icon *ngIf="!post.publishing">check</mat-icon>
+          <mat-spinner *ngIf="post.publishing" diameter="18"></mat-spinner>
+          Marcar como publicado
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </div>
+</div>
