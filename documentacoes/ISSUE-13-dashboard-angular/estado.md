@@ -216,3 +216,4 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 | 12 | Merge Sub-B #104 (PR #110) | lt | sonnet | 189952 | 29 | 808s |
 | 13 | Fix conflito paged-result.model.ts (PR #111) | dev-angular | sonnet | 59483 | 29 | 218s |
 | 14 | Merge Sub-C #105 (PR #111) | lt | sonnet | 76349 | 18 | 296s |
+| 15 | Fix conflito products/queue.service.ts + lazy loading (PR #112) | dev-angular | sonnet | 144598 | 106 | 1068s |
