@@ -76,4 +76,4 @@ Aguardando fluxo da rota normal (Dev, LT, Code Review, QA, Gate 2).
 |---|---|---|---|---|---|---|
 | 1 | Preparacao | Coordenador | haiku-4.5 | 45607 | 37 | 210s |
 | 2 | PM Fase 1 | pm | sonnet | 32806 | 10 | 85s |
-| 3 | PM Fase 2 | pm | sonnet | (preencher no HANDOFF final via usage) | - | - |
+| 3 | PM Fase 2 | pm | sonnet | 66779 | 26 | 256s |
