@@ -48,4 +48,13 @@ export class ProductsService {
   updateStatus(id: string, status: 'pending' | 'rejected'): Observable<void> {
     return this.http.patch<void>(`/api/products/${id}/status`, { status });
   }
+
+  /**
+   * Detalhe de um produto (usado pela tela Facebook Manual para exibir preview de
+   * midia + legenda completa de cada card de post pendente — CA-D1). GET /api/products/{id}
+   * ja existe na API desde a Issue #11, sem alteracao de contrato.
+   */
+  getById(id: string): Observable<ProductDetail> {
+    return this.http.get<ProductDetail>(`/api/products/${id}`);
+  }
 }

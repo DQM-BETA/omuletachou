@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { ProductsService, ProductListItem } from './products.service';
+import { ProductsService, ProductListItem, ProductDetail } from './products.service';
 import { PagedResult } from './paged-result.model';
 
 describe('ProductsService', () => {
@@ -94,5 +94,34 @@ describe('ProductsService', () => {
     expect(req.request.method).toBe('PATCH');
     expect(req.request.body).toEqual({ status: 'rejected' });
     req.flush(null);
+  });
+
+  it('CA-D1 — getById() chama GET /api/products/{id}', () => {
+    const mock: ProductDetail = {
+      id: '1',
+      title: 'Produto X',
+      salePrice: 10,
+      originalPrice: 20,
+      discountPct: 50,
+      status: 'Published',
+      platform: 'Amazon',
+      slug: 'produto-x',
+      category: 'cat',
+      createdAt: '2026-01-01T00:00:00Z',
+      description: 'Legenda completa do produto X',
+      affiliateLink: 'https://x',
+      imageUrl: 'https://img',
+      mediaUrl: null,
+      mediaLocalPath: null,
+      updatedAt: '2026-01-01T00:00:00Z',
+    };
+
+    service.getById('1').subscribe((res) => {
+      expect(res).toEqual(mock);
+    });
+
+    const req = httpMock.expectOne('/api/products/1');
+    expect(req.request.method).toBe('GET');
+    req.flush(mock);
   });
 });

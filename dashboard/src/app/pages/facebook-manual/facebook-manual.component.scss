@@ -1,0 +1,52 @@
+.facebook-manual-page {
+  padding: 24px;
+}
+
+.status-feedback {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  color: rgba(0, 0, 0, 0.6);
+
+  &.error {
+    color: #b3261e;
+  }
+
+  &.empty {
+    color: #1b5e20;
+  }
+}
+
+.posts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.post-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.media-preview {
+  width: 100%;
+  max-height: 220px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  background: #f0f0f0;
+
+  img,
+  video {
+    width: 100%;
+    max-height: 220px;
+    object-fit: cover;
+  }
+}
+
+.caption {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-top: 12px;
+}
