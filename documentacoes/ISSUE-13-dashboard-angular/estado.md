@@ -109,4 +109,4 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 | 3 | PM Fase 2 | pm | sonnet | 66779 | 26 | 256s |
 | 4 | Refinamento LT | lt | sonnet | 109958 | 49 | 458s |
 | 5 | Dev Sub-A #103 (PR #107) | dev-angular | sonnet | 116556 | 95 | 946s |
-| 6 | Merge Sub-A #103 (PR #107) | lt | sonnet | TBD_PELA_SESSAO_PRINCIPAL | TBD | TBD |
+| 6 | Merge Sub-A #103 (PR #107) | lt | sonnet | 48717 | 13 | 135s |
