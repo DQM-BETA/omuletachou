@@ -66,13 +66,13 @@ Concluído.
 - Comentário 📍 Status atualizado para "Em Desenvolvimento": https://github.com/DQM-BETA/omuletachou/issues/13#issuecomment-5045887889
 
 ## Sub-issues
-sub_issues: [#103 (stack:angular, task_id:T-01, Sub-A Autenticação, bloqueante), #104 (stack:angular, task_id:T-02, Sub-B Products+Queue), #105 (stack:angular, task_id:T-03, Sub-C Settings+Jobs manual), #106 (stack:angular, task_id:T-04, Sub-D Facebook Manual+Reports)]
-desenv_tasks_merged: []
+sub_issues: [#103 (stack:angular, task_id:T-01, Sub-A Autenticação, bloqueante) — MERGED em desenv, #104 (stack:angular, task_id:T-02, Sub-B Products+Queue) — desbloqueada, #105 (stack:angular, task_id:T-03, Sub-C Settings+Jobs manual) — desbloqueada, #106 (stack:angular, task_id:T-04, Sub-D Facebook Manual+Reports) — desbloqueada]
+desenv_tasks_merged: [#103]
 
 ## Merge e Encerramento
-Aguardando fluxo da rota normal (Dev, LT, Code Review, QA, Gate 2).
+Aguardando fluxo da rota normal (Dev, LT, Code Review, QA, Gate 2) para Sub-B (#104), Sub-C (#105) e Sub-D (#106).
 
-### Sub-A (#103) — Autenticação — Dev concluído
+### Sub-A (#103) — Autenticação — MERGED em desenv (LT)
 - Angular Material 17.3 instalado (`ng add @angular/material`). Nota técnica: a especificacao-tecnica.md §0 descreve a API M3 (`mat.theme(...)`), disponível a partir do Angular Material 18+; o scaffold está fixado em 17.3 (mesma major do restante do dashboard, Issue #17), cuja API estável é M2. Aplicado o mesmo espírito (tema light, paleta azul, sem guideline de marca) via `mat.define-light-theme` com `$blue-palette` em `src/styles.scss`. Registrado para o LT avaliar se aceita a divergência ou decide upgrade de major em issue futura.
 - `AuthService`, `authGuard`/`loginGuard`, `authInterceptor` implementados conforme especificacao-tecnica.md §1.1-1.3, em `dashboard/src/app/core/auth/`.
 - `ShellComponent` (`dashboard/src/app/core/shell/`) com `MatSidenav` + 6 itens de navegação (Products, Queue, Facebook Manual, Settings, Jobs, Reports) + botão de Logout.
@@ -83,17 +83,23 @@ Aguardando fluxo da rota normal (Dev, LT, Code Review, QA, Gate 2).
 - Testes: 31/31 passando (Jasmine/Karma) cobrindo CA-A1 a CA-A7 (login sucesso/falha, storage, guard, interceptor 401 dentro/fora de `/api/auth/login`).
 - Build (`ng build`): sem erros de TypeScript (1 warning de orçamento de bundle — 712kb vs budget de 500kb — não bloqueante, `maximumError` é 1mb).
 - Boot Docker validado: `docker compose up -d --build db api dashboard` a partir do worktree — smoke test real via `curl` contra a API real (seed `admin@omuletachou.com.br`, Issue #11): login válido (200 + JWT), login inválido (401), chamada sem token a `/api/products` (401), chamada com token (200) — todos via proxy nginx do container `dashboard` (porta 4200). Containers derrubados (`docker compose down -v`) ao final.
-- PR: feature/103-auth → desenv.
-- Worktree `.worktrees/feature-103-auth` a ser removido pelo LT após o merge (ou pela sessão principal).
+- PR: #107 (feature/103-auth → desenv), squash merge por LT em 2026-07-22T13:45:05Z. Branch `feature/103-auth` deletada local e remotamente após o merge. `desenv` local atualizada via fast-forward (`git pull origin desenv`, 52e10f9..7ae9da1). Sub-issue #103 fechada (`completed`).
+
+### Decisão técnica do LT: Angular Material M2 vs M3
+Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descreve a API M3 `mat.theme(...)`, mas Angular Material 17.3 — fixado nesta issue, mesma major do scaffold da Issue #17 — só suporta a API M2 `mat.define-light-theme`; M3 exige Angular Material 18+).
+- **Decisão: M2 é aceitável para esta issue. Não é débito técnico bloqueante.** Justificativa: (1) dashboard é ferramenta interna administrativa, uso por operador único, sem exigência de marca/guideline visual (confirmado no Gate 1 — "design livre, sem Figma"); (2) M2 entrega tema customizável (paleta azul) e todos os componentes Material necessários (`MatSidenav`, formulários reativos, badges) sem qualquer lacuna funcional para os critérios de aceite desta issue; (3) upgrade de major do Angular (17→18) para ganhar M3 é uma mudança estrutural fora do escopo desta issue (afeta todas as Sub-B/C/D e o scaffold inteiro da Issue #17), com risco de regressão desproporcional ao ganho (puramente estético/tokens de design).
+- **Registrado como melhoria não-bloqueante** (não débito técnico crítico): considerar upgrade para Angular 18+/Material M3 em issue futura de manutenção, caso a squad decida investir em um design system mais robusto para o dashboard. Não abre issue de rastreio agora — fica documentado aqui para referência caso o tema volte à tona.
+- Sub-B, Sub-C e Sub-D devem seguir a mesma convenção M2 (`mat.define-light-theme`) já aplicada em `src/styles.scss`, sem tentar migrar para M3 isoladamente.
 
 ## Historico de etapas
 | # | Etapa | Agente | Status |
 |---|---|---|---|
 | 1 | Preparacao | Coordenador | ativo — Issue preparada, estado.md criado, comentário 📍 Status criado, card adicionado ao board em 💻 Em Desenvolvimento |
 | 2 | PM Fase 1 | pm-analista-negocios | concluído — perguntas de levantamento postadas na Issue, comentário 📍 Status atualizado para Gate 1 |
-| 4 | Refinamento Técnico (LT) | lider-tecnico | concluído — design.md + especificacao-tecnica.md + tasks.md escritos, decisão Angular Material, UX/UI não acionado, 4 sub-issues criadas (#103-#106), 3 gaps de contrato com a API #11 identificados e resolvidos como extensões aditivas |
 | 3 | PM Fase 2 | pm-analista-negocios | concluído — proposal.md e criterios-aceite.md escritos, investigação do contrato PUT /api/settings/{key} concluída (sem ajuste retroativo necessário), sem ambiguidade arquitetural identificada, sumário do PRD postado na Issue, comentário 📍 Status atualizado para Refinamento Técnico |
 | 4 | Refinamento Técnico | lider-tecnico | concluído — design.md/especificacao-tecnica.md/tasks.md escritos, 4 sub-issues criadas (#103-#106), 3 gaps de contrato com a API #11 resolvidos como extensões aditivas, UX/UI da squad não acionado (justificativa registrada), sumário postado na Issue, comentário 📍 Status atualizado para Em Desenvolvimento |
+| 5 | Dev Sub-A #103 | dev-angular | concluído — PR #107 (feature/103-auth → desenv), 31/31 testes, boot Docker validado com login real contra API #11 |
+| 6 | Merge Sub-A #103 | lider-tecnico | concluído — PR #107 squash-merged em desenv, sub-issue #103 fechada, decisão M2/M3 documentada (M2 aceito, não bloqueante), Sub-B/C/D desbloqueadas, branch feature/103-auth removida |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -103,3 +109,4 @@ Aguardando fluxo da rota normal (Dev, LT, Code Review, QA, Gate 2).
 | 3 | PM Fase 2 | pm | sonnet | 66779 | 26 | 256s |
 | 4 | Refinamento LT | lt | sonnet | 109958 | 49 | 458s |
 | 5 | Dev Sub-A #103 (PR #107) | dev-angular | sonnet | 116556 | 95 | 946s |
+| 6 | Merge Sub-A #103 (PR #107) | lt | sonnet | TBD_PELA_SESSAO_PRINCIPAL | TBD | TBD |
