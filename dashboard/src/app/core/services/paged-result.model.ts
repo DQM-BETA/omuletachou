@@ -9,16 +9,14 @@ export interface PagedResult<T> {
 }
 
 /**
- * Remove chaves undefined/null/vazias de um objeto de params antes de montar
- * o HttpParams, evitando enviar query strings do tipo "status=&platform=".
+ * Remove chaves undefined/null/vazias antes de montar HttpParams — evita enviar
+ * `status=&platform=` para a API (especificacao-tecnica.md §4).
  */
-export function cleanParams(params: Record<string, unknown>): HttpParams {
+export function cleanParams(params: object): HttpParams {
   let httpParams = new HttpParams();
   for (const [key, value] of Object.entries(params)) {
-    if (value === undefined || value === null || value === '') {
-      continue;
-    }
-    httpParams = httpParams.set(key, String(value));
+    if (value === undefined || value === null || value === '') continue;
+    httpParams = httpParams.set(key, value);
   }
   return httpParams;
 }
