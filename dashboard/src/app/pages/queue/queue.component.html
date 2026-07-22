@@ -1,1 +1,93 @@
-<p>queue works!</p>
+<div class="queue-page">
+  <h1>Fila de Publicação</h1>
+
+  <form [formGroup]="filterForm" class="filters">
+    <mat-form-field appearance="outline">
+      <mat-label>Rede social</mat-label>
+      <mat-select formControlName="network" data-testid="filter-network" (selectionChange)="applyFilters()">
+        <mat-option value="">Todas</mat-option>
+        <mat-option *ngFor="let n of networks" [value]="n">{{ n }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Status</mat-label>
+      <mat-select formControlName="status" data-testid="filter-status" (selectionChange)="applyFilters()">
+        <mat-option value="">Todos</mat-option>
+        <mat-option *ngFor="let s of statuses" [value]="s">{{ s }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </form>
+
+  <div class="loading-bar" *ngIf="loading" data-testid="queue-loading">
+    <mat-spinner diameter="28"></mat-spinner>
+  </div>
+
+  <table mat-table [dataSource]="dataSource" class="queue-table" data-testid="queue-table">
+    <ng-container matColumnDef="socialNetwork">
+      <th mat-header-cell *matHeaderCellDef>Rede</th>
+      <td mat-cell *matCellDef="let item">{{ item.socialNetwork }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="status">
+      <th mat-header-cell *matHeaderCellDef>Status</th>
+      <td mat-cell *matCellDef="let item">
+        <span class="badge" [ngClass]="statusClass(item.status)" data-testid="queue-status-badge">
+          {{ item.status }}
+        </span>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="scheduledAt">
+      <th mat-header-cell *matHeaderCellDef>Agendado para</th>
+      <td mat-cell *matCellDef="let item">{{ item.scheduledAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="publishedAt">
+      <th mat-header-cell *matHeaderCellDef>Publicado em</th>
+      <td mat-cell *matCellDef="let item">
+        {{ item.publishedAt ? (item.publishedAt | date: 'dd/MM/yyyy HH:mm') : '—' }}
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="retryCount">
+      <th mat-header-cell *matHeaderCellDef>Tentativas</th>
+      <td mat-cell *matCellDef="let item">{{ item.retryCount }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="error">
+      <th mat-header-cell *matHeaderCellDef>Erro</th>
+      <td mat-cell *matCellDef="let item">
+        <span [matTooltip]="item.errorMessage || ''">{{ item.errorMessage || '—' }}</span>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef>Ações</th>
+      <td mat-cell *matCellDef="let item">
+        <button
+          mat-stroked-button
+          color="primary"
+          *ngIf="item.status === 'Failed'"
+          data-testid="retry-button"
+          (click)="retry(item)"
+        >
+          <mat-icon>replay</mat-icon>
+          Retry
+        </button>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns" data-testid="queue-row"></tr>
+  </table>
+
+  <mat-paginator
+    [length]="totalItems"
+    [pageIndex]="pageIndex"
+    [pageSize]="pageSize"
+    [pageSizeOptions]="[10, 20, 50]"
+    (page)="onPage($event)"
+    data-testid="queue-paginator"
+  ></mat-paginator>
+</div>
