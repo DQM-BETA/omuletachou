@@ -194,3 +194,4 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 | 9 | Dev Sub-B #104 (PR #110) | dev-angular | sonnet | 129394 | 92 | 988s |
 | 10 | Dev Sub-C #105 (PR #111) | dev-angular | sonnet | 156389 | 114 | 1186s |
 | 11 | Dev Sub-D #106 (PR #112) | dev-angular | sonnet | 152428 | 112 | 1372s |
+| 12 | Merge Sub-B #104 (PR #110) | lt | sonnet | 189952 | 29 | 808s |
