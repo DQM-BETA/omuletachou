@@ -1,0 +1,33 @@
+.jobs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  max-width: 960px;
+}
+
+.job-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.job-feedback {
+  font-size: 0.875rem;
+  min-height: 1.25em;
+}
+
+.job-feedback--idle {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.job-feedback--success {
+  color: #2e7d32;
+}
+
+.job-feedback--error {
+  color: #c62828;
+}
+
+.trigger-spinner {
+  display: inline-block;
+}

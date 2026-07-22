@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { PagedResult, cleanParams } from './paged-result.model';
 
 export type ProductStatus = 'Pending' | 'Queued' | 'Published' | 'Rejected' | 'Processing' | 'Error';
 export type Platform = 'Amazon' | 'MercadoLivre' | 'Shopee';
@@ -29,9 +30,24 @@ export interface ProductDetail extends ProductListItem {
   updatedAt: string;
 }
 
+export interface ProductsListParams {
+  status?: string;
+  platform?: string;
+  page?: number;
+  pageSize?: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ProductsService {
   constructor(private http: HttpClient) {}
+
+  list(params: ProductsListParams): Observable<PagedResult<ProductListItem>> {
+    return this.http.get<PagedResult<ProductListItem>>('/api/products', { params: cleanParams(params) });
+  }
+
+  updateStatus(id: string, status: 'pending' | 'rejected'): Observable<void> {
+    return this.http.patch<void>(`/api/products/${id}/status`, { status });
+  }
 
   /**
    * Detalhe de um produto (usado pela tela Facebook Manual para exibir preview de
