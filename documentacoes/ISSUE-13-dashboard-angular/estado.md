@@ -66,7 +66,7 @@ Concluído.
 - Comentário 📍 Status atualizado para "Em Desenvolvimento": https://github.com/DQM-BETA/omuletachou/issues/13#issuecomment-5045887889
 
 ## Sub-issues
-sub_issues: [#103 (stack:angular, task_id:T-01, Sub-A Autenticação, bloqueante) — MERGED em desenv, #104 (stack:angular, task_id:T-02, Sub-B Products+Queue) — PR #110 (feature/104-products-queue → desenv) aberto, aguardando merge do LT, #105 (stack:angular, task_id:T-03, Sub-C Settings+Jobs manual) — desbloqueada, #106 (stack:angular, task_id:T-04, Sub-D Facebook Manual+Reports) — desbloqueada, backend do gap de contrato já mergeado (PR #109), parte Angular pendente]
+sub_issues: [#103 (stack:angular, task_id:T-01, Sub-A Autenticação, bloqueante) — MERGED em desenv, #104 (stack:angular, task_id:T-02, Sub-B Products+Queue) — PR #110 (feature/104-products-queue → desenv) aberto, aguardando merge do LT, #105 (stack:angular, task_id:T-03, Sub-C Settings+Jobs manual) — PR #111 (feature/105-settings-jobs → desenv) aberto, aguardando merge do LT, #106 (stack:angular, task_id:T-04, Sub-D Facebook Manual+Reports) — PR #112 (feature/106-facebook-reports → desenv) aberto, aguardando merge do LT]
 desenv_tasks_merged: [#103]
 
 ## Merge e Encerramento
