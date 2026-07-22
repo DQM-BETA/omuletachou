@@ -87,6 +87,18 @@ public class ReportsControllerTests : IClassFixture<CustomWebApplicationFactory>
     {
         var client = _factory.CreateClient();
         var token = await LoginAndGetTokenAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        // Baseline capturado ANTES de inserir os dados deste teste: a factory compartilha o
+        // banco InMemory entre todos os testes desta classe (CustomWebApplicationFactory), entao
+        // outros testes (ex.: Totals_*) podem ja ter publicado itens dentro da mesma janela de 7
+        // dias. Asserts em delta (depois - antes) tornam o teste independente da ordem/estado de
+        // outros testes da classe.
+        var baselineResponse = await client.GetAsync("/api/reports/summary");
+        var baselineBody = await baselineResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var baselineTotal = baselineBody.GetProperty("totalPublished").GetInt32();
+        var baselineByNetwork = baselineBody.GetProperty("byNetwork").EnumerateArray()
+            .ToDictionary(e => e.GetProperty("network").GetString()!, e => e.GetProperty("count").GetInt32());
 
         using (var scope = _factory.Services.CreateScope())
         {
@@ -123,21 +135,85 @@ public class ReportsControllerTests : IClassFixture<CustomWebApplicationFactory>
             await db.SaveChangesAsync();
         }
 
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var response = await client.GetAsync("/api/reports/summary");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
 
-        body.GetProperty("totalPublished").GetInt32().Should().Be(3);
+        (body.GetProperty("totalPublished").GetInt32() - baselineTotal).Should().Be(3);
 
         var byNetwork = body.GetProperty("byNetwork").EnumerateArray()
             .ToDictionary(e => e.GetProperty("network").GetString()!, e => e.GetProperty("count").GetInt32());
-        byNetwork["Telegram"].Should().Be(2);
-        byNetwork["Instagram"].Should().Be(1);
-        byNetwork.Should().NotContainKey("Youtube");
+        (byNetwork.GetValueOrDefault("Telegram") - baselineByNetwork.GetValueOrDefault("Telegram")).Should().Be(2);
+        (byNetwork.GetValueOrDefault("Instagram") - baselineByNetwork.GetValueOrDefault("Instagram")).Should().Be(1);
 
         var byDay = body.GetProperty("byDay").EnumerateArray().ToList();
-        byDay.Sum(d => d.GetProperty("count").GetInt32()).Should().Be(3);
+        var baselineByDaySum = baselineBody.GetProperty("byDay").EnumerateArray()
+            .Sum(d => d.GetProperty("count").GetInt32());
+        (byDay.Sum(d => d.GetProperty("count").GetInt32()) - baselineByDaySum).Should().Be(3);
+    }
+
+    [Fact]
+    public async Task Totals_SemToken_Retorna401()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/api/reports/totals");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Totals_ComTokenValido_RetornaContagensHojeSemanaEMes()
+    {
+        var client = _factory.CreateClient();
+        var token = await LoginAndGetTokenAsync(client);
+
+        var today = DateTime.UtcNow.Date;
+        var diffToMonday = ((int)today.DayOfWeek + 6) % 7;
+        var weekStart = today.AddDays(-diffToMonday);
+        var monthStart = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+
+            var product = BuildProduct();
+            db.Products.Add(product);
+
+            // Publicado hoje — deve contar em today/week/month.
+            var qToday = new PublicationQueue(product.Id, SocialNetwork.Telegram, today);
+            qToday.RegisterAttempt(success: true);
+            SetPublishedAt(qToday, today.AddHours(5));
+
+            // Publicado dentro do mes, mas antes do inicio da semana ISO corrente (ou no inicio do
+            // mes, se a semana corrente comecar no dia 1) — deve contar em month, mas nao em week.
+            var beforeWeekButInMonth = weekStart.AddDays(-1) >= monthStart ? weekStart.AddDays(-1) : monthStart;
+            var qMonthOnly = new PublicationQueue(product.Id, SocialNetwork.Instagram, beforeWeekButInMonth);
+            qMonthOnly.RegisterAttempt(success: true);
+            SetPublishedAt(qMonthOnly, beforeWeekButInMonth.AddHours(3));
+
+            // Publicado ha muito tempo (fora do mes corrente) — nao deve contar em nenhum total.
+            var qOld = new PublicationQueue(product.Id, SocialNetwork.Telegram, monthStart.AddMonths(-2));
+            qOld.RegisterAttempt(success: true);
+            SetPublishedAt(qOld, monthStart.AddMonths(-2));
+
+            // Falha — nao deve contar em nenhum total (Status != Published).
+            var qFailed = new PublicationQueue(product.Id, SocialNetwork.Youtube, today);
+            qFailed.RegisterAttempt(success: false, errorMessage: "erro simulado");
+
+            db.PublicationQueues.AddRange(qToday, qMonthOnly, qOld, qFailed);
+            await db.SaveChangesAsync();
+        }
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await client.GetAsync("/api/reports/totals");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        body.GetProperty("today").GetInt32().Should().BeGreaterThanOrEqualTo(1);
+        body.GetProperty("week").GetInt32().Should().BeGreaterThanOrEqualTo(body.GetProperty("today").GetInt32());
+        body.GetProperty("month").GetInt32().Should().BeGreaterThanOrEqualTo(2);
     }
 }

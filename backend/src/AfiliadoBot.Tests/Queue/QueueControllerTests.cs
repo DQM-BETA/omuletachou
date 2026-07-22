@@ -295,4 +295,131 @@ public class QueueControllerTests : IClassFixture<CustomWebApplicationFactory>
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
+
+    [Fact]
+    public async Task UpdateStatus_SemToken_Retorna401()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PatchAsJsonAsync($"/api/queue/{Guid.NewGuid()}/status", new { status = "Published" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_ItemManualPending_AtualizaParaPublishedERetorna204()
+    {
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        Guid itemId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var product = NewProduct("Produto Fila Facebook Manual");
+            db.Products.Add(product);
+
+            var item = new PublicationQueue(product.Id, SocialNetwork.Facebook, DateTime.UtcNow);
+            item.MarkAsManualPending();
+            itemId = item.Id;
+
+            db.PublicationQueues.Add(item);
+            await db.SaveChangesAsync();
+        }
+
+        var before = DateTime.UtcNow;
+        var response = await client.PatchAsJsonAsync($"/api/queue/{itemId}/status", new { status = "Published" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var updated = await db.PublicationQueues.AsNoTracking().FirstAsync(q => q.Id == itemId);
+            updated.Status.Should().Be(PublicationStatus.Published);
+            updated.PublishedAt.Should().NotBeNull();
+            updated.PublishedAt.Should().BeOnOrAfter(before);
+        }
+    }
+
+    [Fact]
+    public async Task UpdateStatus_TransicaoInvalida_Retorna400ESemAlterar()
+    {
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        Guid itemId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var product = NewProduct("Produto Fila Transicao Invalida");
+            db.Products.Add(product);
+
+            var item = new PublicationQueue(product.Id, SocialNetwork.Facebook, DateTime.UtcNow);
+            item.MarkAsManualPending();
+            itemId = item.Id;
+
+            db.PublicationQueues.Add(item);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.PatchAsJsonAsync($"/api/queue/{itemId}/status", new { status = "Failed" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var untouched = await db.PublicationQueues.AsNoTracking().FirstAsync(q => q.Id == itemId);
+            untouched.Status.Should().Be(PublicationStatus.ManualPending);
+        }
+    }
+
+    [Fact]
+    public async Task UpdateStatus_ItemQueNaoEstaManualPending_Retorna409ESemAlterar()
+    {
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        Guid itemId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var product = NewProduct("Produto Fila Nao Manual Pending");
+            db.Products.Add(product);
+
+            var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow);
+            itemId = item.Id;
+
+            db.PublicationQueues.Add(item);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.PatchAsJsonAsync($"/api/queue/{itemId}/status", new { status = "Published" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var untouched = await db.PublicationQueues.AsNoTracking().FirstAsync(q => q.Id == itemId);
+            untouched.Status.Should().Be(PublicationStatus.Scheduled);
+            untouched.PublishedAt.Should().BeNull();
+        }
+    }
+
+    [Fact]
+    public async Task UpdateStatus_ItemInexistente_Retorna404()
+    {
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await client.PatchAsJsonAsync($"/api/queue/{Guid.NewGuid()}/status", new { status = "Published" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
 }

@@ -62,4 +62,38 @@ public class ReportsController : ControllerBase
             byDay,
         });
     }
+
+    /// <summary>
+    /// Issue #13 / Sub-D, #106: totais agregados de publicacoes hoje/semana/mes (cards da tela
+    /// Reports, CA-D4) — janela distinta do resumo de 7 dias de <see cref="Summary"/> (usado no
+    /// grafico, CA-D5). "week" comeca na segunda-feira ISO corrente (UTC); "month" comeca no
+    /// primeiro dia do mes corrente (UTC).
+    /// </summary>
+    [HttpGet("totals")]
+    public async Task<IActionResult> Totals(CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        var today = now.Date;
+
+        // Segunda-feira ISO da semana corrente (DayOfWeek: Sunday=0 .. Saturday=6).
+        var diffToMonday = ((int)today.DayOfWeek + 6) % 7;
+        var weekStart = today.AddDays(-diffToMonday);
+
+        var monthStart = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var tomorrow = today.AddDays(1);
+
+        var basePublished = _db.PublicationQueues
+            .Where(q => q.Status == PublicationStatus.Published && q.PublishedAt != null);
+
+        var todayCount = await basePublished.CountAsync(q => q.PublishedAt >= today && q.PublishedAt < tomorrow, ct);
+        var weekCount = await basePublished.CountAsync(q => q.PublishedAt >= weekStart, ct);
+        var monthCount = await basePublished.CountAsync(q => q.PublishedAt >= monthStart, ct);
+
+        return Ok(new
+        {
+            today = todayCount,
+            week = weekCount,
+            month = monthCount,
+        });
+    }
 }
