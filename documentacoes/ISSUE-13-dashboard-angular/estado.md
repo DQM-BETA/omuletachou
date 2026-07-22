@@ -169,4 +169,4 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 | 7 | Fix backend #104 (PR #108) | dev-dotnet | sonnet | 76498 | 44 | 450s |
 | 8 | Fix backend #106 (PR #109) | dev-dotnet | sonnet | 114084 | 60 | 623s |
 | 9 | Dev Sub-B #104 (PR #110) | dev-angular | sonnet | 129394 | 92 | 988s |
-| 10 | Dev Sub-C #105 (PR #111) | dev-angular | sonnet | | | |
+| 10 | Dev Sub-C #105 (PR #111) | dev-angular | sonnet | 156389 | 114 | 1186s |
