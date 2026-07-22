@@ -5,14 +5,14 @@ issue: 12
 repo: omuletachou
 titulo: feat: Site Publico Next.js (SSR + SEO)
 rota: normal
-etapa_atual: QA (Code Review aprovou e mergeou PR #100 desenv→homolog)
+etapa_atual: Aguardando Aprovação — PR release #102 (homolog→main) — GATE 2: Gerente
 docs_path: repos/omuletachou/documentacoes/ISSUE-12-site-publico
 openspec_path: repos/omuletachou/openspec/changes/issue-12-site-publico
 ultimo_agente: lider-tecnico
 status_comment_id: 5025494280
 pr_homologacao: 100
 code_review_homolog_pr: 100
-pr_release: ~
+pr_release: 102
 
 ## Contexto
 Stack: Next.js 14 + TypeScript + ISR (App Router) — NÃO SSR puro (decisão do Gerente no Gate 1)
@@ -59,7 +59,7 @@ Resumo:
 sub_issues: [#94 (stack:nodejs, task_id:T-01, Sub-A: Integração de dados + Home) — MERGED, #95 (stack:nodejs, task_id:T-02, Sub-B: Página de oferta + SEO — depende de #94) — MERGED, #96 (stack:nodejs, task_id:T-03, Sub-C: Página de categoria + sitemap/robots — depende de #94) — MERGED]
 desenv_tasks_merged: [#94, #95, #96]
 
-Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) → após merge de #94, Dev #95 e Dev #96 em paralelo. Todas as sub-issues concluídas; PR #100 desenv→homolog aberto e atualizado (inclui fix de XSS #101).
+Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) → após merge de #94, Dev #95 e Dev #96 em paralelo. Todas as sub-issues concluídas; PR #100 desenv→homolog aberto e atualizado (inclui fix de XSS #101), aprovado pelo Code Review e mergeado. QA aprovado 26/26. PR #102 (homolog→main) criado.
 
 ## Merge Sub-A #94 (LT)
 - PR #97 (`feature/94-integracao-home` → `desenv`): mergeado via squash. `mergeStateStatus` confirmado `CLEAN`/`MERGEABLE` antes do merge (estava `UNKNOWN` na checagem anterior, resolvido após nova consulta). Merge commit: `e718fdda9c882b39004aff9379bb255c4928e721`, mergedAt: 2026-07-20T20:42:42Z.
@@ -120,6 +120,16 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 - **PR #100 mergeado (merge commit, não squash) desenv→homolog.** Merge commit: `9894b7cc48b0b5c9d2936f7592f9d9bfdca5a73b`, mergedAt: 2026-07-20T21:36:07Z.
 - **Próximo:** QA.
 
+## QA — aprovado (26/26 critérios de aceite, homolog)
+- QA validou 26/26 critérios de aceite com stack real (Docker, Postgres), incluindo reconfirmação independente do fix de XSS via JSON-LD (item revalidado tanto pelo Code Review quanto pelo QA).
+- **Próximo:** LT cria o PR de release (homolog→main).
+
+## PR release #102 (homolog→main) (LT)
+- PR criado: `gh pr create --repo DQM-BETA/omuletachou --base main --head homolog ...` → https://github.com/DQM-BETA/omuletachou/pull/102
+- Corpo do PR resume: evolução do scaffold (Issue #18) para o site público completo (Home/oferta/categoria com ISR 300s, SEO completo — meta tags, OG, JSON-LD, sitemap, robots), integração com a API pública (Issue #11), e o fix de segurança de XSS armazenado via JSON-LD encontrado na revisão estática e corrigido antes do merge para `homolog`.
+- **NÃO** mergeado — merge homolog→main exige aprovação do Gerente (Gate 2). **NÃO** editado o comentário 📍 Status nem o Kanban (fora do escopo desta invocação).
+- **Próximo:** GATE 2 — Gerente aprova o merge homolog→main. Após aprovação, Coordenador executa o merge (`--merge`, nunca squash) e fecha a Issue #12.
+
 ## Historico de etapas
 | # | Etapa | Agente | Status |
 |---|---|---|---|
@@ -137,6 +147,9 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 12 | Merge Sub-C #96 + PR release | lider-tecnico | concluido — mergeStateStatus reconfirmado (UNKNOWN→CLEAN apos 5s), PR #99 squash merge em desenv (c511866), sub-issue #96 fechada. Todas as 3 sub-issues mergeadas. PR #100 (desenv→homolog) criado — proximo: Code Review (duas camadas). |
 | 13 | Dev fix XSS JSON-LD | dev-nodejs | concluido — PR #101 (fix/100-jsonld-xss→desenv), safeJsonLdStringify() em lib/seo.ts, 4 testes de regressão novos, 61/61 passando |
 | 14 | Merge PR #101 + validação PR #100 | lider-tecnico | concluido — PR #101 squash merge em desenv (98b87ca), PR #100 confirmado MERGEABLE/CLEAN com o fix incluído. Proximo: Code Review dedicado revalida o fix no PR #100. |
+| 15 | Code Review PR #100 | code-review | concluido — aprovado, XSS revalidado de forma independente, merge (commit) desenv→homolog: 9894b7c. |
+| 16 | QA (homolog) | qa | concluido — aprovado 26/26 critérios de aceite, incluindo reconfirmação do fix de XSS. |
+| 17 | PR release #102 (homolog→main) | lider-tecnico | concluido — PR criado, aguardando Gate 2 (Gerente). Merge final é bookkeeping do Coordenador após aprovação. |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -159,3 +172,4 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 16 | Code Review PR #100 (aprovado, XSS revalidado, merge homolog) | code-review | sonnet | 110027 | 88 | 751s |
 | 17 | QA (homolog) — tentativa 1, travou testando resiliência API-fora-do-ar | qa | sonnet | (falha — sem HANDOFF, sem custo capturável) | — | — |
 | 18 | QA (homolog) — tentativa 2, aprovado 26/26 CAs | qa | sonnet | 76212 | 34 | 487s |
+| 19 | PR release #102 (homolog→main) (LT) | lider-tecnico | sonnet | (preenchido pela sessão principal a partir do `<usage>` deste HANDOFF) | — | — |
