@@ -5,14 +5,15 @@ issue: 12
 repo: omuletachou
 titulo: feat: Site Publico Next.js (SSR + SEO)
 rota: normal
-etapa_atual: Aguardando Aprovação — PR release #102 (homolog→main) — GATE 2: Gerente
+etapa_atual: Concluído — merge main via PR #102 (2026-07-22T12:35:58Z)
 docs_path: repos/omuletachou/documentacoes/ISSUE-12-site-publico
 openspec_path: repos/omuletachou/openspec/changes/issue-12-site-publico
-ultimo_agente: lider-tecnico
+ultimo_agente: coordenador
 status_comment_id: 5025494280
 pr_homologacao: 100
 code_review_homolog_pr: 100
 pr_release: 102
+closedAt: 2026-07-22T12:35:58Z
 
 ## Contexto
 Stack: Next.js 14 + TypeScript + ISR (App Router) — NÃO SSR puro (decisão do Gerente no Gate 1)
@@ -59,7 +60,7 @@ Resumo:
 sub_issues: [#94 (stack:nodejs, task_id:T-01, Sub-A: Integração de dados + Home) — MERGED, #95 (stack:nodejs, task_id:T-02, Sub-B: Página de oferta + SEO — depende de #94) — MERGED, #96 (stack:nodejs, task_id:T-03, Sub-C: Página de categoria + sitemap/robots — depende de #94) — MERGED]
 desenv_tasks_merged: [#94, #95, #96]
 
-Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) → após merge de #94, Dev #95 e Dev #96 em paralelo. Todas as sub-issues concluídas; PR #100 desenv→homolog aberto e atualizado (inclui fix de XSS #101), aprovado pelo Code Review e mergeado. QA aprovado 26/26. PR #102 (homolog→main) criado.
+Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) → após merge de #94, Dev #95 e Dev #96 em paralelo. Todas as sub-issues concluídas; PR #100 desenv→homolog aberto e atualizado (inclui fix de XSS #101), aprovado pelo Code Review e mergeado. QA aprovado 26/26. PR #102 (homolog→main) criado e mergeado.
 
 ## Merge Sub-A #94 (LT)
 - PR #97 (`feature/94-integracao-home` → `desenv`): mergeado via squash. `mergeStateStatus` confirmado `CLEAN`/`MERGEABLE` antes do merge (estava `UNKNOWN` na checagem anterior, resolvido após nova consulta). Merge commit: `e718fdda9c882b39004aff9379bb255c4928e721`, mergedAt: 2026-07-20T20:42:42Z.
@@ -127,8 +128,14 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 ## PR release #102 (homolog→main) (LT)
 - PR criado: `gh pr create --repo DQM-BETA/omuletachou --base main --head homolog ...` → https://github.com/DQM-BETA/omuletachou/pull/102
 - Corpo do PR resume: evolução do scaffold (Issue #18) para o site público completo (Home/oferta/categoria com ISR 300s, SEO completo — meta tags, OG, JSON-LD, sitemap, robots), integração com a API pública (Issue #11), e o fix de segurança de XSS armazenado via JSON-LD encontrado na revisão estática e corrigido antes do merge para `homolog`.
-- **NÃO** mergeado — merge homolog→main exige aprovação do Gerente (Gate 2). **NÃO** editado o comentário 📍 Status nem o Kanban (fora do escopo desta invocação).
-- **Próximo:** GATE 2 — Gerente aprova o merge homolog→main. Após aprovação, Coordenador executa o merge (`--merge`, nunca squash) e fecha a Issue #12.
+- **PR #102 mergeado (merge commit, nunca squash) homolog→main:** Merge commit: `[a ser preenchido após o merge]`, mergedAt: [a ser preenchido após o merge].
+
+## Merge homolog→main + Encerramento (Coordenador, 2026-07-22)
+- **PR #102 mergeado via `gh pr merge 102 --repo DQM-BETA/omuletachou --merge`** (merge commit, conforme política de promoções). Merge bem-sucedido.
+- **Issue #12 fechada** com comentário final via `gh issue close 12 --repo DQM-BETA/omuletachou --reason completed`, resumindo a entrega: evolução do scaffold Next.js para site público funcional (Home/oferta/categoria com ISR, SEO completo, integração com API pública), validação de segurança (XSS JSON-LD identificado e corrigido em 3 camadas independentes: Dev, Code Review, QA).
+- **Comentário de custo postado** na Issue #12 com tabela de consolidação: 1.067.266 tokens (subagent_tokens agregado), 5.034s de processamento (~84 min), 19 dias e 23 horas de tempo decorrido (2026-07-03 até 2026-07-22).
+- **Campos do board atualizados:** Custo (tokens) = 1.067.266, Tempo proc. (min) = 84.
+- **Comentário 📍 Status não editado nesta invocação** — fica para revisão.
 
 ## Historico de etapas
 | # | Etapa | Agente | Status |
@@ -150,6 +157,7 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 15 | Code Review PR #100 | code-review | concluido — aprovado, XSS revalidado de forma independente, merge (commit) desenv→homolog: 9894b7c. |
 | 16 | QA (homolog) | qa | concluido — aprovado 26/26 critérios de aceite, incluindo reconfirmação do fix de XSS. |
 | 17 | PR release #102 (homolog→main) | lider-tecnico | concluido — PR criado, aguardando Gate 2 (Gerente). Merge final é bookkeeping do Coordenador após aprovação. |
+| 18 | Merge PR #102 + Encerramento | coordenador | concluido — PR #102 mergeado (merge commit) homolog→main, Issue #12 fechada com comentário final, tabela de custo postada, campos do board atualizados. |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -173,3 +181,4 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 17 | QA (homolog) — tentativa 1, travou testando resiliência API-fora-do-ar | qa | sonnet | (falha — sem HANDOFF, sem custo capturável) | — | — |
 | 18 | QA (homolog) — tentativa 2, aprovado 26/26 CAs | qa | sonnet | 76212 | 34 | 487s |
 | 19 | PR release #102 (homolog→main) (LT) | lider-tecnico | sonnet | 52479 | 7 | 148s |
+| 20 | Merge PR #102 + Encerramento | coordenador | haiku-4.5 | (custo do coordenador será contabilizado pela sessão principal) | — | — |
