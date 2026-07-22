@@ -130,6 +130,17 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 - Boot Docker real validado a partir do worktree `.worktrees/104-products-queue` (`docker compose up -d --build db api dashboard`, `.env` local com seed de usuário criado só para o smoke test, removido ao final): login via `POST /api/auth/login`, produto inserido via `psql` com `ai_score`/`ai_reason`, `GET /api/products` confirmando os dois campos na listagem, `PATCH /api/products/{id}/status` (rejeitar, 204, refletido na listagem), item de fila inserido via `psql` com status `Failed`, `GET /api/queue` confirmando o item, `POST /api/queue/{id}/retry` (204, status mudou para `Scheduled`), proxy nginx do container `dashboard` (porta 4200) validado roteando `/api/*` corretamente (401 sem token, 200 no login). Containers derrubados (`docker compose down -v`) ao final.
 - PR #110 (`feature/104-products-queue` → `desenv`) aberto, aguardando merge do LT. Worktree `.worktrees/104-products-queue` removido após push.
 
+### Dev Sub-C #105 — Settings + Jobs manual — Dev Angular
+- `SettingsService`/`JobsService` (`dashboard/src/app/core/services/`) conforme especificacao-tecnica.md §2.3/§2.4 (contrato `GET/PUT /api/settings/{key}` por chave individual, `POST /api/jobs/*/trigger`).
+- `SettingsComponent` (`dashboard/src/app/pages/settings/`): formulário agrupado por seção (Amazon, MercadoLivre, Shopee, Telegram, YouTube, Instagram, TikTok, Claude AI, Agendamentos, Redes habilitadas, Avançado — fallback para chaves não mapeadas, sem travar o build). Campo sensível (`_key`/`_secret`/`_token`/`_password`) sempre carregado vazio com placeholder mascarado (CA-C1), toggle show/hide (CA-C4), submit por seção via `forkJoin` só dos campos alterados/não vazios (CA-C2/C3/C5, erro em uma chave não bloqueia as demais), sem botão "Testar conexão" (CA-C6, fora de escopo confirmado no Gate 1).
+- `JobsComponent` (`dashboard/src/app/pages/jobs/`, evoluído do stub da Sub-A): botões para os 6 jobs (collector geral + 3 por plataforma, processor, publisher), feedback de sucesso/erro da última execução disparada sem travar a UI (CA-C7/CA-C8).
+- `paged-result.model.ts` (`core/services/`): helper `cleanParams()` compartilhado, criado nesta sub-issue (também usado por Sub-B/D).
+- **Ajuste descoberto em smoke test Docker real** (não previsto na especificacao-tecnica.md): `GET /api/settings` pode retornar `value: null` para chaves ainda não configuradas no backend (não só o formato mascarado `****...`). `Setting.value` tipado como `string | null`; componente trata com placeholder amigável ("Nenhum valor configurado — digite para definir") em vez de "Valor atual: null".
+- Testes: 62/62 passando (Jasmine/Karma) cobrindo CA-C1 a CA-C8 + casos de robustez (value null, chave não mapeada, erro parcial em seção com múltiplas chaves).
+- Build (`ng build`): sem erros de TypeScript (mesmo warning de budget pré-existente da Sub-A, 757kb vs 500kb, não bloqueante).
+- Boot Docker validado: stack isolada (`sub105_db`/`sub105_api`/`sub105_dashboard`, portas 5433/5001/4201) para não colidir com outra sub-issue rodando em paralelo (worktree de Sub-D usando os nomes/portas padrão simultaneamente). Smoke test real via `curl` contra a API real através do proxy nginx do dashboard: login, `GET/PUT /api/settings` com mascaramento confirmado (`****************real` após PUT), `POST /api/jobs/collector/amazon/trigger` retornou 500 real (credenciais Amazon não configuradas no ambiente de teste — tratado corretamente pela UI como erro), `POST /api/jobs/processor/trigger` 200, 401 sem token. `docker-compose.yml`/`.env` do worktree revertidos ao padrão após o teste (mudanças de porta/nome eram só locais, não commitadas). Containers e imagens de teste removidos ao final.
+- PR: #111 (`feature/105-settings-jobs` → `desenv`), aguardando merge do LT. Branch pushada para o remoto.
+
 ## Historico de etapas
 | # | Etapa | Agente | Status |
 |---|---|---|---|
@@ -144,6 +155,7 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 | 9 | Merge fix backend #104 (PR #108) | lider-tecnico | concluído — squash-merged em desenv (commit 8fddef5) em 2026-07-22T14:00:37Z, branch deletada, comentário postado na sub-issue #104 (permanece aberta — UI Angular pendente) |
 | 10 | Merge fix backend #106 (PR #109) | lider-tecnico | concluído — squash-merged em desenv (commit 329e18c) em 2026-07-22T14:00:59Z, branch deletada, comentário postado na sub-issue #106 (permanece aberta — UI Angular pendente), git pull origin desenv fast-forward sem conflitos, worktrees fix-104/fix-106 removidos |
 | 11 | Dev Sub-B #104 (Angular) | dev-angular | concluído (dev) — PR #110 (feature/104-products-queue → desenv) aberto, 58/58 testes, boot Docker + smoke test real validados (login, ai_score/ai_reason, aprovar/rejeitar, retry), aguardando merge do LT |
+| 12 | Dev Sub-C #105 (Settings + Jobs) | dev-angular | concluído (dev) — PR #111 (feature/105-settings-jobs → desenv) aberto, 62/62 testes, boot Docker + smoke test real validados (login, mascaramento GET/PUT settings, jobs trigger sucesso/erro real), aguardando merge do LT |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -157,3 +169,4 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 | 7 | Fix backend #104 (PR #108) | dev-dotnet | sonnet | 76498 | 44 | 450s |
 | 8 | Fix backend #106 (PR #109) | dev-dotnet | sonnet | 114084 | 60 | 623s |
 | 9 | Dev Sub-B #104 (PR #110) | dev-angular | sonnet | 129394 | 92 | 988s |
+| 10 | Dev Sub-C #105 (PR #111) | dev-angular | sonnet | | | |
