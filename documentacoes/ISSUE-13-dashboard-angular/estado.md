@@ -5,10 +5,10 @@ issue: 13
 repo: omuletachou
 titulo: feat: Dashboard Angular (Todas as Paginas Admin)
 rota: normal
-etapa_atual: Refinamento Técnico
+etapa_atual: Em Desenvolvimento
 docs_path: repos/omuletachou/documentacoes/ISSUE-13-dashboard-angular
 openspec_path: repos/omuletachou/openspec/changes/issue-13-dashboard-angular
-ultimo_agente: pm-analista-negocios
+ultimo_agente: lider-tecnico
 status_comment_id: 5045887889
 pr_homologacao: ~
 code_review_homolog_pr: ~
@@ -55,10 +55,18 @@ Dois pontos foram ponderados explicitamente antes da decisão:
 - **Conclusão**: sem ambiguidade arquitetural relevante. Segue direto para o **Líder Técnico** (design.md resumido + task breakdown), sem passar pelo Arquiteto.
 
 ## Refinamento Técnico (LT)
-Aguardando LT (design.md, especificacao-tecnica.md, tasks.md, sub-issues).
+Concluído.
+- `design.md` (resumido, PM roteou sem Arquiteto): openspec/changes/issue-13-dashboard-angular/design.md
+- `especificacao-tecnica.md`: documentacoes/ISSUE-13-dashboard-angular/especificacao-tecnica.md
+- `tasks.md`: openspec/changes/issue-13-dashboard-angular/tasks.md
+- Decisão de UI: Angular Material (justificativa em especificacao-tecnica.md §0).
+- Decisão UX/UI da squad: NÃO acionado — ferramenta interna desktop-only sem exigência de marca; Gate 1 já resolveu design ("priorizando Angular Material/PrimeNG"); critérios de aceite já detalham comportamento visual suficiente (cores de badge/status, agrupamento de seções). Segue direto para os Devs.
+- 3 gaps de contrato descobertos por inspeção direta dos controllers da Issue #11 (`main`), resolvidos como extensões aditivas (sem reabrir a Issue #11 nem exigir aprovação do Gerente — não são mudanças de comportamento em produção): (1) `ai_score`/`ai_reason` ausentes em `GET /api/products` → Sub-B estende `ProductListItemDto`; (2) sem endpoint para marcar item da fila `ManualPending → Published` → Sub-D adiciona `PATCH /api/queue/{id}/status`; (3) sem endpoint de totais hoje/semana/mês em Reports → Sub-D adiciona `GET /api/reports/totals` (tabela de falhas recentes reaproveita `GET /api/queue?status=Failed`, já existente, sem endpoint novo).
+- Sumário técnico postado na Issue #13: https://github.com/DQM-BETA/omuletachou/issues/13#issuecomment-5046388558
+- Comentário 📍 Status atualizado para "Em Desenvolvimento": https://github.com/DQM-BETA/omuletachou/issues/13#issuecomment-5045887889
 
 ## Sub-issues
-sub_issues: []
+sub_issues: [#103 (stack:angular, task_id:T-01, Sub-A Autenticação, bloqueante), #104 (stack:angular, task_id:T-02, Sub-B Products+Queue), #105 (stack:angular, task_id:T-03, Sub-C Settings+Jobs manual), #106 (stack:angular, task_id:T-04, Sub-D Facebook Manual+Reports)]
 desenv_tasks_merged: []
 
 ## Merge e Encerramento
@@ -70,6 +78,7 @@ Aguardando fluxo da rota normal (Dev, LT, Code Review, QA, Gate 2).
 | 1 | Preparacao | Coordenador | ativo — Issue preparada, estado.md criado, comentário 📍 Status criado, card adicionado ao board em 💻 Em Desenvolvimento |
 | 2 | PM Fase 1 | pm-analista-negocios | concluído — perguntas de levantamento postadas na Issue, comentário 📍 Status atualizado para Gate 1 |
 | 3 | PM Fase 2 | pm-analista-negocios | concluído — proposal.md e criterios-aceite.md escritos, investigação do contrato PUT /api/settings/{key} concluída (sem ajuste retroativo necessário), sem ambiguidade arquitetural identificada, sumário do PRD postado na Issue, comentário 📍 Status atualizado para Refinamento Técnico |
+| 4 | Refinamento Técnico | lider-tecnico | concluído — design.md/especificacao-tecnica.md/tasks.md escritos, 4 sub-issues criadas (#103-#106), 3 gaps de contrato com a API #11 resolvidos como extensões aditivas, UX/UI da squad não acionado (justificativa registrada), sumário postado na Issue, comentário 📍 Status atualizado para Em Desenvolvimento |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
