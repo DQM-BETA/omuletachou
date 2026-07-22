@@ -172,4 +172,4 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 16 | Code Review PR #100 (aprovado, XSS revalidado, merge homolog) | code-review | sonnet | 110027 | 88 | 751s |
 | 17 | QA (homolog) — tentativa 1, travou testando resiliência API-fora-do-ar | qa | sonnet | (falha — sem HANDOFF, sem custo capturável) | — | — |
 | 18 | QA (homolog) — tentativa 2, aprovado 26/26 CAs | qa | sonnet | 76212 | 34 | 487s |
-| 19 | PR release #102 (homolog→main) (LT) | lider-tecnico | sonnet | (preenchido pela sessão principal a partir do `<usage>` deste HANDOFF) | — | — |
+| 19 | PR release #102 (homolog→main) (LT) | lider-tecnico | sonnet | 52479 | 7 | 148s |
