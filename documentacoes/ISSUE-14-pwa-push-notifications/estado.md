@@ -27,3 +27,4 @@ closedAt: ~
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|-------|--------|--------|--------|-------|-----------|
+| 1 | Preparacao | Coordenador | haiku-4.5 | 26844 | 21 | 133s |
