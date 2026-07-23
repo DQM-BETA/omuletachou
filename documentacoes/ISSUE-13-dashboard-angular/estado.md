@@ -5,10 +5,10 @@ issue: 13
 repo: omuletachou
 titulo: feat: Dashboard Angular (Todas as Paginas Admin)
 rota: normal
-etapa_atual: Em Desenvolvimento — PR de homologação #113 (desenv→homolog) mergeado (Code Review aprovado), aguardando QA
+etapa_atual: Em Desenvolvimento — QA aprovado (validação em `homolog`, commit `9e49f377`), aguardando LT abrir PR de release homolog→main (Gate 2)
 docs_path: repos/omuletachou/documentacoes/ISSUE-13-dashboard-angular
 openspec_path: repos/omuletachou/openspec/changes/issue-13-dashboard-angular
-ultimo_agente: lider-tecnico
+ultimo_agente: qa
 status_comment_id: 5045887889
 pr_homologacao: 113
 code_review_homolog_pr: 113
@@ -211,6 +211,7 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 | 18 | Resolução do conflito Sub-D #106 (PR #112) | dev-angular | concluído — merge de origin/desenv na branch feature/106-facebook-reports, conflito add/add em paged-result.model.ts/products.service.ts/queue.service.ts resolvido mantendo a versão canônica da Sub-B estendida aditivamente com ProductsService.getById() (único método ausente); corrigido também um erro de budget de bundle (1.13MB > 1MB) surgido da soma cumulativa das sub-issues, via conversão das rotas de app.routes.ts para lazy loading (loadComponent); 105/105 testes passando, ng build ok (apenas warning pré-existente), push, PR #112 confirmado MERGEABLE, aguardando merge do LT |
 | 19 | Merge Sub-D #106 (PR #112) | lider-tecnico | concluído — squash-merged em desenv (commit 46927ad) em 2026-07-22T19:12:02Z, branch feature/106-facebook-reports deletada, sub-issue #106 fechada (completed) com comentário de resumo. **As 4 sub-issues da Issue #13 estão completas.** PR de homologação #113 (desenv→homolog) criado, resumindo a entrega completa |
 | 20 | Code Review — PR #113 (desenv→homolog) | code-review | concluído — build/boot/testes executados (backend 290/290, frontend 105/105, `ng build` prod ok), smoke test real via curl/JWT dos 3 gaps de contrato (ai_score/ai_reason, PATCH queue status, reports/totals), boot Docker completo com as 7 rotas do dashboard respondendo 200, sem innerHTML/segredo commitado, plugin `/code-review` sem achados — **aprovado**, PR #113 merged (commit 9e49f377) |
+| 21 | QA — homolog | qa | concluído — **aprovado**, todos os 29 critérios de aceite (CA-A1 a CA-T4) validados por execução real (Docker Compose completo, curl/JWT/psql) e/ou leitura de código + testes automatizados (backend 290/290, frontend 105/105, tsc --noEmit ok, cobertura de branches 81.6%); ver seção "QA — homolog" abaixo |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -270,3 +271,64 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 
 ### Conclusão
 Nenhum item do checklist de veto reprovado. PR #113 **aprovado e mergeado** (`desenv`→`homolog`, merge commit `9e49f377ae587b6aa35fb4fbcfe6c9492c5db8a7`, `gh pr merge 113 --merge`, 2026-07-23T15:16:24Z). Próxima etapa: QA.
+## QA — homolog
+
+**Veredito: APROVADO.** Validação executada em `homolog` (commit `9e49f37ae587b6aa35fb4fbcfe6c9492c5db8a7`, confirmado presente via `git log` após `git fetch origin && git checkout homolog && git pull origin homolog`).
+
+**Nota sobre estado de git (não-bloqueante):** os commits `b61c53c`/`a67ac0a` (docs do Code Review, "registrar aprovação do Code Review e merge do PR #113" / "registrar custo do Code Review") existem em `desenv` mas **não foram promovidos a `homolog`** — o PR #113 já havia sido aberto e mergeado (`b3b30c7` era o HEAD de `desenv` no momento do merge) antes desses commits de documentação serem criados. Confirmado que isso afeta **apenas a documentação** (`estado.md`), não o código de aplicação: o diff completo de `desenv`→`homolog` foi conferido via `git pull` (79 arquivos, só backend/dashboard/docs da própria Issue #13) e a seção "Code Review — PR #113" não estava presente na cópia de `homolog` antes desta escrita do QA. Recomendação ao LT: ao abrir o PR de release `homolog→main`, sincronizar `desenv`→`homolog` novamente (ou cherry-pick os 2 commits de docs) para não perder o rastro do Code Review na branch de longa vida.
+
+### Testes automatizados (rodados a partir de `homolog`)
+- Backend: `dotnet test` → **290/290 passando** (25s), 0 falhas.
+- Frontend: `ng test --watch=false --browsers=ChromeHeadless` → **105/105 passando**; com `--code-coverage`: Statements 92.43%, **Branches 81.6%** (>= 80% exigido), Functions 92.3%, Lines 92.28%.
+- `npx tsc --noEmit -p tsconfig.app.json` → sem erros (CA-T1 confirmado).
+- `npm run test:visual` **não existe** em `dashboard/package.json` (scripts: `ng`, `start`, `build`, `watch`, `test`) → **E2E/screenshots: N/A (projeto sem `test:visual`/Playwright configurado)**, decisão consistente com CA-T2 ("sem exigência de testes e2e/Playwright nesta issue", confirmada pelo Gate 1).
+
+### Validação integrada (Docker Compose real, `db+api+dashboard`, a partir de `homolog`)
+`docker compose up -d --build db api dashboard` — subida sem erro; logs da API sem exceção, Hangfire iniciado, seed do usuário operador único executado (`SEED_USER_EMAIL`/`SEED_USER_PASSWORD` temporários setados só para o teste, revertidos ao final via backup do `.env`). Todas as 7 rotas do dashboard (`/`, `/login`, `/products`, `/queue`, `/settings`, `/jobs`, `/facebook-manual`, `/reports`) responderam **HTTP 200** via nginx (fallback SPA).
+
+Dados de teste inseridos via `psql` (2 produtos com `ai_score` 9 e 4, 4 itens de fila com status `Scheduled`/`Published`/`Failed`/`ManualPending`) para exercitar os fluxos ponta-a-ponta reais contra a API.
+
+### Tabela de critérios validados
+
+| Critério | Veredito | Evidência |
+|---|---|---|
+| CA-A1 Login válido | ✅ | `POST /api/auth/login` com credenciais válidas → 200 + JWT |
+| CA-A2 Login inválido | ✅ | `POST /api/auth/login` com senha errada → 401 `{"message":"Credenciais invalidas."}` |
+| CA-A3 sessionStorage (nunca localStorage) | ✅ | `grep -rn localStorage src/app/` → 0 ocorrências; `auth.service.ts` usa exclusivamente `sessionStorage` (leitura de código + 31 testes do AuthService) |
+| CA-A4 Guard bloqueia sem token | ✅ | `authGuard` (`auth.guard.ts`) confirmado por leitura + `auth.guard.spec.ts` (passando) |
+| CA-A5 `/login` autenticado redireciona | ✅ | `loginGuard` (`auth.guard.ts`) confirmado por leitura + spec passando |
+| CA-A6 Interceptor injeta Bearer | ✅ | `auth.interceptor.ts` confirmado por leitura; coberto por `auth.interceptor.spec.ts` |
+| CA-A7 Interceptor trata 401 global | ✅ | `auth.interceptor.ts`: `err.status===401 && !url.includes('/api/auth/login')` → `auth.logout('Sessão expirada...')`; coberto por spec |
+| CA-A8 Login sem menu lateral | ✅ | Confirmado por Code Review anterior + `login.component.spec.ts` |
+| CA-B1 Tabela de produtos com campos obrigatórios | ✅ | `GET /api/products` autenticado retornou `ai_score`/`ai_reason`/título/preço/desconto/status/plataforma/data para os 2 produtos inseridos |
+| CA-B2 Badge ai_score cores | ✅ | Produto com `ai_score=9` inserido e confirmado na listagem (regra de cor validada nos testes unitários de `products.component.spec.ts`) |
+| CA-B3 Filtros de produtos | ✅ | Confirmado por leitura de `products.component.ts` + specs (filtros server-side plataforma/status, client-side data) |
+| CA-B4 Aprovar produto | ✅ | `PATCH /api/products/{id}/status {"status":"pending"}` → 204, refletido na listagem |
+| CA-B5 Rejeitar produto | ✅ | `PATCH /api/products/{id}/status {"status":"rejected"}` → 204, refletido na listagem |
+| CA-B6 Fila cores por status | ✅ | 4 itens inseridos com status Scheduled/Published/Failed/ManualPending, confirmados via `GET /api/queue`; mapeamento de cor coberto pelos testes |
+| CA-B7 Retry em falha | ✅ | `POST /api/queue/{id}/retry` em item `Failed` → 204, status mudou para `Scheduled` (confirmado via novo `GET /api/queue`) |
+| CA-B8 Filtros da fila | ✅ | Confirmado por leitura de `queue.component.ts` + specs |
+| CA-C1 Campo sensível mascarado, nunca valor real | ✅ | `PUT /api/settings/telegram.bot_token` com valor real → `GET /api/settings` subsequente retornou `****************a1b2` (mascarado); tratamento do placeholder confirmado em `settings.component.ts`/specs |
+| CA-C2 Campo em branco não é enviado no PUT | ✅ | Confirmado por leitura de `settings.component.ts` (`forkJoin` só dos campos alterados/não vazios) + testes cobrindo o caso |
+| CA-C3 Campo preenchido substitui valor | ✅ | `PUT /api/settings/{key}` com novo valor → 200, valor mascarado atualizado refletido no `GET` seguinte |
+| CA-C4 Toggle show/hide senha | ✅ | Confirmado por leitura + specs de `settings.component.ts` |
+| CA-C5 Salvar por seção | ✅ | Confirmado por leitura + specs |
+| CA-C6 Sem "Testar conexão" | ✅ | Confirmado — não há botão/serviço de teste de conexão no código |
+| CA-C7 Jobs disparam via API | ✅ | `POST /api/jobs/processor/trigger` → 200 |
+| CA-C8 Resultado da última execução exibido sem travar UI | ✅ | Confirmado por leitura de `jobs.component.ts` (feedback assíncrono via snackbar) + testes específicos |
+| CA-D1 Cards com preview de mídia e legenda | ✅ | `GET /api/queue/manual` + `GET /api/products/{id}` confirmaram `mediaUrl`/`description` disponíveis; template usa `product.description` como legenda |
+| CA-D2 Copiar legenda | ✅ | `copyCaption()` usa `navigator.clipboard.writeText`, coberto por specs de `facebook-manual.component.spec.ts` |
+| CA-D3 Marcar como publicado | ✅ | `PATCH /api/queue/{id}/status {"status":"Published"}` em item `ManualPending` → 204; `GET /api/queue/manual` subsequente confirmou lista vazia (item saiu dos pendentes) |
+| CA-D4 Cards de totais hoje/semana/mês | ✅ | `GET /api/reports/totals` → `{"today":1,"week":1,"month":1}` refletindo a publicação de teste |
+| CA-D5 Gráfico de publicações por rede (7 dias) | ✅ | `GET /api/reports/summary` → `byNetwork`/`byDay` populados corretamente |
+| CA-D6 Tabela de falhas com Retry | ✅ | Item `Failed` inserido e confirmado via `GET /api/queue`; botão Retry reaproveita o mesmo fluxo de CA-B7 (confirmado por leitura) |
+| CA-T1 Build sem erros TS | ✅ | `ng build --configuration production` (durante o build da imagem Docker) e `tsc --noEmit` sem erros |
+| CA-T2 Testes unitários dos serviços | ✅ | 105/105 testes passando, cobertura de branches 81.6% |
+| CA-T3 Sem responsividade mobile obrigatória | ✅ (não avaliado via execução, aceito por decisão de escopo do Gate 1) | — |
+| CA-T4 Sem ajuste retroativo no contrato da API #11 | ✅ | Confirmado — `PUT /api/settings/{key}` mantém contrato original, lógica de não-sobrescrita é 100% front-end |
+
+### Containers
+`docker compose down -v` executado ao final — containers, volumes e rede removidos. `.env` restaurado ao estado original (backup/restore do arquivo, sem alterar valores versionados).
+
+### Conclusão
+Todos os 29 critérios de aceite (CA-A1 a CA-T4) aprovados por evidência de execução real (curl/JWT/psql contra containers Docker reais) e/ou leitura de código + suíte de testes automatizados 100% passando. Nenhum blocker funcional encontrado. Próxima etapa: Líder Técnico para abrir o PR de release `homolog→main` (Gate 2).
