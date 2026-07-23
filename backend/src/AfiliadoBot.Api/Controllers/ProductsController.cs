@@ -65,6 +65,8 @@ public class ProductsController : ControllerBase
                 p.Platform.ToString(),
                 p.Slug,
                 p.Category,
+                p.AiScore,
+                p.AiReason,
                 p.CreatedAt))
             .ToPagedResultAsync(page, pageSize, ct);
 

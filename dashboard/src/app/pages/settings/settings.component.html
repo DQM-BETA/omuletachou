@@ -1,1 +1,67 @@
-<p>settings works!</p>
+<h1>Configurações</h1>
+
+<div class="settings-loading" *ngIf="loading">
+  <mat-spinner diameter="32"></mat-spinner>
+  <span>Carregando configurações...</span>
+</div>
+
+<div class="settings-error" *ngIf="!loading && loadError">
+  <p>Não foi possível carregar as configurações. Tente novamente.</p>
+  <button mat-stroked-button color="primary" (click)="load()">Tentar novamente</button>
+</div>
+
+<div class="settings-sections" *ngIf="!loading && !loadError">
+  <mat-card class="settings-section" *ngFor="let section of sections">
+    <mat-card-header>
+      <mat-card-title>{{ section.title }}</mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="settings-field" *ngFor="let field of section.fields">
+        <ng-container *ngIf="field.isToggle; else textField">
+          <mat-slide-toggle [(ngModel)]="field.toggleValue" [name]="field.key">
+            {{ field.label }}
+          </mat-slide-toggle>
+        </ng-container>
+
+        <ng-template #textField>
+          <mat-form-field appearance="outline" class="settings-form-field">
+            <mat-label>{{ field.label }}</mat-label>
+            <input
+              matInput
+              [name]="field.key"
+              [type]="field.sensitive && !field.showPassword ? 'password' : 'text'"
+              [placeholder]="field.sensitive ? placeholderFor(field) : ''"
+              [(ngModel)]="field.inputValue"
+            />
+            <button
+              *ngIf="field.sensitive"
+              mat-icon-button
+              matSuffix
+              type="button"
+              [attr.aria-label]="field.showPassword ? 'Ocultar valor' : 'Mostrar valor'"
+              (click)="togglePasswordVisibility(field)"
+            >
+              <mat-icon>{{ field.showPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+          </mat-form-field>
+        </ng-template>
+      </div>
+    </mat-card-content>
+
+    <mat-card-actions>
+      <button mat-raised-button color="primary" type="button" [disabled]="section.saving" (click)="save(section)">
+        <mat-spinner *ngIf="section.saving" diameter="18" class="save-spinner"></mat-spinner>
+        <span *ngIf="!section.saving">Salvar</span>
+      </button>
+      <span
+        class="settings-feedback"
+        *ngIf="section.message"
+        [class.settings-feedback--error]="section.messageType === 'error'"
+        [class.settings-feedback--success]="section.messageType === 'success'"
+      >
+        {{ section.message }}
+      </span>
+    </mat-card-actions>
+  </mat-card>
+</div>
