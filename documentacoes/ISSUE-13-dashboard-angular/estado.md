@@ -231,6 +231,7 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 | 14 | Merge Sub-C #105 (PR #111) | lt | sonnet | 76349 | 18 | 296s |
 | 15 | Fix conflito products/queue.service.ts + lazy loading (PR #112) | dev-angular | sonnet | 144598 | 106 | 1068s |
 | 16 | Merge Sub-D #106 (PR #112) + PR homologação #113 | lt | sonnet | (agente caiu por erro de conexão antes do HANDOFF final — usage não capturado; trabalho real confirmado via gh/git) | — | — |
+| 17 | Code Review — PR #113 (desenv→homolog) | code-review | sonnet | 93208 | 47 | 965s |
 
 ## Code Review — PR #113 (desenv→homolog)
 
