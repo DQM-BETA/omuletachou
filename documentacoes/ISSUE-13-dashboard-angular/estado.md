@@ -5,14 +5,14 @@ issue: 13
 repo: omuletachou
 titulo: feat: Dashboard Angular (Todas as Paginas Admin)
 rota: normal
-etapa_atual: Em Desenvolvimento — QA aprovado (validação em `homolog`, commit `9e49f377`), aguardando LT abrir PR de release homolog→main (Gate 2)
+etapa_atual: Em Desenvolvimento — PR de release #115 (homolog→main) criado pelo LT, aguardando aprovação manual do Gerente (Gate 2)
 docs_path: repos/omuletachou/documentacoes/ISSUE-13-dashboard-angular
 openspec_path: repos/omuletachou/openspec/changes/issue-13-dashboard-angular
-ultimo_agente: qa
+ultimo_agente: lider-tecnico
 status_comment_id: 5045887889
 pr_homologacao: 113
 code_review_homolog_pr: 113
-pr_release: ~
+pr_release: 115
 closedAt: ~
 
 ## Contexto
@@ -212,6 +212,8 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 | 19 | Merge Sub-D #106 (PR #112) | lider-tecnico | concluído — squash-merged em desenv (commit 46927ad) em 2026-07-22T19:12:02Z, branch feature/106-facebook-reports deletada, sub-issue #106 fechada (completed) com comentário de resumo. **As 4 sub-issues da Issue #13 estão completas.** PR de homologação #113 (desenv→homolog) criado, resumindo a entrega completa |
 | 20 | Code Review — PR #113 (desenv→homolog) | code-review | concluído — build/boot/testes executados (backend 290/290, frontend 105/105, `ng build` prod ok), smoke test real via curl/JWT dos 3 gaps de contrato (ai_score/ai_reason, PATCH queue status, reports/totals), boot Docker completo com as 7 rotas do dashboard respondendo 200, sem innerHTML/segredo commitado, plugin `/code-review` sem achados — **aprovado**, PR #113 merged (commit 9e49f377) |
 | 21 | QA — homolog | qa | concluído — **aprovado**, todos os 29 critérios de aceite (CA-A1 a CA-T4) validados por execução real (Docker Compose completo, curl/JWT/psql) e/ou leitura de código + testes automatizados (backend 290/290, frontend 105/105, tsc --noEmit ok, cobertura de branches 81.6%); ver seção "QA — homolog" abaixo |
+| 22 | Sincronização de docs desenv→homolog (PR #114) | lider-tecnico | concluído — confirmado via `git log`/`git diff --stat` que o diff `homolog...desenv` continha só arquivos de documentação (`estado.md`, `relatorio-qa.md`, 2 arquivos/147 linhas), nenhum código de aplicação. PR #114 (`desenv`→`homolog`, título "docs: sincronizar registros de Code Review e QA em homolog") criado e mergeado via `gh pr merge --merge` (merge commit, sem squash, sem nova rodada de Code Review por ser só doc) — merge commit `3fbf123a6f88989967e2212617039959d0a96c75`, mergedAt 2026-07-23T15:45:40Z |
+| 23 | PR de release homolog→main (#115) | lider-tecnico | concluído — PR #115 criado (`homolog`→`main`, merge commit, NUNCA squash), descrição resumindo as 4 sub-issues (#103-#106), os 2 gaps de contrato backend resolvidos, aprovação do Code Review (PR #113) e do QA (29/29 CAs). **PR NÃO mergeado** — aguardando aprovação manual do Gerente (Gate 2, branch protection ativa em `main`) |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -278,6 +280,8 @@ Nenhum item do checklist de veto reprovado. PR #113 **aprovado e mergeado** (`de
 
 **Nota sobre estado de git (não-bloqueante):** os commits `b61c53c`/`a67ac0a` (docs do Code Review, "registrar aprovação do Code Review e merge do PR #113" / "registrar custo do Code Review") existem em `desenv` mas **não foram promovidos a `homolog`** — o PR #113 já havia sido aberto e mergeado (`b3b30c7` era o HEAD de `desenv` no momento do merge) antes desses commits de documentação serem criados. Confirmado que isso afeta **apenas a documentação** (`estado.md`), não o código de aplicação: o diff completo de `desenv`→`homolog` foi conferido via `git pull` (79 arquivos, só backend/dashboard/docs da própria Issue #13) e a seção "Code Review — PR #113" não estava presente na cópia de `homolog` antes desta escrita do QA. Recomendação ao LT: ao abrir o PR de release `homolog→main`, sincronizar `desenv`→`homolog` novamente (ou cherry-pick os 2 commits de docs) para não perder o rastro do Code Review na branch de longa vida.
 
+**Atualização do LT (pós-QA):** recomendação seguida — ver etapas 22 e 23 do Histórico de etapas. PR #114 (`desenv`→`homolog`, merge commit `3fbf123a`) sincronizou os 4 commits de docs pendentes (`b61c53c`, `a67ac0a`, `7de3564`, `2f17896`) antes da abertura do PR de release #115 (`homolog`→`main`).
+
 ### Testes automatizados (rodados a partir de `homolog`)
 - Backend: `dotnet test` → **290/290 passando** (25s), 0 falhas.
 - Frontend: `ng test --watch=false --browsers=ChromeHeadless` → **105/105 passando**; com `--code-coverage`: Statements 92.43%, **Branches 81.6%** (>= 80% exigido), Functions 92.3%, Lines 92.28%.
@@ -332,4 +336,10 @@ Dados de teste inseridos via `psql` (2 produtos com `ai_score` 9 e 4, 4 itens de
 `docker compose down -v` executado ao final — containers, volumes e rede removidos. `.env` restaurado ao estado original (backup/restore do arquivo, sem alterar valores versionados).
 
 ### Conclusão
-Todos os 29 critérios de aceite (CA-A1 a CA-T4) aprovados por evidência de execução real (curl/JWT/psql contra containers Docker reais) e/ou leitura de código + suíte de testes automatizados 100% passando. Nenhum blocker funcional encontrado. Próxima etapa: Líder Técnico para abrir o PR de release `homolog→main` (Gate 2).
+Todos os 29 critérios de aceite (CA-A1 a CA-T4) aprovados por evidência de execução real (curl/JWT/psql contra containers Docker reais) e/ou leitura de código + suíte de testes automatizados 100% passando. Nenhum blocker funcional encontrado.
+
+## Release — PR homolog→main (#115)
+
+PR criado pelo LT em 2026-07-23: https://github.com/DQM-BETA/omuletachou/pull/115. Título "[ISSUE-13] Release: Dashboard Angular (Todas as Páginas Admin)". Descrição resume as 4 sub-issues (#103-#106), os 2 gaps de contrato backend resolvidos (ai_score/ai_reason, PATCH queue status + reports/totals), aprovação do Code Review (PR #113) e do QA (29/29 CAs), e o histórico de PRs até aqui (incluindo o PR #114 de sincronização de docs).
+
+**PR NÃO mergeado pelo LT** — merge `homolog`→`main` exige aprovação manual do Gerente (Gate 2), com branch protection real (`enforce_admins`, sem push direto) bloqueando qualquer contorno. Próxima etapa: aguardar resposta do Gerente.
