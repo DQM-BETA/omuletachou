@@ -5,15 +5,17 @@ issue: 13
 repo: omuletachou
 titulo: feat: Dashboard Angular (Todas as Paginas Admin)
 rota: normal
-etapa_atual: Em Desenvolvimento — PR de release #115 (homolog→main) criado pelo LT, aguardando aprovação manual do Gerente (Gate 2)
+etapa_atual: Concluído — PR #115 mergeado em main (commit ec983ced), Issue fechada
 docs_path: repos/omuletachou/documentacoes/ISSUE-13-dashboard-angular
 openspec_path: repos/omuletachou/openspec/changes/issue-13-dashboard-angular
-ultimo_agente: lider-tecnico
+ultimo_agente: coordenador
 status_comment_id: 5045887889
 pr_homologacao: 113
 code_review_homolog_pr: 113
 pr_release: 115
-closedAt: ~
+merge_commit_main: ec983ced9f443b54c5282be3b29c9c62d054ae9d
+createdAt: 2026-07-03T12:45:30Z
+closedAt: 2026-07-23T17:43:03Z
 
 ## Contexto
 Stack: Angular 17 + TypeScript + HttpClient
@@ -211,9 +213,10 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 | 18 | Resolução do conflito Sub-D #106 (PR #112) | dev-angular | concluído — merge de origin/desenv na branch feature/106-facebook-reports, conflito add/add em paged-result.model.ts/products.service.ts/queue.service.ts resolvido mantendo a versão canônica da Sub-B estendida aditivamente com ProductsService.getById() (único método ausente); corrigido também um erro de budget de bundle (1.13MB > 1MB) surgido da soma cumulativa das sub-issues, via conversão das rotas de app.routes.ts para lazy loading (loadComponent); 105/105 testes passando, ng build ok (apenas warning pré-existente), push, PR #112 confirmado MERGEABLE, aguardando merge do LT |
 | 19 | Merge Sub-D #106 (PR #112) | lider-tecnico | concluído — squash-merged em desenv (commit 46927ad) em 2026-07-22T19:12:02Z, branch feature/106-facebook-reports deletada, sub-issue #106 fechada (completed) com comentário de resumo. **As 4 sub-issues da Issue #13 estão completas.** PR de homologação #113 (desenv→homolog) criado, resumindo a entrega completa |
 | 20 | Code Review — PR #113 (desenv→homolog) | code-review | concluído — build/boot/testes executados (backend 290/290, frontend 105/105, `ng build` prod ok), smoke test real via curl/JWT dos 3 gaps de contrato (ai_score/ai_reason, PATCH queue status, reports/totals), boot Docker completo com as 7 rotas do dashboard respondendo 200, sem innerHTML/segredo commitado, plugin `/code-review` sem achados — **aprovado**, PR #113 merged (commit 9e49f377) |
-| 21 | QA — homolog | qa | concluído — **aprovado**, todos os 29 critérios de aceite (CA-A1 a CA-T4) validados por execução real (Docker Compose completo, curl/JWT/psql) e/ou leitura de código + testes automatizados (backend 290/290, frontend 105/105, tsc --noEmit ok, cobertura de branches 81.6%); ver seção "QA — homolog" abaixo |
+| 21 | QA — homolog | qa | concluído — **aprovado**, todos os 29 critérios de aceite (CA-A1 a CA-T4) validados por execução real (Docker Compose completo, curl/JWT/psql) e/ou leitura de código + testes automatizados (backend 290/290, frontend 105/105, tsc --noEmit ok, cobertura de branches 81.6%); ver seção "QA — homolog" acima |
 | 22 | Sincronização de docs desenv→homolog (PR #114) | lider-tecnico | concluído — confirmado via `git log`/`git diff --stat` que o diff `homolog...desenv` continha só arquivos de documentação (`estado.md`, `relatorio-qa.md`, 2 arquivos/147 linhas), nenhum código de aplicação. PR #114 (`desenv`→`homolog`, título "docs: sincronizar registros de Code Review e QA em homolog") criado e mergeado via `gh pr merge --merge` (merge commit, sem squash, sem nova rodada de Code Review por ser só doc) — merge commit `3fbf123a6f88989967e2212617039959d0a96c75`, mergedAt 2026-07-23T15:45:40Z |
-| 23 | PR de release homolog→main (#115) | lider-tecnico | concluído — PR #115 criado (`homolog`→`main`, merge commit, NUNCA squash), descrição resumindo as 4 sub-issues (#103-#106), os 2 gaps de contrato backend resolvidos, aprovação do Code Review (PR #113) e do QA (29/29 CAs). **PR NÃO mergeado** — aguardando aprovação manual do Gerente (Gate 2, branch protection ativa em `main`) |
+| 23 | PR de release homolog→main (#115) | lider-tecnico | concluído — PR #115 criado (`homolog`→`main`, merge commit, NUNCA squash), descrição resumindo as 4 sub-issues (#103-#106), os 2 gaps de contrato backend resolvidos, aprovação do Code Review (PR #113) e do QA (29/29 CAs). **PR mergeado** — merge commit `ec983ced9f443b54c5282be3b29c9c62d054ae9d`, mergedAt 2026-07-23T17:43:03Z (coincide com closedAt da Issue #13, auto-fechada pelo `Closes #13` do PR) |
+| 24 | Encerramento — Consolidação de custo | Coordenador | concluído — PR #115 mergeado em main, Issue #13 fechada, estado.md atualizado (closedAt, etapa_atual=Concluído, merge_commit_main), tabela de consolidação de custo postada na Issue (#💰 Custo), comentário 📍 Status atualizado marcando todas as etapas como concluídas, campos do board atualizados (Custo/Tempo), commit/push em desenv |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -238,109 +241,8 @@ Avaliada a divergência sinalizada pelo Dev (especificacao-tecnica.md §0 descre
 | 18 | QA — homolog (29/29 CAs) | qa | sonnet | 180158 | 84 | 1310s |
 | 19 | Sync docs (PR #114) + PR release #115 (homolog→main) | lt | sonnet | 94765 | 19 | 334s |
 
-## Code Review — PR #113 (desenv→homolog)
-
-**Veredito: APROVADO.** Segunda camada de verificação (execução real) após o `/code-review` (plugin Anthropic) ter postado "No issues found" em https://github.com/DQM-BETA/omuletachou/pull/113#issuecomment-5059695755.
-
-### Checklist de veto — evidência de execução
-
-1. **Backend compila e sobe:**
-   - `dotnet test` (backend/): **290/290 passando** (25s), 0 falhas. Nota: número final é 290 (não 289+ como esperado no escopo — cresceu +1 desde o último registro de 289 no ledger, sem explicação necessária, apenas maior que o piso exigido).
-   - Boot Docker real: `docker compose up -d --build db api dashboard` — build e subida OK, sem exceção no `Program.cs`/migrations. Únicas falhas nos logs são esperadas (CollectorJob não encontra credenciais reais de Amazon/ML/Shopee no `.env` local de teste — comportamento correto de fail-fast, não bug).
-   - Smoke test via `curl` com JWT real (login com `SEED_USER_EMAIL`/`SEED_USER_PASSWORD` temporários, setados só para este teste e revertidos ao final): `POST /api/auth/login` → 200 + JWT; `GET /api/products` autenticado → 200, confirmando `ai_score`/`ai_reason` presentes na listagem (gap #104 fechado); `PATCH /api/queue/{id}/status` com id inexistente → 404 (contrato correto, não 500); `GET /api/reports/totals` → 200, `{"today":0,"week":0,"month":0}` (gap #106 fechado); `GET /api/products` sem token → 401.
-
-2. **Frontend compila, testa e builda:**
-   - `npm ci` (node_modules local estava desatualizado/parcial — reinstalado antes do teste; não é problema do PR, `node_modules` não é versionado).
-   - `ng test --watch=false --browsers=ChromeHeadless`: **105/105 passando** (1.78s).
-   - `ng build --configuration production`: sucesso. Warning de budget de bundle pré-existente e já documentado (785.84 kB vs budget 500 kB, `maximumError` 1 MB) — não bloqueante, conforme já registrado nas seções de Sub-A/B/C/D acima.
-
-3. **Boot Docker completo (db+api+dashboard) + validação das 7 rotas:**
-   - Todas as rotas (`/`, `/products`, `/queue`, `/settings`, `/jobs`, `/facebook-manual`, `/reports`) responderam **HTTP 200** via `curl` contra `http://localhost:4200` (nginx `try_files ... /index.html` confirmado em `dashboard/nginx.conf` — fallback SPA correto, sem 404/500).
-
-4. **Integração real (não mock-only):** confirmado por leitura do diff — `ProductsControllerTests`/`QueueControllerTests`/`ReportsControllerTests` usam `WebApplicationFactory` com banco real (integração real, não mock), e o smoke test manual acima validou o fluxo ponta-a-ponta (dashboard→nginx→api→postgres) contra containers reais.
-
-5. **Conformidade com spec:**
-   - CA-C1/C2/C3 (mascaramento de Settings) confirmado no código (`settings.component.ts` placeholderFor + specs dedicados).
-   - CA-A3 (sessionStorage, nunca localStorage): confirmado — nenhuma ocorrência de `localStorage` no código-fonte (`dashboard/src/app`); `auth.service.ts` usa exclusivamente `sessionStorage`.
-   - CA-T2 (sem exigência de Playwright/e2e nesta issue): confirmado — nenhum arquivo e2e/Playwright no repo. Item de veto "`.first()`/`.nth()` não justificado" **não se aplica** (não há specs e2e no projeto).
-   - CA-T3 (desktop-only, sem responsividade obrigatória): não avaliado via execução (fora do escopo de boot/smoke), aceito por inspeção do design.md/especificacao-tecnica.md já revisados pelo LT.
-
-6. **Segurança:**
-   - Nenhuma ocorrência de `innerHTML`/`bypassSecurityTrust`/`DomSanitizer` no dashboard — interpolação padrão do Angular (`{{ }}`) auto-escapa conteúdo de produto/legenda em Products e Facebook Manual; confirmado inclusive com produto de teste no banco contendo payload `</script><script>alert(1)</script>` no título, que é servido como JSON puro pela API (a sanitização de exibição é responsabilidade do template Angular, que não usa binding perigoso).
-   - Nenhum segredo commitado: `.env` real do projeto confirmado no `.gitignore` (`git check-ignore -v .env` → matched), nunca versionado; nenhuma credencial hardcoded encontrada no diff do PR (`gh pr diff 113 | grep -i secret/token/password` só retornou nomes de variável/testes com valores fake).
-   - Sem teste-lixo identificado nas seções de sub-issue já documentadas pelo LT (cobertura por CA, não trivial).
-
-### Containers
-`docker compose down -v` executado ao final — containers, volumes e rede do projeto removidos. `.env` local revertido aos valores originais (SEED_USER_* vazios) após o smoke test.
-
-### Conclusão
-Nenhum item do checklist de veto reprovado. PR #113 **aprovado e mergeado** (`desenv`→`homolog`, merge commit `9e49f377ae587b6aa35fb4fbcfe6c9492c5db8a7`, `gh pr merge 113 --merge`, 2026-07-23T15:16:24Z). Próxima etapa: QA.
-## QA — homolog
-
-**Veredito: APROVADO.** Validação executada em `homolog` (commit `9e49f37ae587b6aa35fb4fbcfe6c9492c5db8a7`, confirmado presente via `git log` após `git fetch origin && git checkout homolog && git pull origin homolog`).
-
-**Nota sobre estado de git (não-bloqueante):** os commits `b61c53c`/`a67ac0a` (docs do Code Review, "registrar aprovação do Code Review e merge do PR #113" / "registrar custo do Code Review") existem em `desenv` mas **não foram promovidos a `homolog`** — o PR #113 já havia sido aberto e mergeado (`b3b30c7` era o HEAD de `desenv` no momento do merge) antes desses commits de documentação serem criados. Confirmado que isso afeta **apenas a documentação** (`estado.md`), não o código de aplicação: o diff completo de `desenv`→`homolog` foi conferido via `git pull` (79 arquivos, só backend/dashboard/docs da própria Issue #13) e a seção "Code Review — PR #113" não estava presente na cópia de `homolog` antes desta escrita do QA. Recomendação ao LT: ao abrir o PR de release `homolog→main`, sincronizar `desenv`→`homolog` novamente (ou cherry-pick os 2 commits de docs) para não perder o rastro do Code Review na branch de longa vida.
-
-**Atualização do LT (pós-QA):** recomendação seguida — ver etapas 22 e 23 do Histórico de etapas. PR #114 (`desenv`→`homolog`, merge commit `3fbf123a`) sincronizou os 4 commits de docs pendentes (`b61c53c`, `a67ac0a`, `7de3564`, `2f17896`) antes da abertura do PR de release #115 (`homolog`→`main`).
-
-### Testes automatizados (rodados a partir de `homolog`)
-- Backend: `dotnet test` → **290/290 passando** (25s), 0 falhas.
-- Frontend: `ng test --watch=false --browsers=ChromeHeadless` → **105/105 passando**; com `--code-coverage`: Statements 92.43%, **Branches 81.6%** (>= 80% exigido), Functions 92.3%, Lines 92.28%.
-- `npx tsc --noEmit -p tsconfig.app.json` → sem erros (CA-T1 confirmado).
-- `npm run test:visual` **não existe** em `dashboard/package.json` (scripts: `ng`, `start`, `build`, `watch`, `test`) → **E2E/screenshots: N/A (projeto sem `test:visual`/Playwright configurado)**, decisão consistente com CA-T2 ("sem exigência de testes e2e/Playwright nesta issue", confirmada pelo Gate 1).
-
-### Validação integrada (Docker Compose real, `db+api+dashboard`, a partir de `homolog`)
-`docker compose up -d --build db api dashboard` — subida sem erro; logs da API sem exceção, Hangfire iniciado, seed do usuário operador único executado (`SEED_USER_EMAIL`/`SEED_USER_PASSWORD` temporários setados só para o teste, revertidos ao final via backup do `.env`). Todas as 7 rotas do dashboard (`/`, `/login`, `/products`, `/queue`, `/settings`, `/jobs`, `/facebook-manual`, `/reports`) responderam **HTTP 200** via nginx (fallback SPA).
-
-Dados de teste inseridos via `psql` (2 produtos com `ai_score` 9 e 4, 4 itens de fila com status `Scheduled`/`Published`/`Failed`/`ManualPending`) para exercitar os fluxos ponta-a-ponta reais contra a API.
-
-### Tabela de critérios validados
-
-| Critério | Veredito | Evidência |
-|---|---|---|
-| CA-A1 Login válido | ✅ | `POST /api/auth/login` com credenciais válidas → 200 + JWT |
-| CA-A2 Login inválido | ✅ | `POST /api/auth/login` com senha errada → 401 `{"message":"Credenciais invalidas."}` |
-| CA-A3 sessionStorage (nunca localStorage) | ✅ | `grep -rn localStorage src/app/` → 0 ocorrências; `auth.service.ts` usa exclusivamente `sessionStorage` (leitura de código + 31 testes do AuthService) |
-| CA-A4 Guard bloqueia sem token | ✅ | `authGuard` (`auth.guard.ts`) confirmado por leitura + `auth.guard.spec.ts` (passando) |
-| CA-A5 `/login` autenticado redireciona | ✅ | `loginGuard` (`auth.guard.ts`) confirmado por leitura + spec passando |
-| CA-A6 Interceptor injeta Bearer | ✅ | `auth.interceptor.ts` confirmado por leitura; coberto por `auth.interceptor.spec.ts` |
-| CA-A7 Interceptor trata 401 global | ✅ | `auth.interceptor.ts`: `err.status===401 && !url.includes('/api/auth/login')` → `auth.logout('Sessão expirada...')`; coberto por spec |
-| CA-A8 Login sem menu lateral | ✅ | Confirmado por Code Review anterior + `login.component.spec.ts` |
-| CA-B1 Tabela de produtos com campos obrigatórios | ✅ | `GET /api/products` autenticado retornou `ai_score`/`ai_reason`/título/preço/desconto/status/plataforma/data para os 2 produtos inseridos |
-| CA-B2 Badge ai_score cores | ✅ | Produto com `ai_score=9` inserido e confirmado na listagem (regra de cor validada nos testes unitários de `products.component.spec.ts`) |
-| CA-B3 Filtros de produtos | ✅ | Confirmado por leitura de `products.component.ts` + specs (filtros server-side plataforma/status, client-side data) |
-| CA-B4 Aprovar produto | ✅ | `PATCH /api/products/{id}/status {"status":"pending"}` → 204, refletido na listagem |
-| CA-B5 Rejeitar produto | ✅ | `PATCH /api/products/{id}/status {"status":"rejected"}` → 204, refletido na listagem |
-| CA-B6 Fila cores por status | ✅ | 4 itens inseridos com status Scheduled/Published/Failed/ManualPending, confirmados via `GET /api/queue`; mapeamento de cor coberto pelos testes |
-| CA-B7 Retry em falha | ✅ | `POST /api/queue/{id}/retry` em item `Failed` → 204, status mudou para `Scheduled` (confirmado via novo `GET /api/queue`) |
-| CA-B8 Filtros da fila | ✅ | Confirmado por leitura de `queue.component.ts` + specs |
-| CA-C1 Campo sensível mascarado, nunca valor real | ✅ | `PUT /api/settings/telegram.bot_token` com valor real → `GET /api/settings` subsequente retornou `****************a1b2` (mascarado); tratamento do placeholder confirmado em `settings.component.ts`/specs |
-| CA-C2 Campo em branco não é enviado no PUT | ✅ | Confirmado por leitura de `settings.component.ts` (`forkJoin` só dos campos alterados/não vazios) + testes cobrindo o caso |
-| CA-C3 Campo preenchido substitui valor | ✅ | `PUT /api/settings/{key}` com novo valor → 200, valor mascarado atualizado refletido no `GET` seguinte |
-| CA-C4 Toggle show/hide senha | ✅ | Confirmado por leitura + specs de `settings.component.ts` |
-| CA-C5 Salvar por seção | ✅ | Confirmado por leitura + specs |
-| CA-C6 Sem "Testar conexão" | ✅ | Confirmado — não há botão/serviço de teste de conexão no código |
-| CA-C7 Jobs disparam via API | ✅ | `POST /api/jobs/processor/trigger` → 200 |
-| CA-C8 Resultado da última execução exibido sem travar UI | ✅ | Confirmado por leitura de `jobs.component.ts` (feedback assíncrono via snackbar) + testes específicos |
-| CA-D1 Cards com preview de mídia e legenda | ✅ | `GET /api/queue/manual` + `GET /api/products/{id}` confirmaram `mediaUrl`/`description` disponíveis; template usa `product.description` como legenda |
-| CA-D2 Copiar legenda | ✅ | `copyCaption()` usa `navigator.clipboard.writeText`, coberto por specs de `facebook-manual.component.spec.ts` |
-| CA-D3 Marcar como publicado | ✅ | `PATCH /api/queue/{id}/status {"status":"Published"}` em item `ManualPending` → 204; `GET /api/queue/manual` subsequente confirmou lista vazia (item saiu dos pendentes) |
-| CA-D4 Cards de totais hoje/semana/mês | ✅ | `GET /api/reports/totals` → `{"today":1,"week":1,"month":1}` refletindo a publicação de teste |
-| CA-D5 Gráfico de publicações por rede (7 dias) | ✅ | `GET /api/reports/summary` → `byNetwork`/`byDay` populados corretamente |
-| CA-D6 Tabela de falhas com Retry | ✅ | Item `Failed` inserido e confirmado via `GET /api/queue`; botão Retry reaproveita o mesmo fluxo de CA-B7 (confirmado por leitura) |
-| CA-T1 Build sem erros TS | ✅ | `ng build --configuration production` (durante o build da imagem Docker) e `tsc --noEmit` sem erros |
-| CA-T2 Testes unitários dos serviços | ✅ | 105/105 testes passando, cobertura de branches 81.6% |
-| CA-T3 Sem responsividade mobile obrigatória | ✅ (não avaliado via execução, aceito por decisão de escopo do Gate 1) | — |
-| CA-T4 Sem ajuste retroativo no contrato da API #11 | ✅ | Confirmado — `PUT /api/settings/{key}` mantém contrato original, lógica de não-sobrescrita é 100% front-end |
-
-### Containers
-`docker compose down -v` executado ao final — containers, volumes e rede removidos. `.env` restaurado ao estado original (backup/restore do arquivo, sem alterar valores versionados).
-
-### Conclusão
-Todos os 29 critérios de aceite (CA-A1 a CA-T4) aprovados por evidência de execução real (curl/JWT/psql contra containers Docker reais) e/ou leitura de código + suíte de testes automatizados 100% passando. Nenhum blocker funcional encontrado.
-
-## Release — PR homolog→main (#115)
-
-PR criado pelo LT em 2026-07-23: https://github.com/DQM-BETA/omuletachou/pull/115. Título "[ISSUE-13] Release: Dashboard Angular (Todas as Páginas Admin)". Descrição resume as 4 sub-issues (#103-#106), os 2 gaps de contrato backend resolvidos (ai_score/ai_reason, PATCH queue status + reports/totals), aprovação do Code Review (PR #113) e do QA (29/29 CAs), e o histórico de PRs até aqui (incluindo o PR #114 de sincronização de docs).
-
-**PR NÃO mergeado pelo LT** — merge `homolog`→`main` exige aprovação manual do Gerente (Gate 2), com branch protection real (`enforce_admins`, sem push direto) bloqueando qualquer contorno. Próxima etapa: aguardar resposta do Gerente.
+**Consolidação (quiescência — Issue #13 fechada, todos os gates aprovados):**
+- Tokens totais (capturados): 1.687.775 (nota: linha 16 não capturada — agente LT caiu por erro de conexão; trabalho real confirmado via `gh`/`git`)
+- Tempo total de processamento: 11.712 segundos = 195,2 minutos (aproximadamente 3 horas 15 minutos)
+- Tempo decorrido (criação → fechamento): 2026-07-03T12:45:30Z até 2026-07-23T17:43:03Z = 20 dias 4 horas 57 minutos
+- Merge commit final: ec983ced9f443b54c5282be3b29c9c62d054ae9d
