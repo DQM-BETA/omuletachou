@@ -40,3 +40,4 @@ Aguardando resposta do Gerente (Gate 1) antes de seguir para PM Fase 2 (PRD/prop
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|-------|--------|--------|--------|-------|-----------|
 | 1 | Preparacao | Coordenador | haiku-4.5 | 26844 | 21 | 133s |
+| 2 | PM Fase 1 | pm | sonnet | 27827 | 8 | 46s |
