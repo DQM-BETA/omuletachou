@@ -63,6 +63,22 @@ public class PublicationQueue
     }
 
     /// <summary>
+    /// Marca manualmente um item como publicado (Issue #13 / Sub-D, #106): usado pela tela
+    /// "Facebook Manual", onde o operador publica manualmente no Facebook e depois confirma
+    /// no dashboard. So permitido quando o item esta em ManualPending; chamador (controller)
+    /// deve validar antes.
+    /// </summary>
+    public void MarkAsPublishedManually()
+    {
+        if (Status != PublicationStatus.ManualPending)
+            throw new InvalidOperationException(
+                "Somente itens ManualPending podem ser marcados como publicados manualmente.");
+
+        Status = PublicationStatus.Published;
+        PublishedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
     /// Registra uma tentativa de publicacao.
     /// Sucesso: Status=Published, PublishedAt=UtcNow.
     /// Falha: RetryCount++, ErrorMessage=errorMessage, Status=Failed.

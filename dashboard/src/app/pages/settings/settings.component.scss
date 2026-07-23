@@ -1,0 +1,43 @@
+.settings-loading,
+.settings-error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 24px;
+}
+
+.settings-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 720px;
+}
+
+.settings-section {
+  width: 100%;
+}
+
+.settings-field {
+  margin-bottom: 8px;
+}
+
+.settings-form-field {
+  width: 100%;
+}
+
+.settings-feedback {
+  margin-left: 12px;
+  font-size: 0.875rem;
+}
+
+.settings-feedback--success {
+  color: #2e7d32;
+}
+
+.settings-feedback--error {
+  color: #c62828;
+}
+
+.save-spinner {
+  display: inline-block;
+}

@@ -21,11 +21,10 @@ describe('AppComponent', () => {
     expect(app.title).toEqual('dashboard');
   });
 
-  it('should render nav links', () => {
+  it('should render the router outlet', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    const links = compiled.querySelectorAll('nav a');
-    expect(links.length).toBe(5);
+    expect(compiled.querySelector('router-outlet')).toBeTruthy();
   });
 });

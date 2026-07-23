@@ -1,0 +1,29 @@
+<h1>Jobs manuais</h1>
+
+<div class="jobs-grid">
+  <mat-card class="job-card" *ngFor="let job of jobs">
+    <mat-card-header>
+      <mat-card-title>{{ job.label }}</mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <p *ngIf="job.lastMessage" class="job-feedback" [class.job-feedback--error]="job.lastResult === 'error'" [class.job-feedback--success]="job.lastResult === 'success'">
+        {{ job.lastMessage }}
+      </p>
+      <p *ngIf="!job.lastMessage" class="job-feedback job-feedback--idle">Nenhuma execução disparada ainda.</p>
+    </mat-card-content>
+
+    <mat-card-actions>
+      <button
+        mat-raised-button
+        color="primary"
+        type="button"
+        [disabled]="job.triggering"
+        (click)="trigger(job)"
+      >
+        <mat-spinner *ngIf="job.triggering" diameter="18" class="trigger-spinner"></mat-spinner>
+        <span *ngIf="!job.triggering">Disparar</span>
+      </button>
+    </mat-card-actions>
+  </mat-card>
+</div>

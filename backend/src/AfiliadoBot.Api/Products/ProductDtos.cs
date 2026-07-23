@@ -3,8 +3,9 @@ using System.Text.Json.Serialization;
 namespace AfiliadoBot.Api.Products;
 
 /// <summary>
-/// Item de listagem de GET /api/products (CA-B1/CA-B2). Sem ai_score/ai_reason — esses
-/// campos so aparecem no detalhe (CA-B3).
+/// Item de listagem de GET /api/products (CA-B1/CA-B2). Inclui ai_score/ai_reason
+/// (extensao aditiva, Issue #13/Sub-B — dashboard exibe a pontuacao de IA na propria tabela,
+/// mesmo [JsonPropertyName] snake_case do detalhe, ver ProductDetailDto).
 /// </summary>
 public record ProductListItemDto(
     Guid Id,
@@ -16,6 +17,8 @@ public record ProductListItemDto(
     string Platform,
     string Slug,
     string Category,
+    [property: JsonPropertyName("ai_score")] int? AiScore,
+    [property: JsonPropertyName("ai_reason")] string? AiReason,
     DateTime CreatedAt);
 
 /// <summary>

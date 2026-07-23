@@ -118,4 +118,32 @@ public class QueueController : ControllerBase
 
         return NoContent();
     }
+
+    /// <summary>
+    /// Issue #13 / Sub-D, #106: transicao explicita de status da fila. Uso principal: tela
+    /// "Facebook Manual" — o operador publica manualmente no Facebook e confirma no dashboard
+    /// (ManualPending -> Published). 400 se o valor de "status" nao for reconhecido ou nao for
+    /// "published" (unica transicao suportada hoje); 404 se o item nao existe; 409 se o item nao
+    /// esta em ManualPending.
+    /// </summary>
+    [HttpPatch("{id:guid}/status")]
+    public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateQueueStatusRequest request, CancellationToken ct)
+    {
+        if (!string.Equals(request.Status, "Published", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(new { message = "Unica transicao suportada: status \"Published\"." });
+        }
+
+        var item = await _db.PublicationQueues.FirstOrDefaultAsync(q => q.Id == id, ct);
+        if (item is null)
+            return NotFound();
+
+        if (item.Status != PublicationStatus.ManualPending)
+            return Conflict(new { message = "Somente itens ManualPending podem ser marcados como publicados manualmente." });
+
+        item.MarkAsPublishedManually();
+        await _db.SaveChangesAsync(ct);
+
+        return NoContent();
+    }
 }

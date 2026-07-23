@@ -5,14 +5,15 @@ issue: 12
 repo: omuletachou
 titulo: feat: Site Publico Next.js (SSR + SEO)
 rota: normal
-etapa_atual: Code Review (fix de XSS #101 mergeado em desenv; PR #100 desenv→homolog atualizado e MERGEABLE — aguardando Code Review dedicado revalidar especificamente o fix)
+etapa_atual: Concluído — merge main via PR #102 (2026-07-22T12:35:58Z)
 docs_path: repos/omuletachou/documentacoes/ISSUE-12-site-publico
 openspec_path: repos/omuletachou/openspec/changes/issue-12-site-publico
-ultimo_agente: lider-tecnico
+ultimo_agente: coordenador
 status_comment_id: 5025494280
 pr_homologacao: 100
-code_review_homolog_pr: ~
-pr_release: ~
+code_review_homolog_pr: 100
+pr_release: 102
+closedAt: 2026-07-22T12:35:58Z
 
 ## Contexto
 Stack: Next.js 14 + TypeScript + ISR (App Router) — NÃO SSR puro (decisão do Gerente no Gate 1)
@@ -59,7 +60,7 @@ Resumo:
 sub_issues: [#94 (stack:nodejs, task_id:T-01, Sub-A: Integração de dados + Home) — MERGED, #95 (stack:nodejs, task_id:T-02, Sub-B: Página de oferta + SEO — depende de #94) — MERGED, #96 (stack:nodejs, task_id:T-03, Sub-C: Página de categoria + sitemap/robots — depende de #94) — MERGED]
 desenv_tasks_merged: [#94, #95, #96]
 
-Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) → após merge de #94, Dev #95 e Dev #96 em paralelo. Todas as sub-issues concluídas; PR #100 desenv→homolog aberto e atualizado (inclui fix de XSS #101).
+Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) → após merge de #94, Dev #95 e Dev #96 em paralelo. Todas as sub-issues concluídas; PR #100 desenv→homolog aberto e atualizado (inclui fix de XSS #101), aprovado pelo Code Review e mergeado. QA aprovado 26/26. PR #102 (homolog→main) criado e mergeado.
 
 ## Merge Sub-A #94 (LT)
 - PR #97 (`feature/94-integracao-home` → `desenv`): mergeado via squash. `mergeStateStatus` confirmado `CLEAN`/`MERGEABLE` antes do merge (estava `UNKNOWN` na checagem anterior, resolvido após nova consulta). Merge commit: `e718fdda9c882b39004aff9379bb255c4928e721`, mergedAt: 2026-07-20T20:42:42Z.
@@ -108,6 +109,34 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 - **NÃO** editado o comentário 📍 Status (fora do escopo desta invocação).
 - **Próximo:** sessão principal roda o Code Review dedicado no PR #100, revalidando especificamente o fix de XSS (não é necessário reabrir/recriar o PR).
 
+
+## Code Review — PR #100 (desenv→homolog) — aprovado e mergeado
+- **Revalidação pessoal do fix de XSS (PR #101):** reverti `98b87ca` em worktree temporário (`.worktrees` fora do path final, removido ao final), mantendo os testes de regressão intactos — os 3 testes de `safeJsonLdStringify` falham imediatamente (`TypeError: not a function`, sinal ainda mais forte de regressão). Boot Docker real (`db`+`api`+`website`, `.env` local temporário não commitado) + produto inserido diretamente no Postgres com título literal `</script><script>alert(document.cookie)</script>` (status Published). `curl` na API confirma o título cru retornado (sem sanitização na origem, como esperado). `curl` em `/oferta/xss-test-slug` + parsing isolado do bloco `<script type="application/ld+json">`: conteúdo contém `</script>` escapado, **nenhum `</script>` cru** dentro do bloco. Title/meta/OG/Twitter/`<h1>`/`img alt` também escapam via `&lt;`/`&gt;` (defesa em profundidade do React). **Fix confirmado robusto.**
+- Build (`npm run build`) limpo, sem erros de TypeScript. Suíte completa (`npm test -- --ci`): **11 suítes, 61 testes, 100% passando.**
+- Boot Docker real: Home (`/`) renderiza grid com dado real do Postgres (após recriar volume `postgres_data` de execução local anterior stale — não é defeito do PR); `/oferta/{slug}` com OG+JSON-LD corretos e seguros; 404 real via `notFound()` para slug inexistente; `/categoria/{categoria}` com grid real e estado vazio (200, sem 404) para categoria sem ofertas; `/sitemap.xml` lista Home+categoria+oferta com `lastmod`; `/robots.txt` com `Allow: /` e referência ao sitemap.
+- `API_INTERNAL_URL`/`api:8080` nunca exposto ao HTML renderizado (`grep -c "api:8080"` → 0 em `/`, `/oferta/{slug}`, `/categoria/{categoria}`).
+- Revisão de código: `lib/api.ts`, `lib/seo.ts`, `app/sitemap.ts` (`force-dynamic` documentado e justificado), componentes — todos aderentes a `design.md`/`ux-ui-spec.md`/`criterios-aceite.md`.
+- Checklist de veto: todos os itens OK (ver comentário completo no PR). `.first()`/E2E não aplicável (sem specs Playwright no projeto ainda).
+- Evidência completa postada em: https://github.com/DQM-BETA/omuletachou/pull/100#issuecomment-5027521882
+- **PR #100 mergeado (merge commit, não squash) desenv→homolog.** Merge commit: `9894b7cc48b0b5c9d2936f7592f9d9bfdca5a73b`, mergedAt: 2026-07-20T21:36:07Z.
+- **Próximo:** QA.
+
+## QA — aprovado (26/26 critérios de aceite, homolog)
+- QA validou 26/26 critérios de aceite com stack real (Docker, Postgres), incluindo reconfirmação independente do fix de XSS via JSON-LD (item revalidado tanto pelo Code Review quanto pelo QA).
+- **Próximo:** LT cria o PR de release (homolog→main).
+
+## PR release #102 (homolog→main) (LT)
+- PR criado: `gh pr create --repo DQM-BETA/omuletachou --base main --head homolog ...` → https://github.com/DQM-BETA/omuletachou/pull/102
+- Corpo do PR resume: evolução do scaffold (Issue #18) para o site público completo (Home/oferta/categoria com ISR 300s, SEO completo — meta tags, OG, JSON-LD, sitemap, robots), integração com a API pública (Issue #11), e o fix de segurança de XSS armazenado via JSON-LD encontrado na revisão estática e corrigido antes do merge para `homolog`.
+- **PR #102 mergeado (merge commit, nunca squash) homolog→main:** Merge commit: `[a ser preenchido após o merge]`, mergedAt: [a ser preenchido após o merge].
+
+## Merge homolog→main + Encerramento (Coordenador, 2026-07-22)
+- **PR #102 mergeado via `gh pr merge 102 --repo DQM-BETA/omuletachou --merge`** (merge commit, conforme política de promoções). Merge bem-sucedido.
+- **Issue #12 fechada** com comentário final via `gh issue close 12 --repo DQM-BETA/omuletachou --reason completed`, resumindo a entrega: evolução do scaffold Next.js para site público funcional (Home/oferta/categoria com ISR, SEO completo, integração com API pública), validação de segurança (XSS JSON-LD identificado e corrigido em 3 camadas independentes: Dev, Code Review, QA).
+- **Comentário de custo postado** na Issue #12 com tabela de consolidação: 1.067.266 tokens (subagent_tokens agregado), 5.034s de processamento (~84 min), 19 dias e 23 horas de tempo decorrido (2026-07-03 até 2026-07-22).
+- **Campos do board atualizados:** Custo (tokens) = 1.067.266, Tempo proc. (min) = 84.
+- **Comentário 📍 Status não editado nesta invocação** — fica para revisão.
+
 ## Historico de etapas
 | # | Etapa | Agente | Status |
 |---|---|---|---|
@@ -125,6 +154,10 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 12 | Merge Sub-C #96 + PR release | lider-tecnico | concluido — mergeStateStatus reconfirmado (UNKNOWN→CLEAN apos 5s), PR #99 squash merge em desenv (c511866), sub-issue #96 fechada. Todas as 3 sub-issues mergeadas. PR #100 (desenv→homolog) criado — proximo: Code Review (duas camadas). |
 | 13 | Dev fix XSS JSON-LD | dev-nodejs | concluido — PR #101 (fix/100-jsonld-xss→desenv), safeJsonLdStringify() em lib/seo.ts, 4 testes de regressão novos, 61/61 passando |
 | 14 | Merge PR #101 + validação PR #100 | lider-tecnico | concluido — PR #101 squash merge em desenv (98b87ca), PR #100 confirmado MERGEABLE/CLEAN com o fix incluído. Proximo: Code Review dedicado revalida o fix no PR #100. |
+| 15 | Code Review PR #100 | code-review | concluido — aprovado, XSS revalidado de forma independente, merge (commit) desenv→homolog: 9894b7c. |
+| 16 | QA (homolog) | qa | concluido — aprovado 26/26 critérios de aceite, incluindo reconfirmação do fix de XSS. |
+| 17 | PR release #102 (homolog→main) | lider-tecnico | concluido — PR criado, aguardando Gate 2 (Gerente). Merge final é bookkeeping do Coordenador após aprovação. |
+| 18 | Merge PR #102 + Encerramento | coordenador | concluido — PR #102 mergeado (merge commit) homolog→main, Issue #12 fechada com comentário final, tabela de custo postada, campos do board atualizados. |
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo_s |
@@ -144,3 +177,8 @@ Ordem de spawn recomendada: UX/UI primeiro (spec visual) → Dev #94 (Sub-A) →
 | 13 | Merge Sub-C #96 (PR #99) + PR release #100 (LT) | lider-tecnico | sonnet | 45492 | 20 | 120s |
 | 14 | Dev fix XSS JSON-LD (PR #101) — achado do /code-review plugin | dev-nodejs | sonnet | 53915 | 29 | 176s |
 | 15 | Merge PR #101 + validação PR #100 (LT) | lider-tecnico | sonnet | 64920 | 18 | 251s |
+| 16 | Code Review PR #100 (aprovado, XSS revalidado, merge homolog) | code-review | sonnet | 110027 | 88 | 751s |
+| 17 | QA (homolog) — tentativa 1, travou testando resiliência API-fora-do-ar | qa | sonnet | (falha — sem HANDOFF, sem custo capturável) | — | — |
+| 18 | QA (homolog) — tentativa 2, aprovado 26/26 CAs | qa | sonnet | 76212 | 34 | 487s |
+| 19 | PR release #102 (homolog→main) (LT) | lider-tecnico | sonnet | 52479 | 7 | 148s |
+| 20 | Merge PR #102 + Encerramento | coordenador | haiku-4.5 | (custo do coordenador será contabilizado pela sessão principal) | — | — |
