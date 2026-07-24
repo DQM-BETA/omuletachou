@@ -117,6 +117,31 @@ Sub-issues criadas:
 - #117 (stack:nodejs, T-02) — Frontend Next.js: next-pwa, manifest+ícones placeholder,
   lógica de subscription/unsubscription no browser.
 
+## Dev Sub-B #117 — Frontend Next.js (PWA + push subscription)
+Concluído.
+- Worktree `.worktrees/117-push-frontend` (branch `feature/117-push-frontend`, base `desenv`),
+  removido ao final.
+- `next-pwa` configurado (`website/next.config.mjs`): `dest: public`, `register: true`,
+  `skipWaiting: true`, desabilitado em dev.
+- `website/public/manifest.json` + ícones placeholder `icon-192x192.png`/`icon-512x512.png`
+  (gerados via `website/scripts/generate-icons.js`, fundo sólido `#e63946`, sem dependência
+  externa) referenciados em `app/layout.tsx` (`<link rel="manifest">` + `<meta
+  name="theme-color">`).
+- `website/lib/push.ts`: `subscribeToPush`/`unsubscribeFromPush` consumindo
+  `GET {NEXT_PUBLIC_API_URL}/api/public/push/vapid-public-key` (sem hardcode da chave, nunca
+  `API_INTERNAL_URL`) + `POST/DELETE` dos endpoints já mergeados na Issue #11/Sub-E, com
+  fallback gracioso (sem Service Worker/PushManager/contexto seguro).
+- `website/components/PushSubscriptionManager.tsx`: client component montado no layout raiz.
+- Correção necessária em `website/tsconfig.json` (`types` restrito a
+  `node`/`jest`/`react`/`react-dom`): o `next-pwa` traz transitivamente o stub
+  `@types/minimatch@6.0.0` (sem `.d.ts` real), que quebrava `next build`.
+- Testes Jest+RTL: 79/79 passando (100%), cobertura ≥ 80% em todos os arquivos novos.
+- `npm run build`: gera `/public/sw.js` sem erros. Build Docker
+  (`docker build -f website/Dockerfile website` + `docker run`) validado via `curl`:
+  `manifest.json` e `sw.js` servidos corretamente (200).
+- PR: https://github.com/DQM-BETA/omuletachou/pull/118 (`feature/117-push-frontend` →
+  `desenv`, aguardando merge do LT).
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|-------|--------|--------|--------|-------|-----------|
@@ -124,3 +149,4 @@ Sub-issues criadas:
 | 2 | PM Fase 1 | pm | sonnet | 27827 | 8 | 46s |
 | 3 | PM Fase 2 | pm-analista-negocios | sonnet | 40649 | 18 | 153s |
 | 4 | Refinamento LT | lider-tecnico | sonnet | 80702 | 42 | 329s |
+| 5 | Dev Sub-B #117 | dev-nodejs | sonnet | 90906 | 64 | 690s |
