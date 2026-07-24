@@ -602,4 +602,4 @@ salvo `.worktrees/` pré-existente).
 | 10 | LT mapeamento da falha (QA reprovou) | lt | sonnet | 67850 | 15 | 227s |
 | 11 | Fix Sub-A #116 — upsert de subscribe | dev-dotnet | sonnet | 74736 | 35 | 263s |
 | 12 | Merge fix #116 → desenv + novo PR #122 desenv→homolog | lt | sonnet | 70897 | 20 | 230s |
-| 13 | Code Review — PR #122 (desenv→homolog, reexecução) | code-review | sonnet | ~ | ~ | ~ |
+| 13 | Code Review — PR #122 (desenv→homolog, reexecução) | code-review | sonnet | 108502 | 23 | 340s |
