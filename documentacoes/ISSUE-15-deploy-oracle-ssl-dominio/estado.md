@@ -31,4 +31,5 @@ Deploy completo no Oracle Cloud Free Tier com HTTPS, domínio personalizado e to
 
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) | Data |
 |---|---|---|---|---|---|---|---|
+| 1 | Preparacao | Coordenador | haiku-4.5 | 24745 | 18 | 108s | 2026-07-24 |
 
