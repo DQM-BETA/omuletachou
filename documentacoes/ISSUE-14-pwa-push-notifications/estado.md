@@ -1,8 +1,8 @@
 issue: 14
 titulo: "feat: PWA + Push Notifications"
 rota: normal
-etapa_atual: Aguardando QA (homolog)
-ultimo_agente: code-review
+etapa_atual: QA reprovou (homolog) — aguardando LT mapear falha
+ultimo_agente: qa
 status_comment_id: 5061626934
 openspec_change: repos/omuletachou/openspec/changes/issue-14-pwa-push-notifications
 tech_stacks:
@@ -24,9 +24,9 @@ sub_issues_frontend:
 pr_homologacao: 120
 pr_release: ~
 code_review_homolog_pr: 120
-qa_status: ~
+qa_status: reprovado
 figma_url: ~
-blockers: nenhum
+blockers: "resubscribe (POST /api/public/push/subscribe) não atualiza p256dh/auth/created_at do registro existente — viola criterio de aceite (upsert silencioso com renovação de created_at)"
 closedAt: ~
 
 ## Levantamento (PM Fase 1)
@@ -278,6 +278,57 @@ abaixo).
 ### Veredito
 **Aprovado.** Merge `desenv→homolog` executado via merge commit (sem squash).
 
+## QA — homolog
+**Reprovado.** Relatório completo: `relatorio-qa.md` (mesmo diretório).
+
+- Sincronização: `git fetch origin && git checkout homolog && git pull origin homolog` —
+  commit `de37c66` (merge do PR #120) confirmado em `git log --oneline -5`.
+- `dotnet test` (backend, a partir de `homolog`): **305/305 passando** (100%), 24s.
+- `npm test -- --ci` (frontend `website/`, a partir de `homolog`): **79/79 passando**
+  (100%), 14 suites, 3.26s.
+- Ambiente completo subido via `docker compose up -d --build db api website` (a partir de
+  `homolog`): subiu sem exceção (migrations aplicadas, Hangfire iniciado, Next.js
+  `Ready in 78ms`).
+- Validado manualmente e OK: manifest.json (200, todos os campos exigidos conferem),
+  ícones 192/512 (200), `/sw.js` (200), `GET /api/public/push/vapid-public-key` (chave em
+  claro, gerada via `webpush generate-vapid-keys` real e cadastrada via SQL em
+  `app_settings`), `GET /api/settings` autenticado (mesma chave mascarada — sem
+  vazamento), rate-limit 429 após exceder o limite em `/subscribe`,
+  `DELETE /unsubscribe` (204 idempotente, remove o registro real do Postgres).
+- **Achado que reprova a entrega:** `POST /api/public/push/subscribe` para um `endpoint`
+  já existente retorna 200 (nunca 409, conforme o critério), mas **não atualiza**
+  `p256dh`/`auth`/`created_at` do registro — apenas retorna o `id` existente sem
+  persistir os novos valores recebidos no corpo da requisição. Testado ao vivo contra
+  Postgres real: 1ª chamada cria a linha com `p256dh=testp256dh-v1`; 2ª chamada ao mesmo
+  endpoint com `p256dh=testp256dh-v2-NEW` retorna 200 mas a linha no banco permanece
+  inalterada (`testp256dh-v1`, `created_at` original). Isso viola diretamente o critério
+  de aceite "Subscription já existe... o registro existente é atualizado (upsert
+  silencioso, `created_at` renovado)" em `criterios-aceite.md`. Impacto funcional real:
+  quando o browser regenera `p256dh`/`auth` (ex.: usuário limpa dados do site e refaz o
+  subscribe com o mesmo `endpoint`, comportamento observado em alguns navegadores), o
+  backend continua usando as chaves de criptografia antigas — os envios de push
+  subsequentes falhariam silenciosamente na criptografia (WebPush usa `p256dh`/`auth`
+  para cifrar o payload), sem 410 Gone (o endpoint em si continua válido), e portanto sem
+  auto-remoção — subscription "zumbi" que nunca recebe push e nunca é limpa.
+  Código: `backend/src/AfiliadoBot.Api/Controllers/PushController.cs` linhas 46-54.
+- Endpoint 410 Gone (remoção automática): validado por leitura de código +
+  `PushNotificationServiceTests` (já cobria 410 Gone e passou em `dotnet test` acima); a
+  lógica de remoção em si está correta (`PushNotificationService.SendToAllAsync`, linhas
+  112-118 de `PushNotificationService.cs`) — não é o achado reprovado acima, que é restrito
+  ao endpoint `subscribe` (não ao envio de push).
+- `PublisherJob` (push individual vs. consolidada): validado por `dotnet test` (5 casos em
+  `PublisherJobTests`, EF InMemory real, já cobertos acima) + inspeção de código. Não foi
+  possível disparar um ciclo real contra o Telegram ao vivo neste ambiente (sem
+  credenciais de bot Telegram configuradas em `.env`/`.env.example`) — validação restrita
+  a testes automatizados + inspeção, consistente com o que a Camada 2 do Code Review já
+  havia feito.
+- Fallback sem HTTPS: validado por inspeção de código (`website/lib/push.ts`,
+  `isPushSupported()` checa `window.isSecureContext`, retorna `null` gracioso sem lançar
+  exceção) + teste unitário existente (`push.test.ts`, incluído nos 79/79 acima) — não
+  testado ao vivo sem HTTPS real, conforme instrução da tarefa.
+- Ambiente derrubado ao final: `docker compose down -v`. Repo devolvido à branch `desenv`
+  (`git checkout desenv && git pull origin desenv`), `git status` limpo.
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|-------|--------|--------|--------|-------|-----------|
@@ -289,3 +340,4 @@ abaixo).
 | 6 | Dev Sub-A #116 | dev-dotnet | sonnet | 196222 | 136 | 1139s |
 | 7 | Merge #118/#119 + PR homologação #120 | lt | sonnet | 49500 | 17 | 132s |
 | 8 | Code Review — PR #120 (desenv→homolog) | code-review | sonnet | 80642 | 52 | 717s |
+| 9 | QA — homolog (reprovado) | qa | sonnet | 88467 | 37 | 509s |
