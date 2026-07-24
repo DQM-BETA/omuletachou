@@ -1,8 +1,8 @@
 issue: 14
 titulo: "feat: PWA + Push Notifications"
 rota: normal
-etapa_atual: Refinamento Técnico
-ultimo_agente: pm-analista-negocios
+etapa_atual: Em Desenvolvimento
+ultimo_agente: lider-tecnico
 status_comment_id: 5061626934
 openspec_change: repos/omuletachou/openspec/changes/issue-14-pwa-push-notifications
 tech_stacks:
@@ -13,9 +13,12 @@ repos:
 repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-14-pwa-push-notifications
 openspec_path: repos/omuletachou/openspec/changes/issue-14-pwa-push-notifications
-sub_issues: []
+sub_issues:
+  - "#116 (stack:dotnet, task_id:T-01) — Sub-A backend .NET"
+  - "#117 (stack:nodejs, task_id:T-02) — Sub-B frontend Next.js"
 desenv_tasks_merged: []
-sub_issues_frontend: {}
+sub_issues_frontend:
+  "#117": stack:nodejs
 pr_homologacao: ~
 pr_release: ~
 code_review_homolog_pr: ~
@@ -81,6 +84,38 @@ explicitamente:
   Técnico** (design.md resumido + task breakdown), sem passar pelo Arquiteto. Recomenda-se
   que o LT registre no design.md o ponto de integração exato do throttling dentro do
   `PublisherJob` (nota técnica, não arquitetural).
+
+## Refinamento Técnico (LT)
+Concluído.
+- `design.md`: repos/omuletachou/openspec/changes/issue-14-pwa-push-notifications/design.md
+- `especificacao-tecnica.md`: repos/omuletachou/documentacoes/ISSUE-14-pwa-push-notifications/especificacao-tecnica.md
+- `tasks.md`: repos/omuletachou/openspec/changes/issue-14-pwa-push-notifications/tasks.md
+- Sumário técnico postado: https://github.com/DQM-BETA/omuletachou/issues/14#issuecomment-5070042861
+
+**Achado importante do levantamento (evita retrabalho):** inspeção do código real revelou
+que a Issue #11/Sub-E (#85/#89, já mergeada em desenv) implementou entidade
+`PushSubscription`, EF config e os endpoints `POST /api/public/push/subscribe` /
+`DELETE /api/public/push/unsubscribe` (com rate-limit `public-write` já aplicado). Falta
+apenas: migration da tabela (nunca criada no banco), envio efetivo via WebPush NuGet, VAPID
+keys em `app_settings`, um novo endpoint público de leitura da chave pública, e o gatilho de
+throttling dentro do `PublisherJob`. Escopo das sub-issues ajustado para não duplicar
+trabalho já feito.
+
+**Decisão UX/UI:** não acionado. Sem tela nova — manifest/ícones são infraestrutura de
+browser (metadados + assets estáticos), sem fluxo de interação visual novo (prompts de
+instalação/permissão são UI nativa do browser, fora do controle do app). Decisão registrada
+em design.md.
+
+**Sequenciamento das sub-issues:** paralelo (não bloqueante). O contrato do endpoint da
+chave pública VAPID (`GET /api/public/push/vapid-public-key`) já está totalmente
+especificado em especificacao-tecnica.md §4/§7 — a Sub-B pode desenvolver contra o
+contrato documentado sem esperar o merge da Sub-A.
+
+Sub-issues criadas:
+- #116 (stack:dotnet, T-01) — Backend .NET: migration, PushNotificationService (WebPush),
+  VAPID keys em app_settings, endpoint de chave pública, integração no PublisherJob.
+- #117 (stack:nodejs, T-02) — Frontend Next.js: next-pwa, manifest+ícones placeholder,
+  lógica de subscription/unsubscription no browser.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
