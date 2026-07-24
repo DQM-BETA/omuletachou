@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using AfiliadoBot.Domain.Entities;
 using AfiliadoBot.Infrastructure.Data;
 using FluentAssertions;
@@ -41,6 +42,48 @@ public class PushControllerTests : IClassFixture<CustomWebApplicationFactory>
         saved.Should().NotBeNull();
         saved!.P256dh.Should().Be("chave-p256dh-teste");
         saved.Auth.Should().Be("chave-auth-teste");
+    }
+
+    [Fact]
+    public async Task Subscribe_ExistingEndpoint_UpdatesKeysAndRenewsCreatedAt()
+    {
+        // Regressao QA (Issue #14, sub-issue #116 reaberta): resubscribe do mesmo endpoint
+        // deve atualizar p256dh/auth/created_at (upsert silencioso), nao apenas retornar
+        // o id existente sem persistir os novos valores.
+        var client = _factory.CreateClient();
+        var endpoint = "https://fcm.googleapis.com/fcm/send/" + Guid.NewGuid();
+        var originalCreatedAt = DateTime.UtcNow.AddDays(-1);
+        Guid existingId;
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var subscription = new PushSubscription(endpoint, "old-p256dh", "old-auth");
+            typeof(PushSubscription).GetProperty(nameof(PushSubscription.CreatedAt))!
+                .SetValue(subscription, originalCreatedAt);
+            db.PushSubscriptions.Add(subscription);
+            await db.SaveChangesAsync();
+            existingId = subscription.Id;
+        }
+
+        var response = await client.PostAsJsonAsync("/api/public/push/subscribe", new
+        {
+            endpoint,
+            keys = new { p256dh = "new-p256dh", auth = "new-auth" }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("id").GetGuid().Should().Be(existingId);
+
+        using var verifyScope = _factory.Services.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+        (await verifyDb.PushSubscriptions.CountAsync(s => s.Endpoint == endpoint)).Should().Be(1);
+
+        var updated = await verifyDb.PushSubscriptions.FirstAsync(s => s.Endpoint == endpoint);
+        updated.P256dh.Should().Be("new-p256dh");
+        updated.Auth.Should().Be("new-auth");
+        updated.CreatedAt.Should().BeAfter(originalCreatedAt);
     }
 
     [Fact]
@@ -96,5 +139,61 @@ public class PushControllerTests : IClassFixture<CustomWebApplicationFactory>
         var response = await client.DeleteAsync("/api/public/push/unsubscribe");
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    // --- vapid-public-key (Issue #14 / Sub-A #116, especificacao-tecnica.md §4) ---
+
+    [Fact]
+    public async Task VapidPublicKey_ChaveNaoCadastrada_RetornaPublicKeyNull()
+    {
+        // IClassFixture compartilha o mesmo banco InMemory entre os fatos desta classe — remove
+        // explicitamente qualquer valor deixado por outro teste do mesmo bloco (ex.: a chave
+        // cadastrada por VapidPublicKey_ChaveCadastrada_RetornaValorCru), garantindo o cenario
+        // "ainda nao cadastrada" independente da ordem de execucao dos testes.
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var existing = await db.AppSettings.FirstOrDefaultAsync(s => s.Key == "push.vapid_public_key");
+            if (existing is not null)
+            {
+                db.AppSettings.Remove(existing);
+                await db.SaveChangesAsync();
+            }
+        }
+
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/api/public/push/vapid-public-key");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        (body.GetProperty("publicKey").ValueKind == JsonValueKind.Null).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task VapidPublicKey_ChaveCadastrada_RetornaValorCru()
+    {
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var setting = await db.AppSettings.FirstOrDefaultAsync(s => s.Key == "push.vapid_public_key");
+            if (setting is null)
+            {
+                db.AppSettings.Add(new AppSetting("push.vapid_public_key", "BEx-chave-publica-de-teste"));
+            }
+            else
+            {
+                setting.UpdateValue("BEx-chave-publica-de-teste");
+            }
+
+            await db.SaveChangesAsync();
+        }
+
+        var client = _factory.CreateClient();
+        var response = await client.GetAsync("/api/public/push/vapid-public-key");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("publicKey").GetString().Should().Be("BEx-chave-publica-de-teste");
     }
 }

@@ -49,7 +49,12 @@ public class PushController : ControllerBase
         if (existing is not null)
         {
             // Endpoint ja cadastrado: subscribe e idempotente no sentido de nao duplicar
-            // (mesmo endpoint = mesmo dispositivo/navegador). Retorna 200 sem criar linha nova.
+            // (mesmo endpoint = mesmo dispositivo/navegador). Upsert silencioso (Issue #14,
+            // criterios-aceite.md): renova P256dh/Auth/CreatedAt com os novos valores
+            // recebidos (o browser pode ter gerado um novo par de chaves para o mesmo
+            // endpoint, ex. apos limpar o cache) e retorna 200 sem criar linha nova.
+            existing.Renew(request.Keys.P256dh, request.Keys.Auth);
+            await _db.SaveChangesAsync(ct);
             return Ok(new { id = existing.Id });
         }
 
@@ -79,6 +84,26 @@ public class PushController : ControllerBase
         // — nunca 404, para nao permitir a um chamador nao autenticado inferir por
         // tentativa/erro se um determinado endpoint de push esta cadastrado.
         return NoContent();
+    }
+
+    /// <summary>
+    /// Chave publica VAPID em claro (Issue #14 / Sub-A, especificacao-tecnica.md §4). Bypass
+    /// EXPLICITO do <c>SettingsMasker</c>: embora "push.vapid_public_key" termine em "_key" e
+    /// portanto seja classificada como sensivel pelo masker do dashboard (GET /api/settings,
+    /// SettingsController — comportamento aceito, ver design.md), esta chave especifica NAO e
+    /// um segredo (e enviada ao browser via applicationServerKey do Web Push) e precisa ser
+    /// lida em claro por este endpoint publico dedicado, nunca pelo SettingsController.
+    /// </summary>
+    [HttpGet("vapid-public-key")]
+    [EnableRateLimiting(RateLimiterConfigurator.PublicReadPolicy)]
+    public async Task<IActionResult> GetVapidPublicKey(CancellationToken ct)
+    {
+        var value = await _db.AppSettings
+            .Where(s => s.Key == "push.vapid_public_key")
+            .Select(s => s.Value)
+            .FirstOrDefaultAsync(ct);
+
+        return Ok(new { publicKey = string.IsNullOrWhiteSpace(value) ? null : value });
     }
 }
 
