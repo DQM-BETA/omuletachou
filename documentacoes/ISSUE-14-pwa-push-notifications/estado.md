@@ -1,7 +1,7 @@
 issue: 14
 titulo: "feat: PWA + Push Notifications"
 rota: normal
-etapa_atual: Em Desenvolvimento
+etapa_atual: Code Review
 ultimo_agente: lider-tecnico
 status_comment_id: 5061626934
 openspec_change: repos/omuletachou/openspec/changes/issue-14-pwa-push-notifications
@@ -14,12 +14,14 @@ repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-14-pwa-push-notifications
 openspec_path: repos/omuletachou/openspec/changes/issue-14-pwa-push-notifications
 sub_issues:
-  - "#116 (stack:dotnet, task_id:T-01) — Sub-A backend .NET"
-  - "#117 (stack:nodejs, task_id:T-02) — Sub-B frontend Next.js"
-desenv_tasks_merged: []
+  - "#116 (stack:dotnet, task_id:T-01) — Sub-A backend .NET — MERGED via PR #119"
+  - "#117 (stack:nodejs, task_id:T-02) — Sub-B frontend Next.js — MERGED via PR #118"
+desenv_tasks_merged:
+  - "#116"
+  - "#117"
 sub_issues_frontend:
   "#117": stack:nodejs
-pr_homologacao: ~
+pr_homologacao: 120
 pr_release: ~
 code_review_homolog_pr: ~
 qa_status: ~
@@ -140,7 +142,7 @@ Concluído.
   (`docker build -f website/Dockerfile website` + `docker run`) validado via `curl`:
   `manifest.json` e `sw.js` servidos corretamente (200).
 - PR: https://github.com/DQM-BETA/omuletachou/pull/118 (`feature/117-push-frontend` →
-  `desenv`, aguardando merge do LT).
+  `desenv`, **merged via squash pelo LT**).
 
 ## Dev Sub-A #116 — Backend .NET (push notifications)
 Concluído.
@@ -177,7 +179,19 @@ Concluído.
   cadastrado via SQL, `GET vapid-public-key` retornou o valor cru, `POST subscribe`
   persistiu a subscription real no Postgres.
 - PR: https://github.com/DQM-BETA/omuletachou/pull/119 (`feature/116-push-backend` →
-  `desenv`, aguardando merge do LT).
+  `desenv`, **merged via squash pelo LT**).
+
+## Merge sub-issues → desenv (LT)
+Concluído.
+- Ambos PRs tocavam stacks disjuntas (backend .NET vs. frontend Next.js `website/`) — sem
+  conflito. Mergeados sequencialmente conforme regra da squad: PR #118 (frontend) primeiro,
+  `git pull` para atualizar working copy, depois PR #119 (backend). Ambos fast-forward,
+  sem conflitos.
+- Sub-issues #116 e #117 fechadas no GitHub (`completed`) com comentários de resumo.
+- Todas as sub-issues da Issue #14 concluídas → PR de homologação criado:
+  https://github.com/DQM-BETA/omuletachou/pull/120 (`desenv` → `homolog`, merge commit).
+- Worktrees `.worktrees/116-push-backend` e `.worktrees/117-push-frontend` já haviam sido
+  removidos pelos devs ao final de cada tarefa; nenhum resquício encontrado no repo.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
