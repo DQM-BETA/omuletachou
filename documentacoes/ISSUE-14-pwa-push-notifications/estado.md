@@ -202,3 +202,4 @@ Concluído.
 | 4 | Refinamento LT | lider-tecnico | sonnet | 80702 | 42 | 329s |
 | 5 | Dev Sub-B #117 | dev-nodejs | sonnet | 90906 | 64 | 690s |
 | 6 | Dev Sub-A #116 | dev-dotnet | sonnet | 196222 | 136 | 1139s |
+| 7 | Merge #118/#119 + PR homologação #120 | lt | sonnet | 49500 | 17 | 132s |
