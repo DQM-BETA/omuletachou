@@ -1,8 +1,8 @@
 issue: 14
 titulo: "feat: PWA + Push Notifications"
 rota: normal
-etapa_atual: QA reexecução aprovada (PR #122, homolog); aguardando PR de release homolog->main (LT)
-ultimo_agente: qa
+etapa_atual: aguardando Gate 2 (Gerente) — PR de release homolog->main criado
+ultimo_agente: lt
 status_comment_id: 5061626934
 openspec_change: repos/omuletachou/openspec/changes/issue-14-pwa-push-notifications
 tech_stacks:
@@ -22,7 +22,7 @@ desenv_tasks_merged:
 sub_issues_frontend:
   "#117": stack:nodejs
 pr_homologacao: 122
-pr_release: ~
+pr_release: 124
 code_review_homolog_pr: 122
 qa_status: aprovado (reexecução, PR #122)
 figma_url: ~
@@ -654,3 +654,18 @@ silencioso não persistia `p256dh`/`auth`/`created_at`) está corrigido e revali
 contra Postgres real, reproduzindo exatamente o cenário reprovado. Nenhuma regressão
 colateral encontrada. **QA APROVADO — segue para PR de release `homolog → main` (LT) →
 Gate 2 (Gerente).**
+
+## PR de release homolog -> main (LT)
+Concluído.
+- `git pull origin desenv`: já sincronizado (nenhuma alteração pendente).
+- `git log origin/homolog..origin/desenv --oneline`: apenas 3 commits de documentação
+  (estado.md/relatorio-qa.md — registro do Code Review e QA da reexecução do PR #122),
+  nenhum commit de código de aplicação (já promovido via PR #122). Mesmo padrão usado na
+  Issue #13.
+- PR de sincronização de docs criado e mergeado (merge commit, sem squash):
+  https://github.com/DQM-BETA/omuletachou/pull/123 (`desenv` → `homolog`).
+- PR de release criado: https://github.com/DQM-BETA/omuletachou/pull/124
+  (`homolog` → `main`, merge commit — **NÃO mergeado**, aguardando aprovação humana do
+  Gerente, Gate 2/branch protection real em `main`).
+- Repo devolvido à branch `desenv` (`git checkout desenv`), `git status --porcelain` limpo
+  salvo `.worktrees/` pré-existente.
