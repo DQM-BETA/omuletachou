@@ -1,8 +1,8 @@
 issue: 14
 titulo: "feat: PWA + Push Notifications"
 rota: normal
-etapa_atual: Code Review
-ultimo_agente: lider-tecnico
+etapa_atual: Aguardando QA (homolog)
+ultimo_agente: code-review
 status_comment_id: 5061626934
 openspec_change: repos/omuletachou/openspec/changes/issue-14-pwa-push-notifications
 tech_stacks:
@@ -23,7 +23,7 @@ sub_issues_frontend:
   "#117": stack:nodejs
 pr_homologacao: 120
 pr_release: ~
-code_review_homolog_pr: ~
+code_review_homolog_pr: 120
 qa_status: ~
 figma_url: ~
 blockers: nenhum
@@ -288,3 +288,4 @@ abaixo).
 | 5 | Dev Sub-B #117 | dev-nodejs | sonnet | 90906 | 64 | 690s |
 | 6 | Dev Sub-A #116 | dev-dotnet | sonnet | 196222 | 136 | 1139s |
 | 7 | Merge #118/#119 + PR homologação #120 | lt | sonnet | 49500 | 17 | 132s |
+| 8 | Code Review — PR #120 (desenv→homolog) | code-review | sonnet | 80642 | 52 | 717s |
