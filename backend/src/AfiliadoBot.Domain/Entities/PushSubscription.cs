@@ -19,4 +19,18 @@ public class PushSubscription
         Auth = auth;
         CreatedAt = DateTime.UtcNow;
     }
+
+    /// <summary>
+    /// Renova as chaves de criptografia (P256dh/Auth) e o CreatedAt de uma subscription
+    /// existente. Usado no resubscribe do mesmo endpoint (upsert silencioso, Issue #14,
+    /// criterios-aceite.md secao "Subscription — subscribe/unsubscribe"): quando o browser
+    /// gera um novo par de chaves para o mesmo endpoint (ex.: usuario limpou o cache),
+    /// o registro existente precisa refletir os novos valores em vez de manter os antigos.
+    /// </summary>
+    public void Renew(string p256dh, string auth)
+    {
+        P256dh = p256dh;
+        Auth = auth;
+        CreatedAt = DateTime.UtcNow;
+    }
 }

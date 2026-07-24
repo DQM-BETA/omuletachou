@@ -45,6 +45,48 @@ public class PushControllerTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
+    public async Task Subscribe_ExistingEndpoint_UpdatesKeysAndRenewsCreatedAt()
+    {
+        // Regressao QA (Issue #14, sub-issue #116 reaberta): resubscribe do mesmo endpoint
+        // deve atualizar p256dh/auth/created_at (upsert silencioso), nao apenas retornar
+        // o id existente sem persistir os novos valores.
+        var client = _factory.CreateClient();
+        var endpoint = "https://fcm.googleapis.com/fcm/send/" + Guid.NewGuid();
+        var originalCreatedAt = DateTime.UtcNow.AddDays(-1);
+        Guid existingId;
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var subscription = new PushSubscription(endpoint, "old-p256dh", "old-auth");
+            typeof(PushSubscription).GetProperty(nameof(PushSubscription.CreatedAt))!
+                .SetValue(subscription, originalCreatedAt);
+            db.PushSubscriptions.Add(subscription);
+            await db.SaveChangesAsync();
+            existingId = subscription.Id;
+        }
+
+        var response = await client.PostAsJsonAsync("/api/public/push/subscribe", new
+        {
+            endpoint,
+            keys = new { p256dh = "new-p256dh", auth = "new-auth" }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("id").GetGuid().Should().Be(existingId);
+
+        using var verifyScope = _factory.Services.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+        (await verifyDb.PushSubscriptions.CountAsync(s => s.Endpoint == endpoint)).Should().Be(1);
+
+        var updated = await verifyDb.PushSubscriptions.FirstAsync(s => s.Endpoint == endpoint);
+        updated.P256dh.Should().Be("new-p256dh");
+        updated.Auth.Should().Be("new-auth");
+        updated.CreatedAt.Should().BeAfter(originalCreatedAt);
+    }
+
+    [Fact]
     public async Task Subscribe_SemEndpointOuKeys_Retorna400()
     {
         var client = _factory.CreateClient();
