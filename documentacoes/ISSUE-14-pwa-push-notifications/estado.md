@@ -1,8 +1,8 @@
 issue: 14
 titulo: "feat: PWA + Push Notifications"
 rota: normal
-etapa_atual: Fix #116 mergeado em desenv (PR #121 squash) e propagado a homolog (novo PR #122 desenv->homolog); aguardando /code-review + Code Review
-ultimo_agente: lt
+etapa_atual: QA reexecução aprovada (PR #122, homolog); aguardando PR de release homolog->main (LT)
+ultimo_agente: qa
 status_comment_id: 5061626934
 openspec_change: repos/omuletachou/openspec/changes/issue-14-pwa-push-notifications
 tech_stacks:
@@ -24,7 +24,7 @@ sub_issues_frontend:
 pr_homologacao: 122
 pr_release: ~
 code_review_homolog_pr: 122
-qa_status: aguardando reexecução
+qa_status: aprovado (reexecução, PR #122)
 figma_url: ~
 blockers: ~
 closedAt: ~
@@ -510,6 +510,83 @@ Concluído.
   `#116` de volta a `desenv_tasks_merged` (entrega agora completa).
 - Repo devolvido à branch `desenv` (`git status` limpo).
 
+## Code Review — PR #122 (desenv→homolog, reexecução após fix #116)
+**Aprovado.** Camada 1 (`/code-review` plugin Anthropic, rodada leve focada no diff
+incremental do fix): sem achados
+(comentário: https://github.com/DQM-BETA/omuletachou/pull/122#issuecomment-5070698599 —
+"No issues found."). Camada 2 (execução real, abaixo), focada em reproduzir exatamente o
+cenário que reprovou o QA no PR #120.
+
+### Diff revisado (`gh pr diff 122`)
+Confirma exatamente o fix mapeado pelo LT após a reprovação do QA:
+- `PushController.Subscribe`, branch `existing is not null`: agora chama
+  `existing.Renew(request.Keys.P256dh, request.Keys.Auth)` + `await _db.SaveChangesAsync(ct)`
+  antes do `return Ok(new { id = existing.Id })` — nunca 409, mas agora persiste os novos
+  valores.
+- `PushSubscription.Renew(string p256dh, string auth)`: novo método de domínio que atualiza
+  `P256dh`/`Auth`/`CreatedAt = DateTime.UtcNow`, setters seguem `private`.
+- Teste de regressão `Subscribe_ExistingEndpoint_UpdatesKeysAndRenewsCreatedAt` em
+  `PushControllerTests`: seed de subscription existente com `CreatedAt` no passado, act com
+  `p256dh`/`auth` novos no mesmo endpoint, assert de `200`, `count == 1`, valores novos
+  persistidos e `CreatedAt` renovado (maior que o original).
+
+### Execução real
+- `dotnet test` (raiz `backend/`, a partir de `desenv` — commit `e20033f`, mesmo HEAD do PR
+  #122): **306/306 passando** (100%), 23s. Confirma o total já reportado pelo Dev (305→306
+  com o teste novo).
+- Boot Docker real: `docker compose up -d --build db api` (a partir de `desenv`, conteúdo
+  idêntico ao PR #122) — build sem erros, containers `afiliado_db`/`afiliado_api` subiram,
+  migrations aplicadas (incl. `SeedPushVapidKeys`), Hangfire SQL objects instalados,
+  `Application started`, `Now listening on: http://[::]:8080`. `.env` local usado só para
+  `DB_USER`/`DB_PASSWORD`/`JWT_SIGNING_KEY` de teste — pré-existente no working copy,
+  gitignored, confirmado via `git check-ignore -v .env` e `git status --porcelain` (nenhum
+  arquivo de ambiente rastreado antes/depois).
+- **Smoke test reproduzindo o cenário exato que o QA reprovou no PR #120**, contra Postgres
+  real (não mock):
+  1. `POST /api/public/push/subscribe` com `endpoint` novo
+     (`https://fcm.googleapis.com/fcm/send/cr-smoke-<timestamp>`), `keys.p256dh=p256dh-v1`,
+     `keys.auth=auth-v1` → `201`, `{"id":"48083a3a-551f-46fb-b9c6-f461e9bf1370"}`.
+  2. `POST /api/public/push/subscribe` no MESMO `endpoint`, `keys.p256dh=p256dh-v2-NEW`,
+     `keys.auth=auth-v2-NEW` → `200` (nunca 409), **mesmo `id`** retornado
+     (`48083a3a-551f-46fb-b9c6-f461e9bf1370`) — confirma que não houve tentativa de criar
+     linha duplicada.
+  3. `psql` direto no container `afiliado_db` (`SELECT endpoint, p256dh, auth, created_at
+     FROM push_subscriptions WHERE endpoint = '...'`) → **exatamente 1 linha** para o
+     endpoint (upsert, não insert duplicado), com `p256dh=p256dh-v2-NEW`,
+     `auth=auth-v2-NEW` (valores da 2ª chamada, não da 1ª) e `created_at` no instante da 2ª
+     chamada (renovado). Isso é precisamente o comportamento que o QA havia reprovado no
+     PR #120 (onde a linha permanecia com os valores da 1ª chamada) — confirmado corrigido.
+- Ambiente derrubado ao final: `docker compose down -v` (containers, network e volumes
+  removidos).
+
+### Checklist de veto (rápido, focado no fix pontual)
+- **Compila e sobe**: OK — `dotnet test` 306/306 e boot Docker real confirmados acima.
+- **Integração real**: OK — smoke test contra Postgres real via HTTP + `psql`, não
+  mock-only; o teste de regressão automatizado usa `WebApplicationFactory` real (não só
+  unit test isolado).
+- **Conformidade com spec**: OK — comportamento agora bate exatamente com
+  `criterios-aceite.md` ("Subscription já existe... o registro existente é atualizado
+  (upsert silencioso, `created_at` renovado)"), validado ao vivo no item acima.
+- **Sem teste-lixo**: teste novo (`Subscribe_ExistingEndpoint_UpdatesKeysAndRenewsCreatedAt`)
+  tem arrange/act/assert reais (seed com reflection, POST real via `HttpClient`, 3
+  asserções distintas incluindo `count == 1` e `CreatedAt` renovado) — não é teste vazio
+  nem trivial.
+- **Segredos**: nenhum valor real de `.env`/VAPID key commitado. `git status --porcelain`
+  limpo (só `.worktrees/` pré-existente, sem relação com este PR) antes e depois da
+  verificação.
+- **CLAUDE.md**: convenções seguidas — commit do fix (`fix(ISSUE-116): ...`), merge
+  `desenv→homolog` via merge commit (não squash), branch de trabalho descartável squashed
+  corretamente no PR #121.
+- **`.first()`/`.nth()`/`.last()` em specs E2E**: não aplicável — sem suíte Playwright neste
+  repositório (inalterado desde o Code Review do PR #120).
+
+### Veredito
+**Aprovado.** Merge `desenv→homolog` executado via merge commit (sem squash) —
+`https://github.com/DQM-BETA/omuletachou/pull/122`, merge commit
+`35e7bd1abd7f11e2370c020b7d39d93528191915`, mergeado em `2026-07-24T14:05:37Z`.
+Repo devolvido à branch `desenv` (`git checkout desenv`, `git status --porcelain` limpo
+salvo `.worktrees/` pré-existente).
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|-------|--------|--------|--------|-------|-----------|
@@ -525,3 +602,55 @@ Concluído.
 | 10 | LT mapeamento da falha (QA reprovou) | lt | sonnet | 67850 | 15 | 227s |
 | 11 | Fix Sub-A #116 — upsert de subscribe | dev-dotnet | sonnet | 74736 | 35 | 263s |
 | 12 | Merge fix #116 → desenv + novo PR #122 desenv→homolog | lt | sonnet | 70897 | 20 | 230s |
+| 13 | Code Review — PR #122 (desenv→homolog, reexecução) | code-review | sonnet | 108502 | 23 | 340s |
+| 14 | QA — reexecução homolog (aprovado) | qa | sonnet | 66505 | 22 | 261s |
+
+## QA — reexecução (homolog)
+**Aprovado.** Relatório completo: `relatorio-qa.md` (mesmo diretório, seção "Rodada 2").
+
+- Sincronização: `git fetch origin && git checkout homolog && git pull origin homolog` —
+  commit `35e7bd1` (merge do PR #122, `Merge pull request #122 from DQM-BETA/desenv`)
+  confirmado como HEAD de `homolog` em `git log --oneline -5`.
+- `dotnet test` (backend, a partir de `homolog`): **306/306 passando** (100%), 24s (era
+  305/305 na rodada 1 — o teste de regressão do fix eleva o total).
+- `npm test -- --ci` (frontend `website/`, a partir de `homolog`): **79/79 passando**
+  (100%), 14 suites, 3.63s — sem regressão colateral (esperado, fix restrito ao backend).
+- Leitura de código confirmou o fix presente em `homolog`:
+  `backend/src/AfiliadoBot.Api/Controllers/PushController.cs`, branch `existing is not
+  null` agora chama `existing.Renew(request.Keys.P256dh, request.Keys.Auth)` +
+  `await _db.SaveChangesAsync(ct)` antes do `return Ok(...)`.
+- **Reexecução do critério #5 (upsert) via boot Docker real + `psql`:**
+  `docker compose up -d --build db api` a partir de `homolog` (commit `35e7bd1`) — subiu
+  sem exceção, migrations aplicadas, `Application started`. Reprodução exata do cenário
+  reprovado na rodada 1, endpoint
+  `https://fcm.googleapis.com/fcm/send/qa-reexec-1784902129`:
+  1. `POST /api/public/push/subscribe` (`p256dh=qa-p256dh-v1`, `auth=qa-auth-v1`) → **201**,
+     `id=8e742537-0d53-4c6e-8f37-f2627750c2be`.
+  2. `POST /api/public/push/subscribe` no MESMO endpoint (`p256dh=qa-p256dh-v2-NEW`,
+     `auth=qa-auth-v2-NEW`) → **200** (nunca 409), **mesmo `id`** — sem linha duplicada.
+  3. `psql` direto no container `afiliado_db`: `count(*) = 1` para o endpoint,
+     `p256dh=qa-p256dh-v2-NEW`, `auth=qa-auth-v2-NEW` (valores da 2ª chamada) e
+     `created_at = 2026-07-24 14:08:50.344886+00` (renovado, instante da 2ª chamada, não da
+     1ª). **Comportamento agora bate exatamente com `criterios-aceite.md`** — achado da
+     rodada 1 confirmado corrigido.
+- **Revalidação colateral (sem repetir todo o boot manual, testes automatizados + smoke
+  pontual no mesmo ambiente já subido):**
+  - `GET /api/public/push/vapid-public-key` → `200`, `{"publicKey":null}` (esperado: seed
+    da migration deixa a chave vazia por padrão, cadastro manual do operador; sem
+    regressão, endpoint inalterado por este fix).
+  - `DELETE /api/public/push/unsubscribe` (endpoint existente) → `204`, `count(*) = 0`
+    confirmado via `psql`; chamado 2x (idempotente, `204` também na 2ª vez).
+  - `PublisherJob` (push individual/consolidada/throttling) e 410 Gone (remoção
+    automática): cobertos por `dotnet test` acima (`PublisherJobTests`,
+    `PushNotificationServiceTests`), nenhum arquivo relacionado tocado pelo PR #121/#122 —
+    sem necessidade de re-boot dedicado.
+- Ambiente derrubado ao final: `docker compose down -v` (containers, network e volumes
+  removidos). Repo devolvido à branch `desenv` (`git checkout desenv`), `git status
+  --porcelain` limpo (salvo `.worktrees/` pré-existente, sem relação com esta issue).
+
+### Veredito
+**13 de 13 critérios de aceite aprovados (100%).** O achado que reprovou a rodada 1 (upsert
+silencioso não persistia `p256dh`/`auth`/`created_at`) está corrigido e revalidado ao vivo
+contra Postgres real, reproduzindo exatamente o cenário reprovado. Nenhuma regressão
+colateral encontrada. **QA APROVADO — segue para PR de release `homolog → main` (LT) →
+Gate 2 (Gerente).**
