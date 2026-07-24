@@ -1,8 +1,8 @@
 issue: 14
 titulo: "feat: PWA + Push Notifications"
 rota: normal
-etapa_atual: Code Review PR #122 aprovado e mergeado (desenv->homolog); aguardando QA reexecução
-ultimo_agente: code-review
+etapa_atual: QA reexecução aprovada (PR #122, homolog); aguardando PR de release homolog->main (LT)
+ultimo_agente: qa
 status_comment_id: 5061626934
 openspec_change: repos/omuletachou/openspec/changes/issue-14-pwa-push-notifications
 tech_stacks:
@@ -24,7 +24,7 @@ sub_issues_frontend:
 pr_homologacao: 122
 pr_release: ~
 code_review_homolog_pr: 122
-qa_status: aguardando reexecução
+qa_status: aprovado (reexecução, PR #122)
 figma_url: ~
 blockers: ~
 closedAt: ~
@@ -603,3 +603,54 @@ salvo `.worktrees/` pré-existente).
 | 11 | Fix Sub-A #116 — upsert de subscribe | dev-dotnet | sonnet | 74736 | 35 | 263s |
 | 12 | Merge fix #116 → desenv + novo PR #122 desenv→homolog | lt | sonnet | 70897 | 20 | 230s |
 | 13 | Code Review — PR #122 (desenv→homolog, reexecução) | code-review | sonnet | 108502 | 23 | 340s |
+| 14 | QA — reexecução homolog (aprovado) | qa | sonnet | 66505 | 22 | 261s |
+
+## QA — reexecução (homolog)
+**Aprovado.** Relatório completo: `relatorio-qa.md` (mesmo diretório, seção "Rodada 2").
+
+- Sincronização: `git fetch origin && git checkout homolog && git pull origin homolog` —
+  commit `35e7bd1` (merge do PR #122, `Merge pull request #122 from DQM-BETA/desenv`)
+  confirmado como HEAD de `homolog` em `git log --oneline -5`.
+- `dotnet test` (backend, a partir de `homolog`): **306/306 passando** (100%), 24s (era
+  305/305 na rodada 1 — o teste de regressão do fix eleva o total).
+- `npm test -- --ci` (frontend `website/`, a partir de `homolog`): **79/79 passando**
+  (100%), 14 suites, 3.63s — sem regressão colateral (esperado, fix restrito ao backend).
+- Leitura de código confirmou o fix presente em `homolog`:
+  `backend/src/AfiliadoBot.Api/Controllers/PushController.cs`, branch `existing is not
+  null` agora chama `existing.Renew(request.Keys.P256dh, request.Keys.Auth)` +
+  `await _db.SaveChangesAsync(ct)` antes do `return Ok(...)`.
+- **Reexecução do critério #5 (upsert) via boot Docker real + `psql`:**
+  `docker compose up -d --build db api` a partir de `homolog` (commit `35e7bd1`) — subiu
+  sem exceção, migrations aplicadas, `Application started`. Reprodução exata do cenário
+  reprovado na rodada 1, endpoint
+  `https://fcm.googleapis.com/fcm/send/qa-reexec-1784902129`:
+  1. `POST /api/public/push/subscribe` (`p256dh=qa-p256dh-v1`, `auth=qa-auth-v1`) → **201**,
+     `id=8e742537-0d53-4c6e-8f37-f2627750c2be`.
+  2. `POST /api/public/push/subscribe` no MESMO endpoint (`p256dh=qa-p256dh-v2-NEW`,
+     `auth=qa-auth-v2-NEW`) → **200** (nunca 409), **mesmo `id`** — sem linha duplicada.
+  3. `psql` direto no container `afiliado_db`: `count(*) = 1` para o endpoint,
+     `p256dh=qa-p256dh-v2-NEW`, `auth=qa-auth-v2-NEW` (valores da 2ª chamada) e
+     `created_at = 2026-07-24 14:08:50.344886+00` (renovado, instante da 2ª chamada, não da
+     1ª). **Comportamento agora bate exatamente com `criterios-aceite.md`** — achado da
+     rodada 1 confirmado corrigido.
+- **Revalidação colateral (sem repetir todo o boot manual, testes automatizados + smoke
+  pontual no mesmo ambiente já subido):**
+  - `GET /api/public/push/vapid-public-key` → `200`, `{"publicKey":null}` (esperado: seed
+    da migration deixa a chave vazia por padrão, cadastro manual do operador; sem
+    regressão, endpoint inalterado por este fix).
+  - `DELETE /api/public/push/unsubscribe` (endpoint existente) → `204`, `count(*) = 0`
+    confirmado via `psql`; chamado 2x (idempotente, `204` também na 2ª vez).
+  - `PublisherJob` (push individual/consolidada/throttling) e 410 Gone (remoção
+    automática): cobertos por `dotnet test` acima (`PublisherJobTests`,
+    `PushNotificationServiceTests`), nenhum arquivo relacionado tocado pelo PR #121/#122 —
+    sem necessidade de re-boot dedicado.
+- Ambiente derrubado ao final: `docker compose down -v` (containers, network e volumes
+  removidos). Repo devolvido à branch `desenv` (`git checkout desenv`), `git status
+  --porcelain` limpo (salvo `.worktrees/` pré-existente, sem relação com esta issue).
+
+### Veredito
+**13 de 13 critérios de aceite aprovados (100%).** O achado que reprovou a rodada 1 (upsert
+silencioso não persistia `p256dh`/`auth`/`created_at`) está corrigido e revalidado ao vivo
+contra Postgres real, reproduzindo exatamente o cenário reprovado. Nenhuma regressão
+colateral encontrada. **QA APROVADO — segue para PR de release `homolog → main` (LT) →
+Gate 2 (Gerente).**
