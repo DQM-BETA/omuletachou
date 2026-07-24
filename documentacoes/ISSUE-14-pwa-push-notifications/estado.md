@@ -456,3 +456,4 @@ não reaberto). `#116` volta à lista quando o novo PR do fix for mergeado em `d
 | 7 | Merge #118/#119 + PR homologação #120 | lt | sonnet | 49500 | 17 | 132s |
 | 8 | Code Review — PR #120 (desenv→homolog) | code-review | sonnet | 80642 | 52 | 717s |
 | 9 | QA — homolog (reprovado) | qa | sonnet | 88467 | 37 | 509s |
+| 10 | LT mapeamento da falha (QA reprovou) | lt | sonnet | 67850 | 15 | 227s |
