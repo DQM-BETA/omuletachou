@@ -193,6 +193,91 @@ Concluído.
 - Worktrees `.worktrees/116-push-backend` e `.worktrees/117-push-frontend` já haviam sido
   removidos pelos devs ao final de cada tarefa; nenhum resquício encontrado no repo.
 
+## Code Review — PR #120 (desenv→homolog)
+Aprovado. Camada 1 (`/code-review` plugin Anthropic): sem achados de confiança suficiente
+(comentário: https://github.com/DQM-BETA/omuletachou/pull/120#issuecomment-5070339700 —
+"No issues found. Checked for bugs and CLAUDE.md compliance."). Camada 2 (execução real,
+abaixo).
+
+### Backend (.NET) — execução real
+- `dotnet test` (raiz `backend/`): **305/305 passando** (100%), 24s.
+- Boot Docker real: `docker compose up -d --build db api` — subiu sem exceção, migrations
+  aplicadas (incl. `SeedPushVapidKeys`), Hangfire instalado, `Application started`.
+- Smoke test do bypass do `SettingsMasker` (ponto crítico de segurança do PR):
+  1. Gerado par de VAPID keys real via `VapidHelper.GenerateVapidKeys()` (mini console app
+     descartável referenciando o NuGet `WebPush`, fora do repo).
+  2. Cadastradas via SQL direto em `app_settings` (ids 47/48, antes vazios).
+  3. `GET /api/public/push/vapid-public-key` (sem auth) → retornou a chave pública **em
+     claro**: `{"publicKey":"BJeffbN7jHNX...sxcH1vE"}`.
+  4. `GET /api/settings` (autenticado, JWT de um usuário seed temporário criado só para o
+     teste) → a MESMA chave (`push.vapid_public_key`) e também `push.vapid_private_key`
+     retornaram **mascaradas** (`****************H1vE` / `****************5wx4`),
+     confirmando por leitura de código (`SettingsController` chama
+     `SettingsMasker.ApplyIfSensitive` sem exceção para nenhuma key) e por execução que o
+     bypass do masker é estritamente local ao endpoint público dedicado — nenhum vazamento
+     pelo endpoint autenticado do dashboard.
+  5. Nenhuma VAPID key real gerada no smoke test foi commitada — `.env` (usado para o
+     usuário seed temporário) é gitignored, `git status` limpo antes/depois, chaves só
+     existiram no Postgres do container efêmero (destruído no `docker compose down -v`
+     final).
+- Integração real `PublisherJob` → push (leitura de código +
+  `backend/src/AfiliadoBot.Tests/Jobs/PublisherJobTests.cs`): `SendPushNotificationsAsync`
+  só é chamado ao FINAL do ciclo (após o loop de publicação), acumulando em
+  `publishedProducts` apenas itens com `SocialNetwork == Telegram` e sucesso confirmado
+  (`item.RegisterAttempt(true)` já persistido via `SaveChangesAsync` antes do push).
+  Disparo de push envolto em try/catch dedicado (`catch (Exception ex) when (ex is not
+  OperationCanceledException)`) que apenas loga warning — nunca propaga para o método
+  `ExecuteAsync` nem desfaz o registro de sucesso já salvo. Cobertura por 5 casos de teste
+  (0/1/>1 produtos, isolamento por rede, isolamento de falha de push) usando EF InMemory
+  real (não só mock) para o `PublicationQueue`/`Product`, com `IPushNotificationService`
+  mockado no limite correto (colaborador de aplicação, não a fronteira de rede — a
+  fronteira real WebPush é testada separadamente em `PushNotificationServiceTests` via
+  `IWebPushSender` mockado, isolando falhas 410 Gone e genéricas por subscription).
+
+### Frontend (Next.js) — execução real
+- `npm ci` (sync com `package-lock.json` atualizado pelo PR) + `npm test -- --ci`:
+  **79/79 passando** (100%), 14 suites, 4.4s.
+- `npm run build`: sucesso, `[PWA] Service worker: .../public/sw.js` gerado sem erros
+  (critério de aceite formal confirmado); `public/sw.js` e `public/workbox-*.js` presentes
+  no disco e corretamente listados em `.gitignore` (`/public/sw.js`,
+  `/public/workbox-*.js`) — não versionados.
+- Boot Docker real: `docker compose up -d --build website` (+ `api`, `db`) — subiu em
+  `Ready in 79ms`. `curl http://localhost:3000/manifest.json` → 200, conteúdo idêntico ao
+  critério de aceite (`name`, `short_name`, `display: standalone`, `theme_color #e63946`,
+  `background_color #ffffff`, ícones 192/512). `curl http://localhost:3000/sw.js` → 200.
+
+### Checklist de veto
+- **Compila e sobe**: OK (backend + frontend, build e boot reais, ver acima).
+- **Integração real**: OK (push via Docker+Postgres real no smoke test; PublisherJob↔push
+  coberto por teste com EF InMemory real, não mock-only).
+- **Conformidade com spec/UX**: OK — manifest, `theme_color`, `sw.js`, payloads de push
+  (título/corpo/icon/image/data.url) e o endpoint de chave pública conferem exatamente com
+  `criterios-aceite.md`. Sem tela nova (decisão UX/UI já registrada em design.md, sem
+  pendência).
+- **Sem teste-lixo**: não encontrado nenhum teste vazio/trivial nas 305+79 execuções
+  inspecionadas amostralmente (`PushNotificationServiceTests`, `PublisherJobTests`,
+  `PushControllerTests`, `push.test.ts`, `PushSubscriptionManager.test.tsx`,
+  `manifest.test.ts`).
+- **Segredos**: nenhuma VAPID key real commitada (`.env` gitignored, seed da migration usa
+  valores vazios, cadastro manual pelo operador conforme PRD). `git status` limpo ao final.
+- **OWASP Top 10 / vulnerabilidades**: nenhuma óbvia no código do PR. Observação não-
+  bloqueante: `npm audit` acusa vulnerabilidades HIGH em devDependencies transitivas de
+  `next-pwa` (`workbox-build` → `rollup-plugin-terser` → `serialize-javascript` RCE via
+  regex; `glob` CLI injection) — `next-pwa` está sem manutenção ativa. Superfície de
+  ataque é restrita ao processo de build (webpack plugin, sem input do atacante em tempo
+  de build), não ao runtime do site público — não bloqueia esta entrega, mas registrado
+  para acompanhamento futuro (considerar migração para `@ducanh2912/next-pwa`, fork
+  mantido, quando a Issue #15 ou outra tocar PWA novamente).
+- **`.first()`/`.nth()`/`.last()` em specs E2E**: não aplicável — não há suíte Playwright
+  neste repositório ainda (nenhum `playwright.config.*` encontrado); os testes do PR são
+  Jest+RTL (frontend) e xUnit (backend), sem seletor estrutural E2E a auditar.
+- **Cobertura ≥ 80%**: confirmado pelos devs (Sub-A e Sub-B) e coerente com o volume de
+  casos observado; segue `design.md` e cobre `criterios-aceite.md` integralmente (todas as
+  seções: PWA/manifest, subscription, disparo de push, VAPID/masking, migration).
+
+### Veredito
+**Aprovado.** Merge `desenv→homolog` executado via merge commit (sem squash).
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|-------|--------|--------|--------|-------|-----------|
