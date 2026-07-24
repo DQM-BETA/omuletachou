@@ -604,6 +604,7 @@ salvo `.worktrees/` pré-existente).
 | 12 | Merge fix #116 → desenv + novo PR #122 desenv→homolog | lt | sonnet | 70897 | 20 | 230s |
 | 13 | Code Review — PR #122 (desenv→homolog, reexecução) | code-review | sonnet | 108502 | 23 | 340s |
 | 14 | QA — reexecução homolog (aprovado) | qa | sonnet | 66505 | 22 | 261s |
+| 15 | Sync docs (PR #123) + PR release #124 (homolog→main) | lt | sonnet | 54479 | 15 | 86s |
 
 ## QA — reexecução (homolog)
 **Aprovado.** Relatório completo: `relatorio-qa.md` (mesmo diretório, seção "Rodada 2").
