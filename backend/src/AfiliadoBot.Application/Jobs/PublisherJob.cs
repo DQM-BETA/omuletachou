@@ -2,6 +2,7 @@ using AfiliadoBot.Domain.Entities;
 using AfiliadoBot.Domain.Enums;
 using AfiliadoBot.Domain.Interfaces;
 using AfiliadoBot.Infrastructure.Data;
+using AfiliadoBot.Infrastructure.Push;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -12,20 +13,26 @@ namespace AfiliadoBot.Application.Jobs;
 /// busca itens Scheduled vencidos ou Failed com CanRetry=true, ordenados por
 /// ScheduledAt/CreatedAt ASC, resolve o <see cref="ISocialPublisher"/> da rede e publica.
 /// Itens ManualPending nunca sao selecionados (Issue #7, CA7-CA22).
+/// Ao final do ciclo, dispara push notification (Issue #14 / Sub-A) com base nos produtos
+/// publicados com sucesso no Telegram (primeira rede do ciclo) — 1 individual se exatamente 1
+/// produto, 1 consolidada se mais de 1, nenhuma se 0 (design.md, throttling do PublisherJob).
 /// </summary>
 public class PublisherJob
 {
     private readonly AfiliadoBotDbContext _dbContext;
     private readonly IEnumerable<ISocialPublisher> _publishers;
+    private readonly IPushNotificationService _pushNotificationService;
     private readonly ILogger<PublisherJob> _logger;
 
     public PublisherJob(
         AfiliadoBotDbContext dbContext,
         IEnumerable<ISocialPublisher> publishers,
+        IPushNotificationService pushNotificationService,
         ILogger<PublisherJob> logger)
     {
         _dbContext = dbContext;
         _publishers = publishers;
+        _pushNotificationService = pushNotificationService;
         _logger = logger;
     }
 
@@ -44,6 +51,8 @@ public class PublisherJob
 
         if (items.Count == 0)
             return;
+
+        var publishedProducts = new List<Product>();
 
         foreach (var item in items)
         {
@@ -66,6 +75,9 @@ public class PublisherJob
                 {
                     // Sucesso sempre registrado incondicionalmente.
                     item.RegisterAttempt(true);
+
+                    if (item.SocialNetwork == SocialNetwork.Telegram && item.Product is not null)
+                        publishedProducts.Add(item.Product);
                 }
                 else if (item.RetryCount == retryCountAntes)
                 {
@@ -86,6 +98,32 @@ public class PublisherJob
             }
 
             await _dbContext.SaveChangesAsync(ct);
+        }
+
+        await SendPushNotificationsAsync(publishedProducts, ct);
+    }
+
+    /// <summary>
+    /// Fire-and-forget do ponto de vista do ciclo de publicacao: falha no envio de push (ex.:
+    /// nenhuma subscription cadastrada, VAPID keys ausentes, todos os endpoints 410) nunca deve
+    /// afetar o retorno/registro de sucesso da publicacao ja confirmada acima (design.md).
+    /// </summary>
+    private async Task SendPushNotificationsAsync(List<Product> publishedProducts, CancellationToken ct)
+    {
+        try
+        {
+            if (publishedProducts.Count == 1)
+            {
+                await _pushNotificationService.SendIndividualAsync(publishedProducts[0], ct);
+            }
+            else if (publishedProducts.Count > 1)
+            {
+                await _pushNotificationService.SendConsolidatedAsync(publishedProducts.Count, ct);
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "PublisherJob: falha ao enviar push notifications do ciclo.");
         }
     }
 }

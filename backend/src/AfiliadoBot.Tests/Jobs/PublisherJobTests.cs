@@ -3,6 +3,7 @@ using AfiliadoBot.Domain.Entities;
 using AfiliadoBot.Domain.Enums;
 using AfiliadoBot.Domain.Interfaces;
 using AfiliadoBot.Infrastructure.Data;
+using AfiliadoBot.Infrastructure.Push;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -47,8 +48,11 @@ public class PublisherJobTests
         return mock;
     }
 
-    private static PublisherJob CreateJob(AfiliadoBotDbContext db, IEnumerable<ISocialPublisher> publishers)
-        => new(db, publishers, NullLogger<PublisherJob>.Instance);
+    private static PublisherJob CreateJob(
+        AfiliadoBotDbContext db,
+        IEnumerable<ISocialPublisher> publishers,
+        IPushNotificationService? pushNotificationService = null)
+        => new(db, publishers, pushNotificationService ?? Mock.Of<IPushNotificationService>(), NullLogger<PublisherJob>.Instance);
 
     [Fact]
     public async Task ExecuteAsync_PublicaItensScheduledVencidos()
@@ -349,5 +353,123 @@ public class PublisherJobTests
         var updated = await db.PublicationQueues.FirstAsync(i => i.Id == item.Id);
         updated.Status.Should().Be(PublicationStatus.Published);
         updated.ErrorMessage.Should().BeNull();
+    }
+
+    // --- Throttling de push notification (Issue #14 / Sub-A #116) ---
+
+    [Fact]
+    public async Task ExecuteAsync_ZeroProdutosPublicadosNoTelegram_NaoDisparaPush()
+    {
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto();
+        db.Products.Add(product);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
+        db.PublicationQueues.Add(item);
+        await db.SaveChangesAsync();
+
+        // Falha na publicacao -> nenhum produto publicado no ciclo.
+        var telegram = CreatePublisherMock(SocialNetwork.Telegram, success: false);
+        var push = new Mock<IPushNotificationService>();
+        var job = CreateJob(db, new[] { telegram.Object }, push.Object);
+
+        await job.ExecuteAsync();
+
+        push.Verify(p => p.SendIndividualAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()), Times.Never);
+        push.Verify(p => p.SendConsolidatedAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ExatamenteUmProdutoPublicadoNoTelegram_DisparaPushIndividual()
+    {
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto();
+        db.Products.Add(product);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
+        db.PublicationQueues.Add(item);
+        await db.SaveChangesAsync();
+
+        var telegram = CreatePublisherMock(SocialNetwork.Telegram, success: true);
+        var push = new Mock<IPushNotificationService>();
+        var job = CreateJob(db, new[] { telegram.Object }, push.Object);
+
+        await job.ExecuteAsync();
+
+        push.Verify(p => p.SendIndividualAsync(
+            It.Is<Product>(prod => prod.Id == product.Id), It.IsAny<CancellationToken>()), Times.Once);
+        push.Verify(p => p.SendConsolidatedAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MaisDeUmProdutoPublicadoNoTelegram_DisparaPushConsolidadaUnica()
+    {
+        using var db = CreateInMemoryContext();
+        var product1 = CriarProduto("Produto 1");
+        var product2 = CriarProduto("Produto 2");
+        var product3 = CriarProduto("Produto 3");
+        db.Products.AddRange(product1, product2, product3);
+        var item1 = new PublicationQueue(product1.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
+        var item2 = new PublicationQueue(product2.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
+        var item3 = new PublicationQueue(product3.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
+        db.PublicationQueues.AddRange(item1, item2, item3);
+        await db.SaveChangesAsync();
+
+        var telegram = CreatePublisherMock(SocialNetwork.Telegram, success: true);
+        var push = new Mock<IPushNotificationService>();
+        var job = CreateJob(db, new[] { telegram.Object }, push.Object);
+
+        await job.ExecuteAsync();
+
+        push.Verify(p => p.SendConsolidatedAsync(3, It.IsAny<CancellationToken>()), Times.Once);
+        push.Verify(p => p.SendIndividualAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ApenasTelegramContaParaOThrottling_OutrasRedesIgnoradas()
+    {
+        using var db = CreateInMemoryContext();
+        var product1 = CriarProduto("Produto Telegram");
+        var product2 = CriarProduto("Produto Youtube");
+        db.Products.AddRange(product1, product2);
+        var itemTelegram = new PublicationQueue(product1.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
+        var itemYoutube = new PublicationQueue(product2.Id, SocialNetwork.Youtube, DateTime.UtcNow.AddHours(-1));
+        db.PublicationQueues.AddRange(itemTelegram, itemYoutube);
+        await db.SaveChangesAsync();
+
+        var telegram = CreatePublisherMock(SocialNetwork.Telegram, success: true);
+        var youtube = CreatePublisherMock(SocialNetwork.Youtube, success: true);
+        var push = new Mock<IPushNotificationService>();
+        var job = CreateJob(db, new[] { telegram.Object, youtube.Object }, push.Object);
+
+        await job.ExecuteAsync();
+
+        // So 1 produto publicado no Telegram no ciclo -> push individual, mesmo com 2 itens
+        // no total (Youtube nao conta para o throttling).
+        push.Verify(p => p.SendIndividualAsync(
+            It.Is<Product>(prod => prod.Id == product1.Id), It.IsAny<CancellationToken>()), Times.Once);
+        push.Verify(p => p.SendConsolidatedAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_FalhaNoEnvioDePush_NaoAfetaRegistroDePublicacao()
+    {
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto();
+        db.Products.Add(product);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
+        db.PublicationQueues.Add(item);
+        await db.SaveChangesAsync();
+
+        var telegram = CreatePublisherMock(SocialNetwork.Telegram, success: true);
+        var push = new Mock<IPushNotificationService>();
+        push.Setup(p => p.SendIndividualAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("falha simulada no envio de push"));
+        var job = CreateJob(db, new[] { telegram.Object }, push.Object);
+
+        var act = async () => await job.ExecuteAsync();
+
+        await act.Should().NotThrowAsync();
+
+        var updated = await db.PublicationQueues.FirstAsync(i => i.Id == item.Id);
+        updated.Status.Should().Be(PublicationStatus.Published);
     }
 }
