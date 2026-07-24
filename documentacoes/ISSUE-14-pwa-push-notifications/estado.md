@@ -1,8 +1,8 @@
 issue: 14
 titulo: "feat: PWA + Push Notifications"
 rota: normal
-etapa_atual: QA reprovou (homolog) — aguardando LT mapear falha
-ultimo_agente: qa
+etapa_atual: QA reprovou (homolog) — falha mapeada, aguardando Dev .NET (fix pontual)
+ultimo_agente: lt
 status_comment_id: 5061626934
 openspec_change: repos/omuletachou/openspec/changes/issue-14-pwa-push-notifications
 tech_stacks:
@@ -14,10 +14,9 @@ repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-14-pwa-push-notifications
 openspec_path: repos/omuletachou/openspec/changes/issue-14-pwa-push-notifications
 sub_issues:
-  - "#116 (stack:dotnet, task_id:T-01) — Sub-A backend .NET — MERGED via PR #119"
+  - "#116 (stack:dotnet, task_id:T-01) — Sub-A backend .NET — REABERTA para fix de upsert (QA reprovou, ver seção abaixo)"
   - "#117 (stack:nodejs, task_id:T-02) — Sub-B frontend Next.js — MERGED via PR #118"
 desenv_tasks_merged:
-  - "#116"
   - "#117"
 sub_issues_frontend:
   "#117": stack:nodejs
@@ -26,7 +25,7 @@ pr_release: ~
 code_review_homolog_pr: 120
 qa_status: reprovado
 figma_url: ~
-blockers: "resubscribe (POST /api/public/push/subscribe) não atualiza p256dh/auth/created_at do registro existente — viola criterio de aceite (upsert silencioso com renovação de created_at)"
+blockers: "resubscribe (POST /api/public/push/subscribe) não atualiza p256dh/auth/created_at do registro existente — viola criterio de aceite (upsert silencioso com renovação de created_at) — fix pontual em #116, branch fix/116-push-subscribe-upsert a partir de desenv"
 closedAt: ~
 
 ## Levantamento (PM Fase 1)
@@ -328,6 +327,122 @@ abaixo).
   testado ao vivo sem HTTPS real, conforme instrução da tarefa.
 - Ambiente derrubado ao final: `docker compose down -v`. Repo devolvido à branch `desenv`
   (`git checkout desenv && git pull origin desenv`), `git status` limpo.
+
+## QA reprovou — mapeamento da falha (LT)
+
+### O que o handler faz hoje (confirmado por leitura direta do código em `homolog`)
+`backend/src/AfiliadoBot.Api/Controllers/PushController.cs`, método `Subscribe`
+(linhas 46-54, código atual, não paráfrase):
+
+```csharp
+var existing = await _db.PushSubscriptions
+    .FirstOrDefaultAsync(s => s.Endpoint == request.Endpoint, ct);
+
+if (existing is not null)
+{
+    // Endpoint ja cadastrado: subscribe e idempotente no sentido de nao duplicar
+    // (mesmo endpoint = mesmo dispositivo/navegador). Retorna 200 sem criar linha nova.
+    return Ok(new { id = existing.Id });
+}
+```
+
+É um **early-return puro**: quando `existing` não é nulo, o handler devolve `200 Ok` com o
+`Id` já existente e sai — nunca toca em `existing.P256dh`/`existing.Auth`/
+`existing.CreatedAt`, nunca chama `SaveChangesAsync` neste branch. Não é um `Add`
+condicional (esse só roda no branch `else`, linhas 56-58) — é a ausência total de um
+caminho de atualização.
+
+Causa raiz adicional na entidade (`backend/src/AfiliadoBot.Domain\Entities\PushSubscription.cs`):
+todos os setters são `private` e não existe nenhum método público de mutação além do
+construtor — mesmo que o controller quisesse atualizar os campos diretamente, a entidade
+não expõe como. O fix precisa adicionar um método de domínio (ex.: `Renew(p256dh, auth)`)
+que atualize `P256dh`/`Auth`/`CreatedAt = DateTime.UtcNow` e seja chamado pelo controller
+antes do `SaveChangesAsync`.
+
+### Escopo do fix: sub-issue #116 (reaberta), não uma nova sub-issue
+Decisão: **reabrir #116** (`gh issue reopen 116`), não criar sub-issue nova nem tratar como
+tech-debt solto da Issue #11.
+- O método `Subscribe` é o mesmo componente que a Sub-A (#116) tocou por último (mesmo
+  `PushController`, mesmo endpoint `/subscribe`) — mapear o fix na mesma sub-issue mantém
+  o rastreamento 1:1 entre sub-issue e arquivo/responsabilidade, e o comportamento de
+  upsert (CA formal de "Subscription — subscribe/unsubscribe") está no escopo da Issue #14
+  independentemente de quem tocou o método por último (nota de contexto do QA já
+  registrada em `relatorio-qa.md`: o método nasceu na Issue #11/Sub-E, mas o *critério*
+  reprovado pertence à Issue #14).
+- Não é um fixup trivial de 1 linha isolado do resto da issue: falta o método de domínio
+  `Renew` (mudança na Entidade, não só no Controller) e um teste de regressão novo — cabe
+  melhor como retrabalho rastreado na sub-issue do componente do que como um commit solto
+  sem sub-issue associada.
+- **Sub-issue #116 reaberta no GitHub** (estava `completed`, agora `open` novamente).
+
+### Comportamento esperado (para o Dev .NET implementar sem ambiguidade)
+`POST /api/public/push/subscribe`, quando já existe uma linha com o mesmo `Endpoint`:
+1. Continua retornando **200 OK** com `{ id: existing.Id }` (isso já está correto — não
+   mexer).
+2. **Antes** de retornar, deve **atualizar** a linha existente com os novos valores do
+   corpo da requisição:
+   - `P256dh` ← `request.Keys.P256dh` (novo valor recebido, não o antigo)
+   - `Auth` ← `request.Keys.Auth` (novo valor recebido, não o antigo)
+   - `CreatedAt` ← `DateTime.UtcNow` (renovado, não o timestamp original de criação)
+3. Persistir via `await _db.SaveChangesAsync(ct)` no branch `existing is not null` (hoje
+   ausente).
+
+Implementação sugerida (o Dev decide os detalhes finais, mas o contrato é este):
+- Adicionar método público na entidade `PushSubscription`
+  (`backend/src/AfiliadoBot.Domain/Entities/PushSubscription.cs`), ex.:
+  `public void Renew(string p256dh, string auth) { P256dh = p256dh; Auth = auth;
+  CreatedAt = DateTime.UtcNow; }` — mantém os setters `private` (encapsulamento
+  preservado), só adiciona a via de mutação controlada.
+- No `PushController.Subscribe`, branch `existing is not null`: chamar
+  `existing.Renew(request.Keys.P256dh, request.Keys.Auth);` seguido de
+  `await _db.SaveChangesAsync(ct);` antes do `return Ok(new { id = existing.Id });`.
+
+### Teste de regressão a escrever
+Em `PushControllerTests` (mesmo arquivo dos +2 casos de `vapid-public-key` já existentes),
+usando o mesmo padrão de EF InMemory já usado no arquivo (ver testes existentes da
+Sub-A para o setup de `DbContext`/`WebApplicationFactory` já em uso):
+- **Arrange**: seed direto no `DbContext` de uma `PushSubscription` existente com
+  `Endpoint = "https://fcm.googleapis.com/fcm/send/abc"`, `P256dh = "old-p256dh"`,
+  `Auth = "old-auth"`, `CreatedAt` = um instante no passado (ex.: `DateTime.UtcNow.
+  AddDays(-1)`, guardado numa variável para comparação).
+- **Act**: chamar `POST /subscribe` com o mesmo `Endpoint`, mas `Keys.P256dh =
+  "new-p256dh"`, `Keys.Auth = "new-auth"`.
+- **Assert**:
+  1. Resposta HTTP é `200 OK` (nunca `409`, nunca `201`) com o mesmo `Id` da linha
+     original (não cria linha nova — `count(*) == 1` para aquele `Endpoint`).
+  2. Reconsultando o banco: `P256dh == "new-p256dh"` e `Auth == "new-auth"` (os valores
+     novos, não os antigos).
+  3. `CreatedAt` da linha após a chamada é **maior** que o `CreatedAt` original salvo no
+     Arrange (renovado, não preservado).
+- Nome sugerido: `Subscribe_ExistingEndpoint_UpdatesKeysAndRenewsCreatedAt`.
+- Não remover/alterar os testes existentes de `Subscribe` que cobrem o caminho de criação
+  (`existing is null` → 201) — este é um teste adicional, não substituto.
+
+### Branch e fluxo de promoção
+**Branch: `fix/116-push-subscribe-upsert`, a partir de `desenv` (não de `homolog`).**
+Justificativa:
+- O bug já está mergeado em `homolog` (via PR #120, commit `de37c66`), mas `homolog` é
+  branch protegida que só aceita PR vindo de `desenv` (regra da squad, sem exceção para
+  hotfix) — não existe `homolog→homolog` nem PR direto para `homolog` a partir de uma
+  branch de fix.
+- `desenv` está, neste momento, no mesmo conteúdo relevante de `homolog` para este arquivo
+  (nenhum outro trabalho tocou `PushController.cs` desde o PR #120) — branchear de
+  `desenv` não perde nem reintroduz nada.
+- Fluxo: Dev abre branch `fix/116-push-subscribe-upsert` a partir de `desenv` → implementa
+  fix + teste de regressão → PR `fix/116-push-subscribe-upsert → desenv` (squash, é
+  branch de trabalho descartável) → LT faz merge para `desenv` → LT abre novo PR
+  `desenv → homolog` (merge commit, nunca squash) substituindo/complementando o já
+  mergeado PR #120 → QA reexecuta a validação do critério #5 (e idealmente um smoke re-run
+  geral, já que o ambiente será resubido) → só então segue para PR de release
+  `homolog → main` (ainda não criado; `pr_release` continua `~`).
+- `pr_homologacao: 120` mantido no estado.md como referência histórica do primeiro merge;
+  o novo PR desenv→homolog (criado pelo LT depois que o Dev concluir) deve atualizar este
+  campo para o número do novo PR.
+
+### Nota sobre `desenv_tasks_merged`
+Removido `#116` da lista (a entrega da sub-issue está incompleta enquanto o critério de
+upsert não for corrigido) — mantido apenas `#117` (frontend, sem relação com este achado,
+não reaberto). `#116` volta à lista quando o novo PR do fix for mergeado em `desenv`.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
