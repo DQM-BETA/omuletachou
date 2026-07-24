@@ -49,7 +49,12 @@ public class PushController : ControllerBase
         if (existing is not null)
         {
             // Endpoint ja cadastrado: subscribe e idempotente no sentido de nao duplicar
-            // (mesmo endpoint = mesmo dispositivo/navegador). Retorna 200 sem criar linha nova.
+            // (mesmo endpoint = mesmo dispositivo/navegador). Upsert silencioso (Issue #14,
+            // criterios-aceite.md): renova P256dh/Auth/CreatedAt com os novos valores
+            // recebidos (o browser pode ter gerado um novo par de chaves para o mesmo
+            // endpoint, ex. apos limpar o cache) e retorna 200 sem criar linha nova.
+            existing.Renew(request.Keys.P256dh, request.Keys.Auth);
+            await _db.SaveChangesAsync(ct);
             return Ok(new { id = existing.Id });
         }
 
