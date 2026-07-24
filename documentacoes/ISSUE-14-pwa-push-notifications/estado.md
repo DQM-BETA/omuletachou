@@ -123,3 +123,4 @@ Sub-issues criadas:
 | 1 | Preparacao | Coordenador | haiku-4.5 | 26844 | 21 | 133s |
 | 2 | PM Fase 1 | pm | sonnet | 27827 | 8 | 46s |
 | 3 | PM Fase 2 | pm-analista-negocios | sonnet | 40649 | 18 | 153s |
+| 4 | Refinamento LT | lider-tecnico | sonnet | 80702 | 42 | 329s |
