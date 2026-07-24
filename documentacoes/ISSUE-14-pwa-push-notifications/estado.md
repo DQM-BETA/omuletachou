@@ -1,8 +1,8 @@
 issue: 14
 titulo: "feat: PWA + Push Notifications"
 rota: normal
-etapa_atual: Fix #116 implementado (PR #121 feature->desenv), aguardando merge do LT
-ultimo_agente: dev-dotnet
+etapa_atual: Fix #116 mergeado em desenv (PR #121 squash) e propagado a homolog (novo PR #122 desenv->homolog); aguardando /code-review + Code Review
+ultimo_agente: lt
 status_comment_id: 5061626934
 openspec_change: repos/omuletachou/openspec/changes/issue-14-pwa-push-notifications
 tech_stacks:
@@ -14,18 +14,19 @@ repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-14-pwa-push-notifications
 openspec_path: repos/omuletachou/openspec/changes/issue-14-pwa-push-notifications
 sub_issues:
-  - "#116 (stack:dotnet, task_id:T-01) — Sub-A backend .NET — REABERTA para fix de upsert (QA reprovou, ver seção abaixo)"
+  - "#116 (stack:dotnet, task_id:T-01) — Sub-A backend .NET — REABERTA para fix de upsert, fix mergeado (PR #121) e FECHADA novamente"
   - "#117 (stack:nodejs, task_id:T-02) — Sub-B frontend Next.js — MERGED via PR #118"
 desenv_tasks_merged:
   - "#117"
+  - "#116"
 sub_issues_frontend:
   "#117": stack:nodejs
-pr_homologacao: 120
+pr_homologacao: 122
 pr_release: ~
-code_review_homolog_pr: 120
-qa_status: reprovado
+code_review_homolog_pr: 122
+qa_status: aguardando reexecução
 figma_url: ~
-blockers: "resubscribe (POST /api/public/push/subscribe) não atualiza p256dh/auth/created_at do registro existente — viola criterio de aceite (upsert silencioso com renovação de created_at) — fix pontual em #116, branch fix/116-push-subscribe-upsert a partir de desenv"
+blockers: ~
 closedAt: ~
 
 ## Levantamento (PM Fase 1)
@@ -481,6 +482,34 @@ Concluído (Dev .NET). Aguardando merge do LT (`fix/116-push-subscribe-upsert �
 - PR: https://github.com/DQM-BETA/omuletachou/pull/121 (`fix/116-push-subscribe-upsert` →
   `desenv`, **NÃO mergeado** — aguardando LT).
 
+## Merge do fix #116 → desenv + novo PR desenv→homolog (LT)
+Concluído.
+- `git pull origin desenv` (sync antes do merge) — sem alterações pendentes de outros PRs.
+- `gh pr diff 121` revisado: `PushController.Subscribe` agora chama `existing.Renew(...)` +
+  `SaveChangesAsync` no branch `existing is not null`; `PushSubscription.Renew` novo método
+  de domínio; teste de regressão `Subscribe_ExistingEndpoint_UpdatesKeysAndRenewsCreatedAt`
+  — diff confere exatamente com o comportamento esperado mapeado na seção acima.
+- PR #121 mergeado via **squash** em `desenv` (commit `8107252`), branch remota
+  `fix/116-push-subscribe-upsert` deletada (`--delete-branch`). `git pull origin desenv`
+  local confirmou fast-forward para `8107252`.
+- Branches locais obsoletas removidas (`git branch -D`): `fix/116-push-subscribe-upsert`,
+  `feature/116-push-backend` (squash-merged, não detectadas como "fully merged" pelo git —
+  conteúdo já confirmado em `desenv` via diff antes da remoção).
+- Sub-issue #116 fechada novamente (`gh issue close 116 --reason completed`) com comentário
+  de resumo referenciando o PR #121 e o commit de squash.
+- Novo PR de homologação criado: https://github.com/DQM-BETA/omuletachou/pull/122
+  (`desenv` → `homolog`, **merge commit, ainda não mergeado** — aguardando `/code-review` +
+  agente Code Review). Corpo do PR referencia o PR #120 (já mergeado, continha o bug) e o
+  PR #121 (fix).
+- Worktrees verificados: nenhum resquício relacionado a esta issue (`.worktrees/` só contém
+  `feature-60-telegram-publisher`, de outra issue, fora de escopo).
+- `pr_homologacao` atualizado de `120` para `122` (PR ativo); `120` mantido no histórico
+  acima como referência do primeiro merge (já continha o bug, superado por #122).
+  `qa_status` resetado para `aguardando reexecução` (QA precisa revalidar o critério #5 —
+  upsert — e idealmente um smoke re-run geral do ambiente resubido a partir de `homolog`).
+  `#116` de volta a `desenv_tasks_merged` (entrega agora completa).
+- Repo devolvido à branch `desenv` (`git status` limpo).
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|-------|--------|--------|--------|-------|-----------|
@@ -495,3 +524,4 @@ Concluído (Dev .NET). Aguardando merge do LT (`fix/116-push-subscribe-upsert �
 | 9 | QA — homolog (reprovado) | qa | sonnet | 88467 | 37 | 509s |
 | 10 | LT mapeamento da falha (QA reprovou) | lt | sonnet | 67850 | 15 | 227s |
 | 11 | Fix Sub-A #116 — upsert de subscribe | dev-dotnet | sonnet | 74736 | 35 | 263s |
+| 12 | Merge fix #116 → desenv + novo PR #122 desenv→homolog | lt | sonnet | (preencher pelo orquestrador a partir do usage deste HANDOFF) | | |
