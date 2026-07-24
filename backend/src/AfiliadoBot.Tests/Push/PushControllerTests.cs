@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using AfiliadoBot.Domain.Entities;
 using AfiliadoBot.Infrastructure.Data;
 using FluentAssertions;
@@ -96,5 +97,61 @@ public class PushControllerTests : IClassFixture<CustomWebApplicationFactory>
         var response = await client.DeleteAsync("/api/public/push/unsubscribe");
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    // --- vapid-public-key (Issue #14 / Sub-A #116, especificacao-tecnica.md §4) ---
+
+    [Fact]
+    public async Task VapidPublicKey_ChaveNaoCadastrada_RetornaPublicKeyNull()
+    {
+        // IClassFixture compartilha o mesmo banco InMemory entre os fatos desta classe — remove
+        // explicitamente qualquer valor deixado por outro teste do mesmo bloco (ex.: a chave
+        // cadastrada por VapidPublicKey_ChaveCadastrada_RetornaValorCru), garantindo o cenario
+        // "ainda nao cadastrada" independente da ordem de execucao dos testes.
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var existing = await db.AppSettings.FirstOrDefaultAsync(s => s.Key == "push.vapid_public_key");
+            if (existing is not null)
+            {
+                db.AppSettings.Remove(existing);
+                await db.SaveChangesAsync();
+            }
+        }
+
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/api/public/push/vapid-public-key");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        (body.GetProperty("publicKey").ValueKind == JsonValueKind.Null).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task VapidPublicKey_ChaveCadastrada_RetornaValorCru()
+    {
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var setting = await db.AppSettings.FirstOrDefaultAsync(s => s.Key == "push.vapid_public_key");
+            if (setting is null)
+            {
+                db.AppSettings.Add(new AppSetting("push.vapid_public_key", "BEx-chave-publica-de-teste"));
+            }
+            else
+            {
+                setting.UpdateValue("BEx-chave-publica-de-teste");
+            }
+
+            await db.SaveChangesAsync();
+        }
+
+        var client = _factory.CreateClient();
+        var response = await client.GetAsync("/api/public/push/vapid-public-key");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("publicKey").GetString().Should().Be("BEx-chave-publica-de-teste");
     }
 }

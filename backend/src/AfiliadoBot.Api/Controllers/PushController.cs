@@ -80,6 +80,26 @@ public class PushController : ControllerBase
         // tentativa/erro se um determinado endpoint de push esta cadastrado.
         return NoContent();
     }
+
+    /// <summary>
+    /// Chave publica VAPID em claro (Issue #14 / Sub-A, especificacao-tecnica.md §4). Bypass
+    /// EXPLICITO do <c>SettingsMasker</c>: embora "push.vapid_public_key" termine em "_key" e
+    /// portanto seja classificada como sensivel pelo masker do dashboard (GET /api/settings,
+    /// SettingsController — comportamento aceito, ver design.md), esta chave especifica NAO e
+    /// um segredo (e enviada ao browser via applicationServerKey do Web Push) e precisa ser
+    /// lida em claro por este endpoint publico dedicado, nunca pelo SettingsController.
+    /// </summary>
+    [HttpGet("vapid-public-key")]
+    [EnableRateLimiting(RateLimiterConfigurator.PublicReadPolicy)]
+    public async Task<IActionResult> GetVapidPublicKey(CancellationToken ct)
+    {
+        var value = await _db.AppSettings
+            .Where(s => s.Key == "push.vapid_public_key")
+            .Select(s => s.Value)
+            .FirstOrDefaultAsync(ct);
+
+        return Ok(new { publicKey = string.IsNullOrWhiteSpace(value) ? null : value });
+    }
 }
 
 public record PushSubscribeRequest(string Endpoint, PushKeys? Keys);

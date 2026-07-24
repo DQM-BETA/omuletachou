@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import PushSubscriptionManager from '@/components/PushSubscriptionManager';
 
 export const metadata: Metadata = {
   title: 'O Mulet Achou',
@@ -12,7 +13,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body>{children}</body>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#e63946" />
+      </head>
+      <body>
+        {children}
+        <PushSubscriptionManager />
+      </body>
     </html>
   );
 }

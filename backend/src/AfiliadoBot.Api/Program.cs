@@ -9,6 +9,7 @@ using AfiliadoBot.Domain.Interfaces;
 using AfiliadoBot.Infrastructure.Data;
 using AfiliadoBot.Infrastructure.Integrations.Platforms;
 using AfiliadoBot.Infrastructure.Integrations.Social;
+using AfiliadoBot.Infrastructure.Push;
 using AfiliadoBot.Infrastructure.Services;
 using AfiliadoBot.Infrastructure.Storage;
 using global::Hangfire;
@@ -131,6 +132,10 @@ builder.Services.AddHttpClient<ISocialPublisher, InstagramPublisher>();
 
 // Publishers (Issue #10 / #77)
 builder.Services.AddHttpClient<ISocialPublisher, TikTokPublisher>();
+
+// Push notifications (Issue #14 / Sub-A)
+builder.Services.AddScoped<IWebPushSender, WebPushSender>();
+builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
 
 // PublisherJob (Issue #7 / #60)
 builder.Services.AddScoped<PublisherJob>();
