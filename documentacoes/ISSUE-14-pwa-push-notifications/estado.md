@@ -1,8 +1,8 @@
 issue: 14
 titulo: "feat: PWA + Push Notifications"
 rota: normal
-etapa_atual: QA reprovou (homolog) — falha mapeada, aguardando Dev .NET (fix pontual)
-ultimo_agente: lt
+etapa_atual: Fix #116 implementado (PR #121 feature->desenv), aguardando merge do LT
+ultimo_agente: dev-dotnet
 status_comment_id: 5061626934
 openspec_change: repos/omuletachou/openspec/changes/issue-14-pwa-push-notifications
 tech_stacks:
@@ -444,6 +444,43 @@ Removido `#116` da lista (a entrega da sub-issue está incompleta enquanto o cri
 upsert não for corrigido) — mantido apenas `#117` (frontend, sem relação com este achado,
 não reaberto). `#116` volta à lista quando o novo PR do fix for mergeado em `desenv`.
 
+## Fix Sub-A #116 — upsert de subscribe
+Concluído (Dev .NET). Aguardando merge do LT (`fix/116-push-subscribe-upsert → desenv`).
+- Worktree `.worktrees/fix-116-upsert` (branch `fix/116-push-subscribe-upsert`, base
+  `desenv`), removido ao final.
+- `PushSubscription.Renew(string p256dh, string auth)`: novo método de domínio
+  (`backend/src/AfiliadoBot.Domain/Entities/PushSubscription.cs`) que atualiza
+  `P256dh`/`Auth`/`CreatedAt = DateTime.UtcNow`, mantendo os setters `private`.
+- `PushController.Subscribe` (`backend/src/AfiliadoBot.Api/Controllers/PushController.cs`),
+  branch `existing is not null`: agora chama `existing.Renew(request.Keys.P256dh,
+  request.Keys.Auth)` + `await _db.SaveChangesAsync(ct)` antes do `return Ok(new { id =
+  existing.Id })` — continua nunca retornando 409.
+- Teste de regressão `Subscribe_ExistingEndpoint_UpdatesKeysAndRenewsCreatedAt` em
+  `PushControllerTests` (mesmo arquivo, mesmo padrão `WebApplicationFactory`/EF InMemory já
+  em uso): seed de subscription existente com `CreatedAt` no passado (via reflection no
+  setter privado, já que a entidade não expõe outro jeito de forçar um `CreatedAt`
+  arbitrário em teste), `POST /subscribe` no mesmo endpoint com `p256dh`/`auth` novos,
+  confirma resposta `200` com o mesmo `id` (sem linha duplicada, `count == 1`) e, via nova
+  consulta ao banco, `P256dh`/`Auth` atualizados e `CreatedAt` maior que o original.
+- Gate obrigatório (passo g): buscados todos os arquivos que referenciam
+  `PushSubscription`/`PushController` (20 arquivos, `Grep`) — únicos testes relevantes são
+  `PushControllerTests` (editado) e `PushNotificationServiceTests` (não relacionado ao
+  endpoint `subscribe`, sem necessidade de ajuste).
+- `dotnet test` (raiz `backend/`): **306/306 passando** (100%), 25s — o teste novo eleva o
+  total de 305 para 306.
+- Boot Docker real: `docker compose up -d --build db api` — subiu sem exceção (precisou de
+  um `.env` local com `JWT_SIGNING_KEY`/`DB_USER`/`DB_PASSWORD` de teste, removido ao final,
+  nunca commitado — `.env` é gitignored). Migrations aplicadas, Hangfire iniciado,
+  `Application started`.
+- Smoke test manual reproduzindo o cenário exato do QA: `POST /subscribe` (endpoint novo,
+  `p256dh-v1`/`auth-v1`) → `201`; `POST /subscribe` no mesmo endpoint com
+  `p256dh-v2-NEW`/`auth-v2-NEW` → `200` (mesmo `id`, não `409`); `psql` direto no Postgres
+  real confirmou a linha atualizada: `p256dh=p256dh-v2-NEW`, `auth=auth-v2-NEW`,
+  `created_at` renovado para o instante da 2ª chamada (não o original). Ambiente derrubado
+  (`docker compose down -v`) ao final.
+- PR: https://github.com/DQM-BETA/omuletachou/pull/121 (`fix/116-push-subscribe-upsert` →
+  `desenv`, **NÃO mergeado** — aguardando LT).
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|-------|--------|--------|--------|-------|-----------|
@@ -457,3 +494,4 @@ não reaberto). `#116` volta à lista quando o novo PR do fix for mergeado em `d
 | 8 | Code Review — PR #120 (desenv→homolog) | code-review | sonnet | 80642 | 52 | 717s |
 | 9 | QA — homolog (reprovado) | qa | sonnet | 88467 | 37 | 509s |
 | 10 | LT mapeamento da falha (QA reprovou) | lt | sonnet | 67850 | 15 | 227s |
+| 11 | Fix Sub-A #116 — upsert de subscribe | dev-dotnet | sonnet | 74736 | 35 | 263s |
