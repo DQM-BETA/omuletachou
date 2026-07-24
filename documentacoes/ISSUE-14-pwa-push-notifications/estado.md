@@ -1,8 +1,8 @@
 issue: 14
 titulo: "feat: PWA + Push Notifications"
 rota: normal
-etapa_atual: Fix #116 mergeado em desenv (PR #121 squash) e propagado a homolog (novo PR #122 desenv->homolog); aguardando /code-review + Code Review
-ultimo_agente: lt
+etapa_atual: Code Review PR #122 aprovado e mergeado (desenv->homolog); aguardando QA reexecução
+ultimo_agente: code-review
 status_comment_id: 5061626934
 openspec_change: repos/omuletachou/openspec/changes/issue-14-pwa-push-notifications
 tech_stacks:
@@ -510,6 +510,83 @@ Concluído.
   `#116` de volta a `desenv_tasks_merged` (entrega agora completa).
 - Repo devolvido à branch `desenv` (`git status` limpo).
 
+## Code Review — PR #122 (desenv→homolog, reexecução após fix #116)
+**Aprovado.** Camada 1 (`/code-review` plugin Anthropic, rodada leve focada no diff
+incremental do fix): sem achados
+(comentário: https://github.com/DQM-BETA/omuletachou/pull/122#issuecomment-5070698599 —
+"No issues found."). Camada 2 (execução real, abaixo), focada em reproduzir exatamente o
+cenário que reprovou o QA no PR #120.
+
+### Diff revisado (`gh pr diff 122`)
+Confirma exatamente o fix mapeado pelo LT após a reprovação do QA:
+- `PushController.Subscribe`, branch `existing is not null`: agora chama
+  `existing.Renew(request.Keys.P256dh, request.Keys.Auth)` + `await _db.SaveChangesAsync(ct)`
+  antes do `return Ok(new { id = existing.Id })` — nunca 409, mas agora persiste os novos
+  valores.
+- `PushSubscription.Renew(string p256dh, string auth)`: novo método de domínio que atualiza
+  `P256dh`/`Auth`/`CreatedAt = DateTime.UtcNow`, setters seguem `private`.
+- Teste de regressão `Subscribe_ExistingEndpoint_UpdatesKeysAndRenewsCreatedAt` em
+  `PushControllerTests`: seed de subscription existente com `CreatedAt` no passado, act com
+  `p256dh`/`auth` novos no mesmo endpoint, assert de `200`, `count == 1`, valores novos
+  persistidos e `CreatedAt` renovado (maior que o original).
+
+### Execução real
+- `dotnet test` (raiz `backend/`, a partir de `desenv` — commit `e20033f`, mesmo HEAD do PR
+  #122): **306/306 passando** (100%), 23s. Confirma o total já reportado pelo Dev (305→306
+  com o teste novo).
+- Boot Docker real: `docker compose up -d --build db api` (a partir de `desenv`, conteúdo
+  idêntico ao PR #122) — build sem erros, containers `afiliado_db`/`afiliado_api` subiram,
+  migrations aplicadas (incl. `SeedPushVapidKeys`), Hangfire SQL objects instalados,
+  `Application started`, `Now listening on: http://[::]:8080`. `.env` local usado só para
+  `DB_USER`/`DB_PASSWORD`/`JWT_SIGNING_KEY` de teste — pré-existente no working copy,
+  gitignored, confirmado via `git check-ignore -v .env` e `git status --porcelain` (nenhum
+  arquivo de ambiente rastreado antes/depois).
+- **Smoke test reproduzindo o cenário exato que o QA reprovou no PR #120**, contra Postgres
+  real (não mock):
+  1. `POST /api/public/push/subscribe` com `endpoint` novo
+     (`https://fcm.googleapis.com/fcm/send/cr-smoke-<timestamp>`), `keys.p256dh=p256dh-v1`,
+     `keys.auth=auth-v1` → `201`, `{"id":"48083a3a-551f-46fb-b9c6-f461e9bf1370"}`.
+  2. `POST /api/public/push/subscribe` no MESMO `endpoint`, `keys.p256dh=p256dh-v2-NEW`,
+     `keys.auth=auth-v2-NEW` → `200` (nunca 409), **mesmo `id`** retornado
+     (`48083a3a-551f-46fb-b9c6-f461e9bf1370`) — confirma que não houve tentativa de criar
+     linha duplicada.
+  3. `psql` direto no container `afiliado_db` (`SELECT endpoint, p256dh, auth, created_at
+     FROM push_subscriptions WHERE endpoint = '...'`) → **exatamente 1 linha** para o
+     endpoint (upsert, não insert duplicado), com `p256dh=p256dh-v2-NEW`,
+     `auth=auth-v2-NEW` (valores da 2ª chamada, não da 1ª) e `created_at` no instante da 2ª
+     chamada (renovado). Isso é precisamente o comportamento que o QA havia reprovado no
+     PR #120 (onde a linha permanecia com os valores da 1ª chamada) — confirmado corrigido.
+- Ambiente derrubado ao final: `docker compose down -v` (containers, network e volumes
+  removidos).
+
+### Checklist de veto (rápido, focado no fix pontual)
+- **Compila e sobe**: OK — `dotnet test` 306/306 e boot Docker real confirmados acima.
+- **Integração real**: OK — smoke test contra Postgres real via HTTP + `psql`, não
+  mock-only; o teste de regressão automatizado usa `WebApplicationFactory` real (não só
+  unit test isolado).
+- **Conformidade com spec**: OK — comportamento agora bate exatamente com
+  `criterios-aceite.md` ("Subscription já existe... o registro existente é atualizado
+  (upsert silencioso, `created_at` renovado)"), validado ao vivo no item acima.
+- **Sem teste-lixo**: teste novo (`Subscribe_ExistingEndpoint_UpdatesKeysAndRenewsCreatedAt`)
+  tem arrange/act/assert reais (seed com reflection, POST real via `HttpClient`, 3
+  asserções distintas incluindo `count == 1` e `CreatedAt` renovado) — não é teste vazio
+  nem trivial.
+- **Segredos**: nenhum valor real de `.env`/VAPID key commitado. `git status --porcelain`
+  limpo (só `.worktrees/` pré-existente, sem relação com este PR) antes e depois da
+  verificação.
+- **CLAUDE.md**: convenções seguidas — commit do fix (`fix(ISSUE-116): ...`), merge
+  `desenv→homolog` via merge commit (não squash), branch de trabalho descartável squashed
+  corretamente no PR #121.
+- **`.first()`/`.nth()`/`.last()` em specs E2E**: não aplicável — sem suíte Playwright neste
+  repositório (inalterado desde o Code Review do PR #120).
+
+### Veredito
+**Aprovado.** Merge `desenv→homolog` executado via merge commit (sem squash) —
+`https://github.com/DQM-BETA/omuletachou/pull/122`, merge commit
+`35e7bd1abd7f11e2370c020b7d39d93528191915`, mergeado em `2026-07-24T14:05:37Z`.
+Repo devolvido à branch `desenv` (`git checkout desenv`, `git status --porcelain` limpo
+salvo `.worktrees/` pré-existente).
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|-------|--------|--------|--------|-------|-----------|
@@ -525,3 +602,4 @@ Concluído.
 | 10 | LT mapeamento da falha (QA reprovou) | lt | sonnet | 67850 | 15 | 227s |
 | 11 | Fix Sub-A #116 — upsert de subscribe | dev-dotnet | sonnet | 74736 | 35 | 263s |
 | 12 | Merge fix #116 → desenv + novo PR #122 desenv→homolog | lt | sonnet | 70897 | 20 | 230s |
+| 13 | Code Review — PR #122 (desenv→homolog, reexecução) | code-review | sonnet | ~ | ~ | ~ |
