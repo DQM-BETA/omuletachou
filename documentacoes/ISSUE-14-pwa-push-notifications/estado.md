@@ -142,6 +142,43 @@ Concluído.
 - PR: https://github.com/DQM-BETA/omuletachou/pull/118 (`feature/117-push-frontend` →
   `desenv`, aguardando merge do LT).
 
+## Dev Sub-A #116 — Backend .NET (push notifications)
+Concluído.
+- Worktree `.worktrees/116-push-backend` (branch `feature/116-push-backend`, base `desenv`),
+  removido ao final.
+- **Achado por inspeção (corrige a premissa do LT):** a migration da tabela
+  `push_subscriptions` já existia — foi englobada em `InitialSchema` na consolidação de
+  migrations (#56), antes mesmo do refinamento desta issue. Confirmado via
+  `dotnet ef migrations add AddPushSubscriptions` (diff vazio, migration removida) e por
+  inspeção direta do schema no Postgres real (colunas/tipos/índice único `endpoint`
+  conferem exatamente com o critério de aceite). Nenhuma migration de schema nova foi
+  necessária — apenas o seed das VAPID keys.
+- `SeedPushVapidKeys` (migration): `push.vapid_public_key`/`push.vapid_private_key`
+  (ids 47/48) em `app_settings`, valores vazios (cadastro manual pelo operador).
+- `PushNotificationService` (NuGet `WebPush` 1.0.13) + abstração `IWebPushSender`
+  (testável sem HTTP real): `SendIndividualAsync`/`SendConsolidatedAsync`, lê as VAPID
+  keys de `app_settings` a cada chamada (sem cache), remove a subscription do banco em
+  `WebPushException` com `StatusCode == Gone`, isola falhas por subscription (não
+  interrompe o lote).
+- Novo endpoint `GET /api/public/push/vapid-public-key` no `PushController` existente —
+  `[AllowAnonymous]`, rate-limit `public-read`, bypass explícito e documentado do
+  `SettingsMasker` (única exceção ao sufixo `_key`).
+- Throttling no `PublisherJob`: acumula produtos publicados com sucesso no Telegram no
+  ciclo; ao final, dispara 1 push individual (exatamente 1 produto) ou 1 consolidada
+  (>1), nenhuma se 0. Falha no envio de push nunca afeta o registro de sucesso da
+  publicação (try/catch isolado, fire-and-forget do ponto de vista do ciclo).
+- Testes: `PushNotificationServiceTests` (9 casos, incluindo 410 Gone e falha genérica
+  isolada), `PublisherJobTests` (+5 casos de throttling 0/1/>1 produtos e isolamento de
+  falha de push), `PushControllerTests` (+2 casos vapid-public-key). `dotnet test`:
+  305/305 passando (100%).
+- Boot real via `docker compose up -d --build db api`: subiu sem exceção, migrations
+  aplicadas, schema `push_subscriptions` conferido no Postgres real, seed das VAPID keys
+  presente. Smoke test real: par de VAPID keys gerado via `VapidHelper.GenerateVapidKeys()`,
+  cadastrado via SQL, `GET vapid-public-key` retornou o valor cru, `POST subscribe`
+  persistiu a subscription real no Postgres.
+- PR: https://github.com/DQM-BETA/omuletachou/pull/119 (`feature/116-push-backend` →
+  `desenv`, aguardando merge do LT).
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|-------|--------|--------|--------|-------|-----------|
@@ -150,3 +187,4 @@ Concluído.
 | 3 | PM Fase 2 | pm-analista-negocios | sonnet | 40649 | 18 | 153s |
 | 4 | Refinamento LT | lider-tecnico | sonnet | 80702 | 42 | 329s |
 | 5 | Dev Sub-B #117 | dev-nodejs | sonnet | 90906 | 64 | 690s |
+| 6 | Dev Sub-A #116 | dev-dotnet | sonnet | | | |
