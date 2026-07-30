@@ -83,4 +83,4 @@ Sumário técnico postado na Issue #15 (comentário https://github.com/DQM-BETA/
 | 2 | PM Fase 1 | pm | sonnet | 29560 | 9 | 68s | 2026-07-24 |
 | 3 | PM Fase 2 | pm-analista-negocios | sonnet | 57585 | 34 | 311s | 2026-07-30 |
 | 4 | Arquiteto | arquiteto | sonnet | 63814 | 38 | 216s | 2026-07-30 |
-| 5 | Refinamento LT | lider-tecnico | sonnet | (a preencher pela sessão principal a partir do <usage> deste HANDOFF) | - | - | 2026-07-30 |
+| 5 | Refinamento LT | lider-tecnico | sonnet | 74694 | 26 | 306s | 2026-07-30 |
