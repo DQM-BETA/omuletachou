@@ -55,3 +55,4 @@ PRD escrito em `openspec/changes/issue-15-deploy-oracle-ssl-dominio/proposal.md`
 |---|---|---|---|---|---|---|---|
 | 1 | Preparacao | Coordenador | haiku-4.5 | 24745 | 18 | 108s | 2026-07-24 |
 | 2 | PM Fase 1 | pm | sonnet | 29560 | 9 | 68s | 2026-07-24 |
+| 3 | PM Fase 2 | pm-analista-negocios | sonnet | 57585 | 34 | 311s | 2026-07-30 |
