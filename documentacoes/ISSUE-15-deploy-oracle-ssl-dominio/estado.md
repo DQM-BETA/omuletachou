@@ -1,18 +1,18 @@
 ---
 issue: 15
 titulo: feat: Deploy Oracle Cloud + SSL + Dominio
-etapa_atual: Refinamento Técnico
+etapa_atual: Em Desenvolvimento
 rota: normal
 repo: omuletachou
-ultimo_agente: arquiteto
+ultimo_agente: lider-tecnico
 status_comment_id: 5074045241
 openspec_change: repos/omuletachou/openspec/changes/issue-15-deploy-oracle-ssl-dominio
-tech_stacks: []
+tech_stacks: [infra]
 repos: {}
 repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-15-deploy-oracle-ssl-dominio
 openspec_path: repos/omuletachou/openspec/changes/issue-15-deploy-oracle-ssl-dominio
-sub_issues: []
+sub_issues: ["#125 (stack:infra, task_id:Sub-A)"]
 desenv_tasks_merged: []
 sub_issues_frontend: {}
 pr_homologacao: ~
@@ -61,6 +61,20 @@ Inspecionado o código real antes de decidir: `dashboard/nginx.conf` já faz `pr
 
 Diagrama textual da topologia de rede/portas, riscos e justificativas completas no `design.md`. Pronto para o refinamento técnico do Líder Técnico.
 
+## Líder Técnico — Refinamento (2026-07-30)
+Refinamento técnico concluído. Documentação escrita:
+- `documentacoes/ISSUE-15-deploy-oracle-ssl-dominio/especificacao-tecnica.md` — estrutura exata do `docker-compose.yml` consolidado (com healthcheck db/api, rede `omuletachou_net`, serviço `nginx-proxy-manager`), `deploy.sh` (idempotente, `set -euo pipefail`, falha cedo sem `.env`), `.env.example` (novas `DOMAIN_ROOT`/`WEBSITE_PUBLIC_URL`/`DASHBOARD_PUBLIC_URL`/`API_PUBLIC_URL`), e passos de validação local (sem VM).
+- `documentacoes/ISSUE-15-deploy-oracle-ssl-dominio/runbook-deploy.md` — runbook operacional completo (VM Oracle, DNS/registro.br, instalação Docker, configuração NPM + Let's Encrypt via UI, fechamento da porta 81 pós-setup, preenchimento de segredos, checklist de verificação, rollback) — já satisfaz o critério de aceite que referenciava este arquivo.
+- `openspec/changes/issue-15-deploy-oracle-ssl-dominio/tasks.md` — critérios de aceite (Given/When/Then) da sub-issue + raciocínio de fatiamento.
+
+**Task breakdown**: avaliado dividir por tipo de artefato (compose / script / env) e rejeitado — os 3 artefatos são pequenos, compartilham as mesmas variáveis e não têm fronteira de PR/teste independente (critérios de aceite exigem `docker compose up -d --build` com os três já consistentes; um PR isolado de `.env.example` não é testável sozinho). Mantida **uma única sub-issue coesa**: #125 "Sub-A: Artefatos de deploy — compose, script, .env" (label `infra`).
+
+**UX/UI**: não acionado — issue de infraestrutura de deploy/proxy/DNS, sem componente de UI, tela ou fluxo visual novo nos 4 serviços.
+
+**Escolha de Dev**: indicado **dev-dotnet**. Justificativa: a squad não tem um dev genérico de infra (devs são por stack de aplicação: angular/dotnet/nodejs/python/react-native); o `devops` da squad é só diagnóstico, não implementa (fronteira definida em CLAUDE.md). O trabalho é majoritariamente compose/bash na raiz do monorepo, mas a interseção mais direta é com o backend: o healthcheck do `api` depende do endpoint `/health` já existente e pode exigir ajuste mínimo no `Dockerfile` do backend (instalar `curl`, documentado na especificação técnica) — dev-dotnet é quem mais entende o comportamento de boot/health da API do qual o healthcheck do compose passa a depender.
+
+Sumário técnico postado na Issue #15 (comentário https://github.com/DQM-BETA/omuletachou/issues/15#issuecomment-5135860550). Comentário 📍 Status atualizado para "Em Desenvolvimento".
+
 ## Custo (ledger)
 
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) | Data |
@@ -69,3 +83,4 @@ Diagrama textual da topologia de rede/portas, riscos e justificativas completas 
 | 2 | PM Fase 1 | pm | sonnet | 29560 | 9 | 68s | 2026-07-24 |
 | 3 | PM Fase 2 | pm-analista-negocios | sonnet | 57585 | 34 | 311s | 2026-07-30 |
 | 4 | Arquiteto | arquiteto | sonnet | 63814 | 38 | 216s | 2026-07-30 |
+| 5 | Refinamento LT | lider-tecnico | sonnet | (a preencher pela sessão principal a partir do <usage> deste HANDOFF) | - | - | 2026-07-30 |
