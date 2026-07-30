@@ -1,12 +1,12 @@
 ---
 issue: 15
 titulo: feat: Deploy Oracle Cloud + SSL + Dominio
-etapa_atual: Gate 1 (Gerente)
+etapa_atual: Refinamento Técnico
 rota: normal
 repo: omuletachou
 ultimo_agente: pm-analista-negocios
 status_comment_id: 5074045241
-openspec_change: ~
+openspec_change: repos/omuletachou/openspec/changes/issue-15-deploy-oracle-ssl-dominio
 tech_stacks: []
 repos: {}
 repo_path: repos/omuletachou
@@ -39,6 +39,15 @@ Issue de infraestrutura/deploy de produção real (diferente das anteriores, que
 8. Confirmação de dependência com Issue #14 (PWA + Push liberados por este deploy)
 
 Aguardando resposta do Gerente (Gate 1) antes de seguir para Fase 2 (PRD/proposal.md/critérios de aceite).
+
+## PM Fase 2 — PRD e avaliação de ambiguidade (2026-07-30)
+Gerente respondeu ao Gate 1 (comentário https://github.com/DQM-BETA/omuletachou/issues/15#issuecomment-5135745488): VM e domínio ainda não provisionados (pré-requisitos manuais do Gerente, primeira tarefa da issue); deploy manual sem SSH pelo pipeline; SSL confirmado via Nginx Proxy Manager + Let's Encrypt; compose consolidado na raiz do monorepo + `deploy.sh` manual (CI/CD fora de escopo); segredos de infra via `.env` na VM, integrações externas via dashboard (`app_settings`); firewall restrito a 22/80/443, containers só em rede Docker interna; rollback via `git checkout` + `docker compose up -d --build`, sem tocar `postgres_data`; confirma dependência com Issue #14 (PWA + Push exigem HTTPS real).
+
+Implicação de escopo: pipeline não tem acesso SSH à VM real -> entregável é documentação + scripts + config versionada (compose, `deploy.sh`, runbook), validados via `docker compose` local — não deploy ao vivo. `proposal.md` e `criterios-aceite.md` adaptados para refletir validação de artefatos, não de boot real na VM.
+
+PRD escrito em `openspec/changes/issue-15-deploy-oracle-ssl-dominio/proposal.md` e `documentacoes/ISSUE-15-deploy-oracle-ssl-dominio/criterios-aceite.md`.
+
+**Avaliação de ambiguidade arquitetural: SIM.** Já existe um `docker-compose.yml` na raiz (issues anteriores) que expõe portas diretamente ao host (5432/5000/3000/4200), incompatível com o requisito de portas 22/80/443 apenas — precisa ser reestruturado. Três pontos exigem decisão de arquitetura antes do refinamento do LT: (a) como reestruturar o compose consolidado existente para rede interna + Nginx Proxy Manager sem quebrar os builds já existentes; (b) desenho da rede Docker/isolamento e exposição (ou não) da porta de admin do NPM; (c) esquema de nomeação de variáveis de ambiente entre os 4 serviços, incluindo a URL pública que hoje aponta para `localhost:5000` (incompatível com produção) — e se a estratégia de subdomínios da spec original ainda vale ou se muda para path routing sob um único domínio. Detalhes completos na seção "Nota de escalonamento" do `proposal.md`. Decisão: escalar para o **Arquiteto**.
 
 ## Custo (ledger)
 
