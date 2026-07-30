@@ -75,6 +75,58 @@ Refinamento técnico concluído. Documentação escrita:
 
 Sumário técnico postado na Issue #15 (comentário https://github.com/DQM-BETA/omuletachou/issues/15#issuecomment-5135860550). Comentário 📍 Status atualizado para "Em Desenvolvimento".
 
+## Dev Sub-A #125 — Artefatos de deploy (2026-07-30)
+
+Implementado exatamente conforme `especificacao-tecnica.md`:
+- `docker-compose.yml` reestruturado: removidas `ports:` de `db`/`api`/`website`/`dashboard`; todos
+  os 4 serviços + novo serviço `nginx-proxy-manager` (imagem `jc21/nginx-proxy-manager:latest`) na
+  rede interna `omuletachou_net` (bridge); NPM é o único serviço com portas publicadas (80/443/81,
+  81 comentada como temporária no próprio arquivo). Healthcheck `pg_isready` em `db` e
+  `curl -f http://localhost:8080/health` em `api`, com `depends_on: db: condition: service_healthy`
+  no `api`. `website` recebe `NEXT_PUBLIC_API_URL: ${API_PUBLIC_URL}` no lugar do
+  `http://localhost:5000` hardcoded.
+- `backend/src/AfiliadoBot.Api/Dockerfile`: adicionado `apt-get install curl` no estágio final —
+  exceção documentada na especificação técnica, necessária porque não foi possível confirmar ao
+  vivo (`docker compose exec api curl --version`) se a imagem `mcr.microsoft.com/dotnet/aspnet:8.0`
+  já traz `curl`, dado o ambiente local sem Docker funcional (ver limitação abaixo). Instalar
+  explicitamente é a opção mais segura/idempotente independente da imagem base.
+- `.env.example` atualizado com `DOMAIN_ROOT`, `WEBSITE_PUBLIC_URL`, `DASHBOARD_PUBLIC_URL`,
+  `API_PUBLIC_URL`, mantendo as variáveis de infraestrutura existentes sem prefixo.
+- `deploy.sh` criado na raiz conforme especificação (idempotente, `set -euo pipefail`, falha cedo
+  sem `.env`, `git pull --ff-only` + `docker compose up -d --build`), marcado executável
+  (`chmod +x` + `git update-index --chmod=+x`, confirmado `100755` no índice).
+- `.gitignore` já listava `.env` — nenhuma mudança necessária (conferido).
+- Nenhuma mudança em `website/lib/push.ts`: já usa `NEXT_PUBLIC_API_URL` (client-side) desde
+  antes desta issue — o Arquiteto já havia inspecionado isso no `design.md`. `CorsConfigurator.cs`
+  e `appsettings.json` já listam os subdomínios de produção corretos, sem mudança necessária.
+
+**⚠️ Limitação relevante para Code Review/QA — Docker Desktop local indisponível.** O ambiente
+local de execução deste Dev teve o Docker Desktop com um bug de infraestrutura da própria máquina
+(arquivos AF_UNIX/reparse-point órfãos em `%LOCALAPPDATA%\Docker\run\` — `dockerInference`,
+`dockerEthernetVfkit`, `userAnalyticsOtlpHttp.sock` — travados por um crash anterior do backend,
+"file cannot be accessed by the system" mesmo após matar todos os processos Docker e `wsl
+--shutdown`; provável necessidade de reboot do host para liberar os handles). Não foi possível
+subir os containers (`docker compose up -d --build`) nem validar healthchecks/portas ao vivo.
+**Validação alternativa realizada, sem daemon:**
+- `docker compose config` — renderiza o compose completo (interpolação de variáveis do `.env`
+  incluída) sem erros: confirma sintaxe válida, `NEXT_PUBLIC_API_URL` resolvido corretamente para
+  `https://api.omuletachou.com.br`, healthchecks/`depends_on: condition` presentes, e que **apenas**
+  `nginx-proxy-manager` tem `ports:` publicadas (80/443/81) — `api`/`db`/`website`/`dashboard` sem
+  nenhuma porta mapeada ao host.
+- Revisão manual linha a linha contra `especificacao-tecnica.md` §1 (compose já reproduzido acima).
+- `dotnet test` (backend): **306/306 aprovados**, 0 falhas — nenhuma regressão pelas mudanças de
+  infra (nenhum código de app alterado, exceto Dockerfile).
+- `npm test` (website, Jest): **79/79 aprovados**.
+- `npm test` (dashboard, Karma/Jasmine, ChromeHeadless): **105/105 aprovados**.
+- Não foi possível: boot real dos 4 serviços + NPM, validar `curl` de fato instalado na imagem
+  final da API, acessar a UI do NPM localmente, ou confirmar healthcheck `healthy` em runtime.
+  **Recomenda-se que o Code Review/QA tente reproduzir a subida via `docker compose up -d --build`
+  num ambiente com Docker funcional antes de aprovar** — esta sub-issue entrega os artefatos
+  estaticamente corretos e testados o quanto foi possível localmente, mas o critério de aceite
+  "os 4 serviços + NPM sobem saudáveis" não foi validado por boot real neste PR.
+
+PR aberto: `feature/125-deploy-artifacts` → `desenv`.
+
 ## Custo (ledger)
 
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) | Data |
@@ -84,3 +136,4 @@ Sumário técnico postado na Issue #15 (comentário https://github.com/DQM-BETA/
 | 3 | PM Fase 2 | pm-analista-negocios | sonnet | 57585 | 34 | 311s | 2026-07-30 |
 | 4 | Arquiteto | arquiteto | sonnet | 63814 | 38 | 216s | 2026-07-30 |
 | 5 | Refinamento LT | lider-tecnico | sonnet | 74694 | 26 | 306s | 2026-07-30 |
+| 6 | Dev Sub-A #125 | dev-dotnet | sonnet | | | | 2026-07-30 |
