@@ -31,6 +31,22 @@ public class SettingsMaskerTests
         SettingsMasker.Mask("sk-live-abcdef1234567890a1b2").Should().Be("****************a1b2");
     }
 
+    [Theory]
+    [InlineData("a")]
+    [InlineData("ab")]
+    [InlineData("abc")]
+    [InlineData("abcd")]
+    public void Mask_ValorCurto_NaoRevelaValorReal_MascaraTotalmente(string value)
+    {
+        // Regressao Issue #131: valores com Length <= 4 nao podem revelar o valor
+        // completo em claro apos o prefixo de asteriscos.
+        var result = SettingsMasker.Mask(value);
+
+        result.Should().NotBeNull();
+        result.Should().NotContain(value);
+        result.Should().MatchRegex("^\\*+$");
+    }
+
     [Fact]
     public void Mask_ValorNuloOuVazio_RetornaNull_NuncaMascaraStringVazia()
     {
