@@ -183,7 +183,29 @@ o PR #127 deveria ter corrigido, só que silenciosamente.
 - Containers/imagens de teste (`docker compose down -v`, `docker image rm`) e `.env` de teste
   removidos ao final — nenhum resíduo no repo ou na máquina.
 
-PR aberto: `fix/127-nextpublic-api-url` → `desenv` (NÃO mergeado — aguarda Líder Técnico).
+PR **#128 squash-merged em `desenv`** (commit `942c9d8`, branch remota `fix/127-nextpublic-api-url` deletada).
+
+## Líder Técnico — Merge PR #128 e verificação de propagação para PR #127 (2026-08-03)
+
+- `gh pr diff 128` revisado: `docker-compose.yml` (`build.args.NEXT_PUBLIC_API_URL`) e
+  `website/Dockerfile` (`ARG`/`ENV` antes de `RUN npm run build`) conferem com o fix descrito.
+  PR #128 confirmado `MERGEABLE`/`CLEAN`.
+- PR #128 squash-merged em `desenv` (commit `942c9d8`), branch remota deletada, working copy
+  local sincronizada (`git pull`).
+- **PR #127 (desenv→homolog) já reflete o fix automaticamente** — confirmado via
+  `gh pr diff 127 --name-only`: `docker-compose.yml` e `website/Dockerfile` aparecem na lista
+  (GitHub recalcula o diff de PR aberto quando a branch head avança). Nenhum ajuste manual
+  necessário.
+- **Revalidação de boot real (item 6 do spawn) NÃO executada por este agente**: rodar
+  `docker compose up -d --build` e inspecionar o bundle gerado é execução de código de
+  aplicação, fora do escopo de ferramentas do Líder Técnico (`Bash` restrito a
+  git/gh/movimentação de arquivos — nunca build/boot de app; ver CLAUDE.md → papel do LT). A
+  evidência de validação real já existe e foi documentada pelo Dev na seção "Fix —
+  NEXT_PUBLIC_API_URL build-time" acima (build da imagem + `grep` no bundle `.next/static/`
+  confirmando o valor embutido + 79/79 testes). Recomenda-se que a segunda rodada de
+  **Code Review** (que tem escopo de build/boot/testes) reexecute essa validação como parte da
+  checagem do PR #127 já com o fix incorporado.
+
 
 ## Custo (ledger)
 
@@ -198,3 +220,4 @@ PR aberto: `fix/127-nextpublic-api-url` → `desenv` (NÃO mergeado — aguarda 
 | 7 | DevOps — diagnóstico Docker Desktop | devops | haiku-4.5 | 28592 | 13 | 133s | 2026-07-30 |
 | 8 | Merge #125 (PR #126) + PR homologação #127 | lt | sonnet | 71808 | 54 | 593s | 2026-07-30 |
 | 9 | Fix NEXT_PUBLIC_API_URL (code review PR #127) | dev-nodejs | sonnet | 60788 | 36 | 414s | 2026-08-03 |
+| 10 | Merge PR #128 + verificação propagação PR #127 | lt | sonnet | (preencher no HANDOFF) | - | - | 2026-08-03 |
