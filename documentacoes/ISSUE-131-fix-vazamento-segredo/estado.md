@@ -38,6 +38,24 @@ status_comment_id: ~
   de homologacao `desenv` -> `homolog` (merge commit, nao-squash):
   https://github.com/DQM-BETA/omuletachou/pull/136. Repo local (`repos/omuletachou`) atualizado e checked out
   em `desenv`.
+- Dev (rota dev, achado do `/code-review` no PR #136): confirmado o achado — `Mask()` usava
+  `16 + value.Length` para valores com `Length <= 4`, produzindo respostas de 17 a 20 asteriscos,
+  o que vaza o comprimento real do segredo por inferencia (contradiz o proprio doc comment da
+  classe). Worktree isolado `.worktrees/136-fix-mask-length` (branch `fix/136-mask-fixed-length`
+  a partir de `desenv`). Corrigido para comprimento FIXO (`ShortValueMaskLength = 20`, constante
+  nomeada), doc comment atualizado documentando a regressao da Issue #136. Adicionados 2 testes
+  de regressao em `SettingsMaskerTests`: `Mask_ValorCurto_SempreRetornaMesmoComprimento_NaoVazaTamanhoReal`
+  (todos os 4 tamanhos produzem string de 20 chars) e
+  `Mask_ValoresCurtosDeTamanhosDiferentes_ProduzemAMesmaStringDeSaida` (1/2/3/4 chars produzem
+  exatamente a mesma mascara). `dotnet test`: 318/318 passando (100%). Validado manualmente via
+  boot Docker real (`docker compose up -d --build db api`, container `healthy`, sem excecao de
+  boot/DI) + seed de 4 chaves sensiveis (`test1..4.api_key`, valores `"a"`/`"ab"`/`"abc"`/`"abcd"`)
+  diretamente em `app_settings` + login via usuario seed + `GET /api/settings` real dentro do
+  container: os 4 retornaram exatamente `"********************"` (len=20) — comprovado que o
+  comprimento da resposta nao varia mais com o tamanho real do segredo. Ambiente Docker limpo
+  (`docker compose down -v`, `.env` local removido) e worktree removido ao final. PR
+  `fix/136-mask-fixed-length` -> `desenv` aberto (sem merge, aguardando LT):
+  https://github.com/DQM-BETA/omuletachou/pull/137.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -45,3 +63,4 @@ status_comment_id: ~
 | 1 | Preparacao (compartilhada com #130/#131/#132/#133) | coordenador | haiku-4.5 | 34090 | 19 | 271s |
 | 2 | Dev (fix + TDD + validacao Docker + PR) | dev-dotnet | sonnet | 48620 | 32 | 313s |
 | 3 | Merge PR #134 + PR homologação #136 | lt | sonnet | 36637 | 14 | 90s |
+| 4 | Dev (fix comprimento fixo, achado /code-review PR #136) | dev-dotnet | sonnet | | | |
