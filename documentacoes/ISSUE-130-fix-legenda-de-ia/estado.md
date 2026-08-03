@@ -36,3 +36,4 @@ Aguardando respostas do Gerente (Gate 1) para prosseguir com PM Fase 2 (proposal
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|-------|--------|--------|--------|-------|-----------|
 | 1 | Preparacao (compartilhada com #130/#131/#132/#133) | coordenador | haiku-4.5 | 34090 | 19 | 271s |
+| 2 | PM Fase 1 | pm-analista-negocios | sonnet | 29010 | 14 | 95s |
