@@ -1,6 +1,6 @@
 issue: 130
 titulo: "fix: Legenda de IA nunca é persistida — todo post sai sem legenda"
-etapa_atual: Em Desenvolvimento
+etapa_atual: Code Review
 ultimo_agente: lider-tecnico
 openspec_change: openspec/changes/issue-130-fix-legenda-de-ia
 tech_stacks:
@@ -13,12 +13,13 @@ docs_path: repos/omuletachou/documentacoes/ISSUE-130-fix-legenda-de-ia
 openspec_path: repos/omuletachou/openspec/changes/issue-130-fix-legenda-de-ia
 sub_issues:
   - "#139 (stack:dotnet, task_id: Sub-A) — backend: migration, PublicationQueue.Caption, ProcessorJob, 4 publishers, ProductDetailDto, ProcessorJobTests.cs — BLOQUEANTE — MERGED (PR #141)"
-  - "#140 (stack:angular, task_id: Sub-B) — frontend: ProductDetail/ProductsService + facebook-manual.component consomem ai_caption — depende do contrato do DTO da Sub-A"
+  - "#140 (stack:angular, task_id: Sub-B) — frontend: ProductDetail/ProductsService + facebook-manual.component consomem ai_caption — MERGED (PR #142)"
 desenv_tasks_merged:
   - "#139"
+  - "#140"
 sub_issues_frontend:
   "#140": angular
-pr_homologacao: ~
+pr_homologacao: 143
 pr_release: ~
 code_review_homolog_pr: ~
 qa_status: ~
@@ -177,6 +178,19 @@ dados de teste removidos ao final (`docker compose down -v`).
 PR aberto: https://github.com/DQM-BETA/omuletachou/pull/142 (`fix/140-caption-frontend` → `desenv`).
 Worktree removido após push.
 
+## Líder Técnico (merge Sub-B #140)
+PR #142 revisado (diff completo, 3 arquivos) — confirmado uso de `ai_caption` em vez de `description` para
+exibição e cópia da legenda no Facebook Manual, com fallback explícito quando `null`. Testes CA13/CA14
+cobrem os dois cenários (legenda de IA real vs. fallback legado).
+
+Merge squash `fix/140-caption-frontend` → `desenv` (PR #142), branch remota deletada. Fast-forward limpo em
+`desenv` local, sem conflitos (`4c9111f..96589db`). Sub-issue #140 fechada com comentário de resumo
+(https://github.com/DQM-BETA/omuletachou/issues/140).
+
+**Ambas as sub-issues da Issue #130 mergeadas em `desenv` (#139 e #140).** PR de homologação criado:
+https://github.com/DQM-BETA/omuletachou/pull/143 (`desenv` → `homolog`, merge commit — descreve bug, fix
+completo, sub-issues e origem/auditoria pedida pelo Gerente em 2026-08-03).
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|-------|--------|--------|--------|-------|-----------|
@@ -187,3 +201,4 @@ Worktree removido após push.
 | 5 | Dev Sub-A #139 | dev-dotnet | sonnet | 183618 | 115 | 724s |
 | 6 | Merge Sub-A #139 (PR #141) | lt | sonnet | 47158 | 18 | 87s |
 | 7 | Dev Sub-B #140 | dev-angular | sonnet | 87255 | 47 | 526s |
+| 8 | Merge Sub-B #140 (PR #142) + PR homologacao (PR #143) | lt | sonnet | TBD | TBD | TBD |
