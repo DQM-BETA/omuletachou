@@ -253,9 +253,9 @@ public class ProcessorJob
                 continue;
             }
 
-            await _aiService.GenerateCaptionAsync(product, network, ct);
+            var caption = await _aiService.GenerateCaptionAsync(product, network, ct);
 
-            var entry = new PublicationQueue(product.Id, network, scheduledAt);
+            var entry = new PublicationQueue(product.Id, network, scheduledAt, caption);
 
             if (network == SocialNetwork.Facebook)
                 entry.MarkAsManualPending();

@@ -13,6 +13,7 @@ public class PublicationQueue
     public int RetryCount { get; private set; }
     public string? ErrorMessage { get; private set; }
     public DateTime CreatedAt { get; private set; }
+    public string Caption { get; private set; } = string.Empty;
 
     public Product? Product { get; private set; }
     public ICollection<PublicationLog> Logs { get; private set; } = new List<PublicationLog>();
@@ -22,12 +23,13 @@ public class PublicationQueue
     // Construtor para EF Core
     private PublicationQueue() { }
 
-    public PublicationQueue(Guid productId, SocialNetwork socialNetwork, DateTime scheduledAt)
+    public PublicationQueue(Guid productId, SocialNetwork socialNetwork, DateTime scheduledAt, string caption)
     {
         Id = Guid.NewGuid();
         ProductId = productId;
         SocialNetwork = socialNetwork;
         ScheduledAt = scheduledAt;
+        Caption = caption ?? string.Empty;
         Status = PublicationStatus.Scheduled;
         RetryCount = 0;
         CreatedAt = DateTime.UtcNow;

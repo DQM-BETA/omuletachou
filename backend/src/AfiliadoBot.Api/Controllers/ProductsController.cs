@@ -81,6 +81,13 @@ public class ProductsController : ControllerBase
         if (product is null)
             return NotFound();
 
+        var facebookCaption = await _db.PublicationQueues
+            .AsNoTracking()
+            .Where(q => q.ProductId == id && q.SocialNetwork == SocialNetwork.Facebook)
+            .OrderByDescending(q => q.CreatedAt)
+            .Select(q => (string?)q.Caption)
+            .FirstOrDefaultAsync(ct);
+
         var dto = new ProductDetailDto(
             product.Id,
             product.Title,
@@ -98,6 +105,7 @@ public class ProductsController : ControllerBase
             product.Status.ToString(),
             product.AiScore,
             product.AiReason,
+            facebookCaption,
             product.CreatedAt,
             product.UpdatedAt);
 
