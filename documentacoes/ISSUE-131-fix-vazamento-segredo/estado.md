@@ -1,6 +1,6 @@
 issue: 131
 titulo: "fix: Vazamento de segredo curto no mascaramento de Settings"
-etapa_atual: Merged em desenv — PR homolog aberto (aguardando Code Review + QA)
+etapa_atual: PR #137 mergeado em desenv — absorvido automaticamente no PR #136 (desenv→homolog); aguardando reverificação /code-review + Code Review (agente)
 ultimo_agente: lt
 openspec_change: ~
 tech_stacks:
@@ -56,6 +56,13 @@ status_comment_id: ~
   (`docker compose down -v`, `.env` local removido) e worktree removido ao final. PR
   `fix/136-mask-fixed-length` -> `desenv` aberto (sem merge, aguardando LT):
   https://github.com/DQM-BETA/omuletachou/pull/137.
+- LT: PR #137 revisado (diff conferido — comprimento fixo `ShortValueMaskLength = 20` + 2 testes de
+  regressao novos; 318/318 passando; validado via boot Docker real com 4 chaves de tamanhos
+  diferentes confirmando saida identica). Merge squash de `fix/136-mask-fixed-length` -> `desenv`
+  (commit `0c1c41b`), branch remota deletada. `desenv` local atualizado sem conflitos. Confirmado
+  que o PR #136 (`desenv` -> `homolog`, ainda OPEN) absorveu automaticamente o commit `0c1c41b`
+  como seu ultimo commit (mesmo padrao ja usado para consolidar #131+#132 anteriormente) — nenhuma
+  acao de merge foi necessaria em #136. Repo local checked out em `desenv`.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -64,3 +71,4 @@ status_comment_id: ~
 | 2 | Dev (fix + TDD + validacao Docker + PR) | dev-dotnet | sonnet | 48620 | 32 | 313s |
 | 3 | Merge PR #134 + PR homologação #136 | lt | sonnet | 36637 | 14 | 90s |
 | 4 | Dev (fix comprimento fixo, achado /code-review PR #136) | dev-dotnet | sonnet | 51282 | 31 | 286s |
+| 5 | Merge PR #137 -> desenv (absorvido em #136) | lt | sonnet | (pendente ledger orquestrador) | - | - |
