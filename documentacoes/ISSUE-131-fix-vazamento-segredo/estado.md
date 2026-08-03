@@ -1,7 +1,7 @@
 issue: 131
 titulo: "fix: Vazamento de segredo curto no mascaramento de Settings"
-etapa_atual: aguardando Gate 2 (Gerente) — PR release #138 (homolog->main) criado
-ultimo_agente: lt
+etapa_atual: Concluído
+ultimo_agente: coordenador
 openspec_change: ~
 tech_stacks:
   - dotnet
@@ -20,6 +20,8 @@ qa_status: aprovado
 figma_url: ~
 blockers: nenhum
 status_comment_id: ~
+closedAt: 2026-08-03T17:23:18Z
+merge_commit: via PR #138 (homolog→main, merge commit, 2026-08-03)
 
 ## Historico
 - Dev (rota rapido): corrigido `SettingsMasker.Mask` em `backend/src/AfiliadoBot.Api/Settings/SettingsMasker.cs` —
@@ -64,6 +66,7 @@ status_comment_id: ~
   como seu ultimo commit (mesmo padrao ja usado para consolidar #131+#132 anteriormente) — nenhuma
   acao de merge foi necessaria em #136. Repo local checked out em `desenv`.
 - 2026-08-03 — LT (release): `git pull origin desenv` limpo (working tree clean, up to date). Verificada sincronizacao de codigo entre `desenv` e `homolog` — `git diff origin/homolog origin/desenv --stat` mostrou apenas os `estado.md` de docs pendentes (esperado), nenhum codigo divergente. Criado PR de release `homolog` -> `main` (merge commit, sem squash), cobrindo as Issues #131 e #132 (aprovadas por Code Review e QA em `homolog` via PR #136): https://github.com/DQM-BETA/omuletachou/pull/138. PR NAO mergeado — aguarda Gate 2 (Gerente). Repo local checked out em `desenv`.
+- 2026-08-03 — Coordenador (Gate 2 — merge): PR #138 mergeado em main via `gh pr merge 138 --repo DQM-BETA/omuletachou --merge` (merge commit). Issues #131 e #132 fechadas com `reason: completed`. Comentarios finais postados nas issues resumindo aprovacoes (Code Review, QA) e rastreabilidade (auditoria de segredo pedida pelo Gerente em 2026-08-03). Estado.md atualizado com closedAt, etapa_atual e merge commit info. Tempo decorrido: 3h 13m 29s (criacao 2026-08-03T14:09:49Z -> fechamento 2026-08-03T17:23:18Z).
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -76,6 +79,8 @@ status_comment_id: ~
 | 6 | Code Review — validacao final PR #136 | code-review | sonnet | 62979 | 46 | 359s |
 | 7 | QA — homolog | qa | sonnet | 57237 | 26 | 310s |
 | 8 | LT PR release homolog-main #138 | lt | sonnet | 49510 | 19 | 113s |
+| **TOTAL** | | | | **378401** | | **1824s (30.4 min)** |
+
 ## Code Review — PR #136 (validacao final)
 - `git pull origin desenv`: já atualizado (HEAD do PR #136 = `desenv`). `dotnet test`: **318/318 passando** (100%).
 - Boot Docker real: `docker compose up -d --build db api` (`.env` local temporario, nunca commitado) — build da imagem `omuletachou-api` OK, containers `afiliado_db` e `afiliado_api` **healthy**, sem exceção de boot/DI, seed do usuário operador executado.
