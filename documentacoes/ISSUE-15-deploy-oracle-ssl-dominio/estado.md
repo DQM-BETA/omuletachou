@@ -1,10 +1,10 @@
 ---
 issue: 15
 titulo: feat: Deploy Oracle Cloud + SSL + Dominio
-etapa_atual: QA aprovado
+etapa_atual: aguardando Gate 2 (Gerente)
 rota: normal
 repo: omuletachou
-ultimo_agente: qa
+ultimo_agente: lt
 status_comment_id: 5074045241
 openspec_change: repos/omuletachou/openspec/changes/issue-15-deploy-oracle-ssl-dominio
 tech_stacks: [infra]
@@ -16,7 +16,7 @@ sub_issues: ["#125 (stack:infra, task_id:Sub-A)"]
 desenv_tasks_merged: ["#125"]
 sub_issues_frontend: {}
 pr_homologacao: 127
-pr_release: ~
+pr_release: 129
 code_review_homolog_pr: 127
 qa_status: aprovado
 figma_url: ~
@@ -363,6 +363,26 @@ execução real independente (boot completo, isolamento de portas, fix confirmad
 documental do runbook, conforme a nota geral dos critérios de aceite desta issue de infra.
 Nenhum bloqueio. PR `homolog`→`main` autorizado.
 
+## Líder Técnico — PR de release homolog→main (2026-08-03)
+
+Pré-checagem antes do PR: `desenv`/`homolog` verificados sincronizados quanto a código — os 3
+commits em que `homolog` estava à frente de `desenv` eram só `docs(ISSUE-15): ...` no
+`estado.md` (registro de QA/Code Review), sem nenhuma mudança de código de aplicação; `git diff
+origin/main..origin/homolog` confirmou o escopo de código esperado (`.env.example`,
+`docker-compose.yml`, `deploy.sh`, `backend/.../Dockerfile`, `website/Dockerfile`).
+
+PR de release criado: **#129** (`homolog` → `main`, merge commit — branch protection em `main`
+impede squash/rebase e exige PR; não mergeado por este agente). Corpo do PR descreve a
+reestruturação do compose (rede interna + Nginx Proxy Manager), `deploy.sh`, `.env.example`
+com as novas variáveis de URL pública, o runbook operacional para execução manual do Gerente
+na VM Oracle real, o bug de `NEXT_PUBLIC_API_URL` encontrado pelo Code Review e corrigido (PR
+#128), e a aprovação de Code Review (PR #127) e QA (`homolog`).
+
+**Aguardando Gate 2 (Gerente)** — merge de `homolog`→`main` exige aprovação humana explícita
+(branch protection real, `enforce_admins:true`); não mergeado por este agente. Após aprovação,
+o merge é bookkeeping do Coordenador; a execução do runbook na VM Oracle real (provisionamento,
+DNS, Nginx Proxy Manager, certificados SSL) é manual e cabe ao Gerente, fora do escopo deste PR.
+
 ## Custo (ledger)
 
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) | Data |
@@ -379,3 +399,4 @@ Nenhum bloqueio. PR `homolog`→`main` autorizado.
 | 10 | Merge PR #128 + verificação propagação PR #127 | lt | sonnet | 51005 | 21 | 178s | 2026-08-03 |
 | 11 | Code Review — validação final PR #127 (build+boot+testes) | code-review | sonnet | 81301 | 45 | 602s | 2026-08-03 |
 | 12 | QA — homolog (aprovado) | qa | sonnet | 69397 | 30 | 323s | 2026-08-03 |
+| 13 | LT — PR release homolog→main (#129) | lt | sonnet | (a preencher pela sessão principal via usage) | - | - | 2026-08-03 |
