@@ -60,7 +60,7 @@ public class PublisherJobTests
         using var db = CreateInMemoryContext();
         var product = CriarProduto();
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddMinutes(-5));
+        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddMinutes(-5), "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -78,7 +78,7 @@ public class PublisherJobTests
         using var db = CreateInMemoryContext();
         var product = CriarProduto();
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(2));
+        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(2), "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -96,7 +96,7 @@ public class PublisherJobTests
         using var db = CreateInMemoryContext();
         var product = CriarProduto();
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
+        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1), "Legenda de teste");
         item.RegisterAttempt(false, "erro anterior"); // RetryCount = 1, Status = Failed, CanRetry = true
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
@@ -119,7 +119,7 @@ public class PublisherJobTests
         using var db = CreateInMemoryContext();
         var product = CriarProduto();
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
+        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1), "Legenda de teste");
         item.RegisterAttempt(false, "erro 1");
         item.RegisterAttempt(false, "erro 2");
         item.RegisterAttempt(false, "erro 3"); // RetryCount = 3, CanRetry = false
@@ -140,7 +140,7 @@ public class PublisherJobTests
         using var db = CreateInMemoryContext();
         var product = CriarProduto();
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Facebook, DateTime.UtcNow.AddHours(-1));
+        var item = new PublicationQueue(product.Id, SocialNetwork.Facebook, DateTime.UtcNow.AddHours(-1), "Legenda de teste");
         item.MarkAsManualPending();
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
@@ -161,9 +161,9 @@ public class PublisherJobTests
         db.Products.Add(product);
 
         var baseTime = DateTime.UtcNow.AddHours(-1);
-        var itemB = new PublicationQueue(product.Id, SocialNetwork.Telegram, baseTime.AddMinutes(10));
-        var itemA = new PublicationQueue(product.Id, SocialNetwork.Telegram, baseTime);
-        var itemC = new PublicationQueue(product.Id, SocialNetwork.Telegram, baseTime.AddMinutes(20));
+        var itemB = new PublicationQueue(product.Id, SocialNetwork.Telegram, baseTime.AddMinutes(10), "Legenda de teste");
+        var itemA = new PublicationQueue(product.Id, SocialNetwork.Telegram, baseTime, "Legenda de teste");
+        var itemC = new PublicationQueue(product.Id, SocialNetwork.Telegram, baseTime.AddMinutes(20), "Legenda de teste");
 
         db.PublicationQueues.AddRange(itemB, itemA, itemC);
         await db.SaveChangesAsync();
@@ -188,7 +188,7 @@ public class PublisherJobTests
         using var db = CreateInMemoryContext();
         var product = CriarProduto();
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
+        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1), "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -208,7 +208,7 @@ public class PublisherJobTests
         using var db = CreateInMemoryContext();
         var product = CriarProduto();
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
+        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1), "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -234,7 +234,7 @@ public class PublisherJobTests
         using var db = CreateInMemoryContext();
         var product = CriarProduto();
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
+        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1), "Legenda de teste");
         item.RegisterAttempt(false, "erro 1");
         item.RegisterAttempt(false, "erro 2"); // RetryCount = 2, ainda CanRetry
         db.PublicationQueues.Add(item);
@@ -282,7 +282,7 @@ public class PublisherJobTests
         using var db = CreateInMemoryContext();
         var product = CriarProduto();
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow.AddHours(-1));
+        var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow.AddHours(-1), "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -318,7 +318,7 @@ public class PublisherJobTests
         using var db = CreateInMemoryContext();
         var product = CriarProduto();
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
+        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1), "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -341,7 +341,7 @@ public class PublisherJobTests
         using var db = CreateInMemoryContext();
         var product = CriarProduto();
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow.AddHours(-1));
+        var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow.AddHours(-1), "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -363,7 +363,7 @@ public class PublisherJobTests
         using var db = CreateInMemoryContext();
         var product = CriarProduto();
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
+        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1), "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -384,7 +384,7 @@ public class PublisherJobTests
         using var db = CreateInMemoryContext();
         var product = CriarProduto();
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
+        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1), "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -407,9 +407,9 @@ public class PublisherJobTests
         var product2 = CriarProduto("Produto 2");
         var product3 = CriarProduto("Produto 3");
         db.Products.AddRange(product1, product2, product3);
-        var item1 = new PublicationQueue(product1.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
-        var item2 = new PublicationQueue(product2.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
-        var item3 = new PublicationQueue(product3.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
+        var item1 = new PublicationQueue(product1.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1), "Legenda de teste");
+        var item2 = new PublicationQueue(product2.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1), "Legenda de teste");
+        var item3 = new PublicationQueue(product3.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1), "Legenda de teste");
         db.PublicationQueues.AddRange(item1, item2, item3);
         await db.SaveChangesAsync();
 
@@ -430,8 +430,8 @@ public class PublisherJobTests
         var product1 = CriarProduto("Produto Telegram");
         var product2 = CriarProduto("Produto Youtube");
         db.Products.AddRange(product1, product2);
-        var itemTelegram = new PublicationQueue(product1.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
-        var itemYoutube = new PublicationQueue(product2.Id, SocialNetwork.Youtube, DateTime.UtcNow.AddHours(-1));
+        var itemTelegram = new PublicationQueue(product1.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1), "Legenda de teste");
+        var itemYoutube = new PublicationQueue(product2.Id, SocialNetwork.Youtube, DateTime.UtcNow.AddHours(-1), "Legenda de teste");
         db.PublicationQueues.AddRange(itemTelegram, itemYoutube);
         await db.SaveChangesAsync();
 
@@ -455,7 +455,7 @@ public class PublisherJobTests
         using var db = CreateInMemoryContext();
         var product = CriarProduto();
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
+        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1), "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 

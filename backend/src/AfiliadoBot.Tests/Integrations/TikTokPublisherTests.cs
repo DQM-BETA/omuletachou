@@ -202,10 +202,11 @@ public class TikTokPublisherTests
             pollTimeout ?? FastPollTimeout);
     }
 
-    private static async Task<PublicationQueue> SeedProductAndQueueAsync(AfiliadoBotDbContext db, Product product)
+    private static async Task<PublicationQueue> SeedProductAndQueueAsync(
+        AfiliadoBotDbContext db, Product product, string caption = "Legenda de teste")
     {
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.TikTok, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.TikTok, DateTime.UtcNow, caption);
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
         return item;
@@ -528,8 +529,8 @@ public class TikTokPublisherTests
         var videoPath = Mp4TestFileBuilder.CreateFileWithDuration(10);
         try
         {
-            var product = CriarProduto(mediaLocalPath: videoPath, mediaUrl: null, mediaType: "video", aiCaption: "Confira essa oferta incrivel!");
-            var item = await SeedProductAndQueueAsync(db, product);
+            var product = CriarProduto(mediaLocalPath: videoPath, mediaUrl: null, mediaType: "video");
+            var item = await SeedProductAndQueueAsync(db, product, caption: "Confira essa oferta incrivel!");
 
             var (httpClient, requests) = CreateHttpClient();
             var publisher = CreatePublisher(httpClient, db);
@@ -558,8 +559,8 @@ public class TikTokPublisherTests
         var videoPath = Mp4TestFileBuilder.CreateFileWithDuration(10);
         try
         {
-            var product = CriarProduto(mediaLocalPath: videoPath, mediaUrl: null, mediaType: "video", aiCaption: captionComDisclosure);
-            var item = await SeedProductAndQueueAsync(db, product);
+            var product = CriarProduto(mediaLocalPath: videoPath, mediaUrl: null, mediaType: "video");
+            var item = await SeedProductAndQueueAsync(db, product, caption: captionComDisclosure);
 
             var (httpClient, requests) = CreateHttpClient();
             var publisher = CreatePublisher(httpClient, db);

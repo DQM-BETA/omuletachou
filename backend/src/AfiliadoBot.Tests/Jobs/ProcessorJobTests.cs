@@ -83,9 +83,12 @@ public class ProcessorJobTests
 
     private static Mock<IAiService> CreateAiServiceMock()
     {
+        // CA16: retorna uma legenda diferente por rede (nao um valor fixo), tornando o mock
+        // determinístico o suficiente para comprovar que cada item de PublicationQueue recebe a
+        // Caption correspondente à sua própria rede, sem sobrescrita.
         var mock = new Mock<IAiService>();
         mock.Setup(a => a.GenerateCaptionAsync(It.IsAny<Product>(), It.IsAny<SocialNetwork>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Legenda gerada");
+            .ReturnsAsync((Product _, SocialNetwork network, CancellationToken _) => $"Legenda {network}");
         return mock;
     }
 
@@ -223,6 +226,41 @@ public class ProcessorJobTests
 
         var entries = await db.PublicationQueues.Where(q => q.ProductId == product.Id).ToListAsync();
         entries.Should().ContainSingle(q => q.SocialNetwork == SocialNetwork.Telegram);
+
+        // CA3/CA15: o retorno de GenerateCaptionAsync deve ser persistido em
+        // PublicationQueue.Caption (nao descartado) — o teste valida o estado persistido, nao
+        // apenas a chamada do mock.
+        entries.Single(e => e.SocialNetwork == SocialNetwork.Telegram).Caption
+            .Should().Be("Legenda Telegram");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_PersisteCaptionDistintaPorRede_QuandoMultiplasRedesHabilitadas()
+    {
+        // CA4/CA16: produto agendado para 2+ redes com prompts/textos diferentes por rede —
+        // cada item de PublicationQueue deve ter a Caption correspondente à sua própria rede,
+        // sem um item sobrescrever o outro (o bug original usava Product.AiCaption, campo único
+        // sobrescrito a cada chamada).
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto(mediaUrl: "https://cdn.com/video.mp4");
+        db.Products.Add(product);
+        await SeedNetworkAsync(db, "telegram", true, ("telegram.bot_token", "abc"), ("telegram.channel_id", "123"));
+        await SeedNetworkAsync(db, "instagram", true, ("instagram.access_token", "tok"), ("instagram.page_id", "1"));
+        await SeedNetworkAsync(db, "tiktok", true, ("tiktok.access_token", "tok"));
+        await db.SaveChangesAsync();
+
+        var mediaMock = CreateMediaStorageMock("/app/media/video.mp4", "video");
+        var job = CreateJob(db, mediaStorage: mediaMock);
+        await job.ExecuteAsync();
+
+        var entries = await db.PublicationQueues.Where(q => q.ProductId == product.Id).ToListAsync();
+
+        entries.Single(e => e.SocialNetwork == SocialNetwork.Telegram).Caption
+            .Should().Be("Legenda Telegram");
+        entries.Single(e => e.SocialNetwork == SocialNetwork.Instagram).Caption
+            .Should().Be("Legenda Instagram");
+        entries.Single(e => e.SocialNetwork == SocialNetwork.TikTok).Caption
+            .Should().Be("Legenda TikTok");
     }
 
     [Fact]

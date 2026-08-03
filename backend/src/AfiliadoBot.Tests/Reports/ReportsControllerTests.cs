@@ -110,25 +110,25 @@ public class ReportsControllerTests : IClassFixture<CustomWebApplicationFactory>
             var today = DateTime.UtcNow.Date;
 
             // Dentro da janela de 7 dias, redes distintas
-            var q1 = new PublicationQueue(product.Id, SocialNetwork.Telegram, today);
+            var q1 = new PublicationQueue(product.Id, SocialNetwork.Telegram, today, "Legenda de teste");
             q1.RegisterAttempt(success: true);
             SetPublishedAt(q1, today.AddHours(10));
 
-            var q2 = new PublicationQueue(product.Id, SocialNetwork.Instagram, today.AddDays(-2));
+            var q2 = new PublicationQueue(product.Id, SocialNetwork.Instagram, today.AddDays(-2), "Legenda de teste");
             q2.RegisterAttempt(success: true);
             SetPublishedAt(q2, today.AddDays(-2).AddHours(9));
 
-            var q3 = new PublicationQueue(product.Id, SocialNetwork.Telegram, today.AddDays(-2));
+            var q3 = new PublicationQueue(product.Id, SocialNetwork.Telegram, today.AddDays(-2), "Legenda de teste");
             q3.RegisterAttempt(success: true);
             SetPublishedAt(q3, today.AddDays(-2).AddHours(15));
 
             // Fora da janela (8 dias atras) — nao deve entrar no total
-            var qOld = new PublicationQueue(product.Id, SocialNetwork.Telegram, today.AddDays(-8));
+            var qOld = new PublicationQueue(product.Id, SocialNetwork.Telegram, today.AddDays(-8), "Legenda de teste");
             qOld.RegisterAttempt(success: true);
             SetPublishedAt(qOld, today.AddDays(-8));
 
             // Falha — nao deve entrar (Status != Published)
-            var qFailed = new PublicationQueue(product.Id, SocialNetwork.Youtube, today);
+            var qFailed = new PublicationQueue(product.Id, SocialNetwork.Youtube, today, "Legenda de teste");
             qFailed.RegisterAttempt(success: false, errorMessage: "erro simulado");
 
             db.PublicationQueues.AddRange(q1, q2, q3, qOld, qFailed);
@@ -182,24 +182,24 @@ public class ReportsControllerTests : IClassFixture<CustomWebApplicationFactory>
             db.Products.Add(product);
 
             // Publicado hoje — deve contar em today/week/month.
-            var qToday = new PublicationQueue(product.Id, SocialNetwork.Telegram, today);
+            var qToday = new PublicationQueue(product.Id, SocialNetwork.Telegram, today, "Legenda de teste");
             qToday.RegisterAttempt(success: true);
             SetPublishedAt(qToday, today.AddHours(5));
 
             // Publicado dentro do mes, mas antes do inicio da semana ISO corrente (ou no inicio do
             // mes, se a semana corrente comecar no dia 1) — deve contar em month, mas nao em week.
             var beforeWeekButInMonth = weekStart.AddDays(-1) >= monthStart ? weekStart.AddDays(-1) : monthStart;
-            var qMonthOnly = new PublicationQueue(product.Id, SocialNetwork.Instagram, beforeWeekButInMonth);
+            var qMonthOnly = new PublicationQueue(product.Id, SocialNetwork.Instagram, beforeWeekButInMonth, "Legenda de teste");
             qMonthOnly.RegisterAttempt(success: true);
             SetPublishedAt(qMonthOnly, beforeWeekButInMonth.AddHours(3));
 
             // Publicado ha muito tempo (fora do mes corrente) — nao deve contar em nenhum total.
-            var qOld = new PublicationQueue(product.Id, SocialNetwork.Telegram, monthStart.AddMonths(-2));
+            var qOld = new PublicationQueue(product.Id, SocialNetwork.Telegram, monthStart.AddMonths(-2), "Legenda de teste");
             qOld.RegisterAttempt(success: true);
             SetPublishedAt(qOld, monthStart.AddMonths(-2));
 
             // Falha — nao deve contar em nenhum total (Status != Published).
-            var qFailed = new PublicationQueue(product.Id, SocialNetwork.Youtube, today);
+            var qFailed = new PublicationQueue(product.Id, SocialNetwork.Youtube, today, "Legenda de teste");
             qFailed.RegisterAttempt(success: false, errorMessage: "erro simulado");
 
             db.PublicationQueues.AddRange(qToday, qMonthOnly, qOld, qFailed);

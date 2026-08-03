@@ -48,7 +48,7 @@ public class TelegramPublisher : ISocialPublisher
         if (product is null)
             throw new InvalidOperationException($"Produto {item.ProductId} nao encontrado para publicacao no Telegram.");
 
-        var caption = product.AiCaption ?? string.Empty;
+        var caption = item.Caption ?? string.Empty;
 
         var mediaSource = !string.IsNullOrWhiteSpace(product.MediaLocalPath)
             ? product.MediaLocalPath

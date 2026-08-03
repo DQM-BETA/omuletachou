@@ -36,14 +36,14 @@
       </div>
 
       <mat-card-content>
-        <p class="caption" data-testid="caption-text">{{ post.product?.description }}</p>
+        <p class="caption" data-testid="caption-text">{{ post.product?.ai_caption || 'Legenda não disponível' }}</p>
       </mat-card-content>
 
       <mat-card-actions>
         <button
           mat-stroked-button
           color="primary"
-          (click)="copyCaption(post.product?.description || '')"
+          (click)="copyCaption(post.product?.ai_caption || '')"
           data-testid="copy-caption-button"
         >
           <mat-icon>content_copy</mat-icon>
