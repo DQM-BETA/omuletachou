@@ -1,10 +1,10 @@
 ---
 issue: 15
 titulo: feat: Deploy Oracle Cloud + SSL + Dominio
-etapa_atual: Code Review
+etapa_atual: Concluído
 rota: normal
 repo: omuletachou
-ultimo_agente: lider-tecnico
+ultimo_agente: coordenador
 status_comment_id: 5074045241
 openspec_change: repos/omuletachou/openspec/changes/issue-15-deploy-oracle-ssl-dominio
 tech_stacks: [infra]
@@ -16,12 +16,12 @@ sub_issues: ["#125 (stack:infra, task_id:Sub-A)"]
 desenv_tasks_merged: ["#125"]
 sub_issues_frontend: {}
 pr_homologacao: 127
-pr_release: ~
-code_review_homolog_pr: ~
-qa_status: ~
+pr_release: 129
+code_review_homolog_pr: 127
+qa_status: aprovado
 figma_url: ~
 blockers: nenhum
-closedAt: ~
+closedAt: 2026-08-03T13:13:24Z
 ---
 
 ## Contexto
@@ -280,6 +280,113 @@ teste removido. Working tree limpo, sem artefatos deixados para trás.
 **Veredito: APROVADO.** Todos os itens do checklist de veto comprovados por execução real
 (não "parece ok"). Merge `desenv`→`homolog` autorizado.
 
+## QA — homolog (2026-08-03)
+
+Validação independente a partir de `homolog` (commit `9a28436`, PR #127 já mergeado com o fix
+do PR #128 incorporado). Repo sincronizado via `git fetch origin && git checkout homolog &&
+git pull origin homolog` antes de qualquer teste; commit confirmado presente em `git log`.
+
+**Suítes automatizadas (re-executadas a partir de `homolog`, sem regressão):**
+- Backend: `dotnet test` → **306/306 aprovados**, 0 falhas.
+- Website: `npm test` → **79/79 aprovados**, 14 suites.
+- Dashboard: `npm test -- --watch=false --browsers=ChromeHeadless` → **105/105 aprovados**.
+
+Números idênticos aos reportados pelo Code Review — confirma que nada regrediu entre a
+validação do Code Review e esta.
+
+**Validação integrada (boot real, independente do Code Review) — `docker compose up -d --build`
+a partir de `homolog`:**
+- `.env` de teste criado a partir do `.env.example` (valores fake, domínio
+  `api-qateste.omuletachou.com.br`) — nunca commitado (`git check-ignore -v .env` confirma
+  ignorado por `.gitignore:13`).
+- Ajuste local **apenas de execução** (não commitado): portas `80`/`443`/`81` do host Windows
+  já ocupadas por `HTTP.sys` (PID 4/System) — `nginx-proxy-manager` remapeado temporariamente
+  para `18080`/`18443`/`18081` só para rodar o teste local. `docker-compose.yml` restaurado ao
+  original via backup + `git diff` limpo ao final. Não afeta a validação: os binds `80:80`/
+  `443:443`/`81:81` do compose commitado estão corretos para a VM Oracle (Linux).
+- `docker compose ps` (após ~15s): **5/5 serviços `Up`**, `afiliado_db` e `afiliado_api`
+  `(healthy)`. Nenhum serviço além de `nginx-proxy-manager` publica porta ao host — confirmado
+  também via `docker compose ps --format json` (`PublishedPort: 0` em `api`/`db`/`website`/
+  `dashboard`; só `nginx-proxy-manager` com `PublishedPort` != 0 em 80/443/81).
+- `docker compose exec api curl --version` → `curl 7.88.1` presente na imagem final da API
+  (pré-requisito do healthcheck).
+- `docker compose exec api curl -f http://localhost:8080/health` → `200`,
+  `{"status":"healthy",...}`.
+- **Fix `NEXT_PUBLIC_API_URL` (build-time) reconfirmado de forma independente**:
+  `docker compose exec website sh -c "grep -orl 'api-qateste' /app/.next/static"` encontrou o
+  valor embutido em `chunks/app/layout-e75c14b71b4cb7cf.js` — o bug original do `/code-review`
+  (env de runtime em vez de build-arg) segue corrigido, comprovado por execução, não só leitura.
+- `curl -s -o /dev/null -w "%{http_code}" http://localhost:18081/` → `200` (UI de admin do NPM
+  acessível). `curl` na raiz (`18080`) → `200` (página padrão do NPM).
+- Limpeza: `docker compose down -v` (containers + volumes removidos), `docker-compose.yml`
+  restaurado ao original (`git diff` limpo), `.env` de teste removido, imagens de teste
+  (`omuletachou-api`/`omuletachou-website`/`omuletachou-dashboard`) removidas. `git status`
+  limpo ao final (exceto `.worktrees/` pré-existente, não relacionado a esta validação).
+
+**Revisão do `runbook-deploy.md` como documento** (critério de aceite "Runbook"):
+Cobre, sem lacunas identificadas, todos os itens exigidos: provisionamento da VM (shape
+`VM.Standard.A1.Flex`, Ubuntu 22.04, Security List 22/80/443 permanentes + 81 temporária —
+§1), instalação de Docker/Compose (§2), registro de domínio + DNS com os 4 registros A e
+verificação via `dig` antes de prosseguir para SSL (§3), clone + configuração de segredos de
+infra via `.env` (§4), primeiro `deploy.sh` (§5), configuração do Nginx Proxy Manager com
+Let's Encrypt via UI — 3 proxy hosts, tabela clara de domain/forward/porta (§6), fechamento da
+porta 81 pós-setup com procedimento de reabertura pontual documentado (§7), preenchimento de
+segredos de integrações externas via dashboard/`app_settings` (§8), checklist de verificação
+pós-deploy cobrindo containers `Up`, SSL válido, `/health` 200, dashboard carrega, `/hangfire`
+com senha (§9), e rollback via `git checkout` do compose + `docker compose up -d --build`, sem
+tocar `postgres_data` (§10). Passo a passo executável por alguém sem conhecimento prévio do
+projeto — nenhuma lacuna óbvia encontrada.
+
+**Critérios de aceite — tabela de veredito:**
+
+| Critério | Evidência | Status |
+|---|---|---|
+| Compose consolidado — 5 serviços sobem saudáveis | `docker compose ps`: 5/5 `Up`, db/api `healthy` | ✅ |
+| Nenhum serviço de app publica porta ao host | `PublishedPort: 0` em api/db/website/dashboard | ✅ |
+| Só `nginx-proxy-manager` publica porta (80/443) | Único com `PublishedPort` != 0 (80/443/81) | ✅ |
+| `.env.example` completo, nomenclatura consistente | Inspeção: DB_USER/PASSWORD/JWT/domínio presentes | ✅ |
+| `deploy.sh` idempotente, sem credencial hardcoded | Inspeção de código: `set -euo pipefail`, lê `.env`, `git pull --ff-only` + `up -d --build` | ✅ |
+| SSL/Let's Encrypt automático (documentado) | Runbook §6 — não testável sem domínio real, conforme nota geral dos critérios | ✅ (documental) |
+| Rede interna — api/dashboard/website/db só via Docker | Confirmado nas portas internas do compose e nos testes acima | ✅ |
+| Segredos de integrações via dashboard (`app_settings`) | Runbook §8, mesmo padrão da Issue #11 | ✅ |
+| `.env` no `.gitignore` | `.gitignore:13` + `git check-ignore -v` confirmado | ✅ |
+| Runbook completo (VM, DNS, Docker, NPM+SSL, segredos, checklist, rollback) | Revisão de documento, sem lacunas | ✅ |
+| Rollback sem afetar `postgres_data` | Runbook §10 — comando não usa `-v`, explícito | ✅ |
+| Firewall — só 22/80/443 permanentes | Runbook §1.5, consistente com compose | ✅ |
+| Hangfire — só via HTTPS + senha, sem porta extra | Runbook §9 checklist, sem proxy host adicional | ✅ (documental) |
+
+**Suítes automatizadas**: 306/79/105 aprovados, sem regressão (idêntico ao Code Review).
+
+**Veredito: APROVADO.** Todos os critérios de aceite validados — os itens artefatuais por
+execução real independente (boot completo, isolamento de portas, fix confirmado no bundle,
+`curl`/health/UI do NPM), os itens de VM real (SSL ao vivo, Security List físico) por revisão
+documental do runbook, conforme a nota geral dos critérios de aceite desta issue de infra.
+Nenhum bloqueio. PR `homolog`→`main` autorizado.
+
+## Líder Técnico — PR de release homolog→main (2026-08-03)
+
+Pré-checagem antes do PR: `desenv`/`homolog` verificados sincronizados quanto a código — os 3
+commits em que `homolog` estava à frente de `desenv` eram só `docs(ISSUE-15): ...` no
+`estado.md` (registro de QA/Code Review), sem nenhuma mudança de código de aplicação; `git diff
+origin/main..origin/homolog` confirmou o escopo de código esperado (`.env.example`,
+`docker-compose.yml`, `deploy.sh`, `backend/.../Dockerfile`, `website/Dockerfile`).
+
+PR de release criado: **#129** (`homolog` → `main`, merge commit — branch protection em `main`
+impede squash/rebase e exige PR; não mergeado por este agente). Corpo do PR descreve a
+reestruturação do compose (rede interna + Nginx Proxy Manager), `deploy.sh`, `.env.example`
+com as novas variáveis de URL pública, o runbook operacional para execução manual do Gerente
+na VM Oracle real, o bug de `NEXT_PUBLIC_API_URL` encontrado pelo Code Review e corrigido (PR
+#128), e a aprovação de Code Review (PR #127) e QA (`homolog`).
+
+**Aguardando Gate 2 (Gerente)** — merge de `homolog`→`main` exige aprovação humana explícita
+(branch protection real, `enforce_admins:true`); não mergeado por este agente. Após aprovação,
+o merge é bookkeeping do Coordenador; a execução do runbook na VM Oracle real (provisionamento,
+DNS, Nginx Proxy Manager, certificados SSL) é manual e cabe ao Gerente, fora do escopo deste PR.
+
+## Coordenador — Encerramento e consolidação de custo (2026-08-03)
+
+PR #129 (`homolog`→`main`) mergeado com sucesso via `gh pr merge 129 --repo DQM-BETA/omuletachou --merge` em 2026-08-03 13:13:04Z. Issue #15 fechada (2026-08-03 13:13:24Z) com comentário resumido.
+
 ## Custo (ledger)
 
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) | Data |
@@ -294,4 +401,13 @@ teste removido. Working tree limpo, sem artefatos deixados para trás.
 | 8 | Merge #125 (PR #126) + PR homologação #127 | lt | sonnet | 71808 | 54 | 593s | 2026-07-30 |
 | 9 | Fix NEXT_PUBLIC_API_URL (code review PR #127) | dev-nodejs | sonnet | 60788 | 36 | 414s | 2026-08-03 |
 | 10 | Merge PR #128 + verificação propagação PR #127 | lt | sonnet | 51005 | 21 | 178s | 2026-08-03 |
-| 11 | Code Review — validação final PR #127 (build+boot+testes) | code-review | sonnet | ~ | ~ | ~ | 2026-08-03 |
+| 11 | Code Review — validação final PR #127 (build+boot+testes) | code-review | sonnet | 81301 | 45 | 602s | 2026-08-03 |
+| 12 | QA — homolog (aprovado) | qa | sonnet | 69397 | 30 | 323s | 2026-08-03 |
+| 13 | LT — PR release homolog→main (#129) | lt | sonnet | 62404 | 9 | 176s | 2026-08-03 |
+
+**Totais:**
+- **Tokens processados**: 905,801 tokens (consumo total agregado, sem split in/out)
+- **Tempo de processamento (squad)**: 5,059 segundos = 84.32 minutos
+- **Tempo decorrido (Issue #15)**: 31 dias (createdAt 2026-07-03 12:46:27Z até closedAt 2026-08-03 13:13:24Z) = 44,664 minutos
+
+Nota: overhead do orquestrador não incluído nos totais; custo é do pipeline de agentes.

@@ -14,3 +14,6 @@ dist/
 
 # Docker
 .dockerignore
+
+# Git worktrees da squad (isolamento de tarefas paralelas)
+.worktrees/
