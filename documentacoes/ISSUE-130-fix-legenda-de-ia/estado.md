@@ -1,7 +1,7 @@
 issue: 130
 titulo: "fix: Legenda de IA nunca é persistida — todo post sai sem legenda"
-etapa_atual: Code Review
-ultimo_agente: lider-tecnico
+etapa_atual: QA
+ultimo_agente: code-review
 openspec_change: openspec/changes/issue-130-fix-legenda-de-ia
 tech_stacks:
   - dotnet
@@ -21,7 +21,7 @@ sub_issues_frontend:
   "#140": angular
 pr_homologacao: 143
 pr_release: ~
-code_review_homolog_pr: ~
+code_review_homolog_pr: 143
 qa_status: ~
 figma_url: ~
 blockers: nenhum
@@ -190,6 +190,83 @@ Merge squash `fix/140-caption-frontend` → `desenv` (PR #142), branch remota de
 **Ambas as sub-issues da Issue #130 mergeadas em `desenv` (#139 e #140).** PR de homologação criado:
 https://github.com/DQM-BETA/omuletachou/pull/143 (`desenv` → `homolog`, merge commit — descreve bug, fix
 completo, sub-issues e origem/auditoria pedida pelo Gerente em 2026-08-03).
+
+## Code Review — PR #143
+
+Verificacao completa executada (build + boot real + suite + checklist de veto), nao apenas leitura do
+diff. Achados do plugin `/code-review` (comentario
+https://github.com/DQM-BETA/omuletachou/pull/143#issuecomment-5170033722) revisados e incorporados: nenhum
+achado de alta confianca pendente (os 2 candidatos avaliados — falta de backfill e cenario teorico de
+multiplos itens de fila Facebook por produto — foram corretamente descartados pelo plugin; backfill e
+decisao explicita do Gerente, e o segundo e impossivel no fluxo real porque `MarkAsPublished()` nao
+permite retorno a `Queued`).
+
+**1. `git pull origin desenv`** — branch ja atualizada (`a1e21a7`), sem divergencia.
+
+**2. Suites completas:**
+- `dotnet test` (backend) — **321/321 passando (100%)**, sem falhas, sem skip.
+- `npm test` (dashboard, Karma/Chrome headless) — **107/107 passando (100%)**.
+
+**3. Boot Docker real:** `.env` local temporario criado (gitignored, removido ao final) +
+`docker compose up -d --build db api dashboard`. Build completo dos 3 servicos sem erro. Containers
+`afiliado_db` (healthy), `afiliado_api` (healthy), `afiliado_dashboard` (up) confirmados via
+`docker compose ps`. Logs da API sem excecao — migration `AddCaptionToPublicationQueue` aplicada
+automaticamente no startup, seed de usuario ok, Hangfire registrado.
+
+**4. Fluxo completo ao vivo (Telegram, ProcessorJob):**
+- Login via `POST /api/auth/login` (usuario seed) → token JWT obtido.
+- Credenciais de Telegram (fake, so para qualificar a rede) configuradas via
+  `PUT /api/settings/telegram.bot_token`, `telegram.channel_id`, `networks.telegram.enabled=true`.
+- Produto de teste inserido via SQL direto (`status=Queued`).
+- `POST /api/jobs/processor/trigger` (autenticado) executado.
+- `psql` confirma: `publication_queue` recebeu 1 entrada (`social_network=Telegram`,
+  `status=Scheduled`) com `caption` = "Achei essa oferta: Produto Teste CR Telegram por R$ 20.00 (33%
+  OFF)" (68 caracteres, texto real, nao vazio) — CA6/CA15 confirmados fim-a-fim. Redes sem credenciais
+  (Youtube/Instagram/TikTok/Facebook) corretamente puladas com warning, sem quebrar o job.
+
+**5. Fluxo completo ao vivo (Facebook Manual):**
+- Produto de teste + item de `publication_queue` (`social_network=Facebook`, `status=ManualPending`,
+  `caption='Legenda de IA real gerada para Facebook via CR teste'`) inseridos via SQL direto.
+- `GET /api/products/{id}` (via container `afiliado_api` e, adicionalmente, via
+  `afiliado_dashboard` — mesmo caminho de proxy nginx que o Angular usa em producao) retornou
+  `"ai_caption":"Legenda de IA real gerada para Facebook via CR teste"`, distinto de `"description"`.
+- `GET /api/queue/manual` (via proxy do dashboard) confirma o item `ManualPending` listado com
+  `socialNetwork:"Facebook"` — o mesmo endpoint que `facebook-manual.component.ts` consome
+  (`QueueService.listManualPending` + `ProductsService.getById` por item), cujo template renderiza
+  `post.product?.ai_caption` (confirmado por leitura do componente/template, dado que o dado de origem
+  ja foi validado fim-a-fim via o endpoint real).
+- Dados de teste (produtos, itens de fila, settings de Telegram) removidos ao final via SQL.
+
+**6. Migration com dados pre-existentes (retrocompatibilidade):** simulado deliberadamente o cenario de
+producao — coluna `caption` removida manualmente, linha de `publication_queue` inserida sem a coluna
+(equivalente a uma linha legada anterior a migration), migration reaplicada
+(`ALTER TABLE publication_queue ADD caption text NOT NULL DEFAULT ''`). Resultado: linha legada recebeu
+`caption=''` (comprimento 0) automaticamente, sem erro, sem perda de dados — confirma que a migration
+aditiva e segura para banco com dados pre-existentes, conforme CA1 e a decisao do Gerente (sem
+backfill necessario).
+
+**7. Checklist de veto:**
+- Compila e sobe: **OK** (build + boot + suite, evidencia acima).
+- Integracao real: **OK** — fluxo cruza fronteira real (Postgres via EF Core, containers Docker, HTTP via
+  proxy nginx do dashboard), sem mock-only nos caminhos criticos validados ao vivo.
+- Conformidade com spec/criterios-aceite: **OK** — CA1, CA5, CA6, CA12, CA13, CA14, CA15, CA16, CA17
+  confirmados por leitura do diff + validacao ao vivo (Telegram/Facebook). CA18 (changelog) presente no
+  corpo do PR #143. Sem backfill (CA4/decisao do Gerente) — decisao explicita, nao e divergencia.
+- Sem teste-lixo, sem segredo commitado: **OK** — `gh pr diff 143` varrido por padroes de segredo
+  (api_key/secret/password/token com valor plausivel), nenhum encontrado. `.env` local usado na
+  verificacao era temporario, gitignored, removido ao final (nao commitado).
+- `.first()`/`.nth()`/`.last()` em specs E2E: **N/A** — este PR nao toca specs Playwright E2E (apenas
+  specs Jasmine/Karma unitarios do dashboard: `facebook-manual.component.spec.ts`,
+  `products.service.spec.ts`), nenhum uso de seletor estrutural via `.first()`.
+- Cobertura: 321 testes backend + 107 testes frontend cobrindo os cenarios criticos (CA13/CA14/CA15/CA16
+  incluidos nesta mudanca).
+- OWASP Top 10: endpoints tocados (`/api/settings`, `/api/jobs/processor/trigger`, `/api/products/{id}`,
+  `/api/queue/manual`) exigem autenticacao JWT (confirmado — chamadas sem token nao testadas
+  intencionalmente pois nao fazem parte do escopo desta correcao, mas o middleware de auth ja existente
+  nao foi alterado pelo diff).
+
+**Veredito: APROVADO.** Merge `desenv` → `homolog` (merge commit, sem squash) executado:
+PR #143. Containers derrubados ao final (`docker compose down -v`), `.env` local removido.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
