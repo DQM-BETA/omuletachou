@@ -9,8 +9,14 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    networks:
+      - omuletachou_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d afiliadoBot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # SEM "ports:" — só alcançável via rede Docker interna (a api conecta por "Host=db")
 
   api:
     build:
@@ -19,7 +25,8 @@ services:
     container_name: afiliado_api
     restart: unless-stopped
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
@@ -33,23 +40,37 @@ services:
       Seed__UserPassword: "${SEED_USER_PASSWORD:-}"
     volumes:
       - media_files:/app/media
-    ports:
-      - "5000:8080"
+    networks:
+      - omuletachou_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    # SEM "ports:" — NPM alcança em api:8080 via rede interna
 
   website:
     build:
       context: ./website
+      args:
+        # Next.js embute NEXT_PUBLIC_* no bundle do browser em BUILD TIME (npm run build),
+        # não em runtime — precisa ser passado como build arg, não só como environment:.
+        NEXT_PUBLIC_API_URL: ${API_PUBLIC_URL}
     container_name: afiliado_website
     restart: unless-stopped
     depends_on:
       - api
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:5000
-      # Issue #12 / Sub-A: usado server-side em lib/api.ts (Server Components/ISR) para
-      # chamar a API pública dentro da rede Docker — nunca exposto ao bundle do browser.
+      # Mantido por completude/inspeção (docker inspect), mas o valor que importa para o
+      # bundle do browser é o de build (args acima) — este env de runtime não é lido pelo
+      # código client-side já compilado.
+      NEXT_PUBLIC_API_URL: ${API_PUBLIC_URL}
+      # Server-side (Server Components/SSR) — já existente, resolve via rede Docker interna
       API_INTERNAL_URL: http://api:8080
-    ports:
-      - "3000:3000"
+    networks:
+      - omuletachou_net
+    # SEM "ports:" — NPM alcança em website:3000
 
   dashboard:
     build:
@@ -58,9 +79,31 @@ services:
     restart: unless-stopped
     depends_on:
       - api
+    networks:
+      - omuletachou_net
+    # SEM "ports:" — NPM alcança em dashboard:80
+    # nginx.conf embutido na imagem já faz proxy_pass /api/ -> http://api:8080/api/
+
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: afiliado_npm
+    restart: unless-stopped
     ports:
-      - "4200:80"
+      - "80:80"
+      - "443:443"
+      - "81:81"   # TEMPORÁRIO — comentar/remover após o setup inicial (ver runbook-deploy.md §7)
+    volumes:
+      - npm_data:/data
+      - npm_letsencrypt:/etc/letsencrypt
+    networks:
+      - omuletachou_net
+
+networks:
+  omuletachou_net:
+    driver: bridge
 
 volumes:
   postgres_data:
   media_files:
+  npm_data:
+  npm_letsencrypt:

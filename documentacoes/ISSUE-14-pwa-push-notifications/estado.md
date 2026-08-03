@@ -1,8 +1,8 @@
 issue: 14
 titulo: "feat: PWA + Push Notifications"
 rota: normal
-etapa_atual: QA reexecução aprovada (PR #122, homolog); aguardando PR de release homolog->main (LT)
-ultimo_agente: qa
+etapa_atual: Concluído
+ultimo_agente: coordenador
 status_comment_id: 5061626934
 openspec_change: repos/omuletachou/openspec/changes/issue-14-pwa-push-notifications
 tech_stacks:
@@ -22,12 +22,12 @@ desenv_tasks_merged:
 sub_issues_frontend:
   "#117": stack:nodejs
 pr_homologacao: 122
-pr_release: ~
+pr_release: 124
 code_review_homolog_pr: 122
 qa_status: aprovado (reexecução, PR #122)
 figma_url: ~
 blockers: ~
-closedAt: ~
+closedAt: 2026-07-24T20:18:29Z
 
 ## Levantamento (PM Fase 1)
 Escopo tecnico ja veio detalhado do Gerente na Issue. Perguntas de negocio postadas em
@@ -587,24 +587,6 @@ Confirma exatamente o fix mapeado pelo LT após a reprovação do QA:
 Repo devolvido à branch `desenv` (`git checkout desenv`, `git status --porcelain` limpo
 salvo `.worktrees/` pré-existente).
 
-## Custo (ledger)
-| # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
-|---|-------|--------|--------|--------|-------|-----------|
-| 1 | Preparacao | Coordenador | haiku-4.5 | 26844 | 21 | 133s |
-| 2 | PM Fase 1 | pm | sonnet | 27827 | 8 | 46s |
-| 3 | PM Fase 2 | pm-analista-negocios | sonnet | 40649 | 18 | 153s |
-| 4 | Refinamento LT | lider-tecnico | sonnet | 80702 | 42 | 329s |
-| 5 | Dev Sub-B #117 | dev-nodejs | sonnet | 90906 | 64 | 690s |
-| 6 | Dev Sub-A #116 | dev-dotnet | sonnet | 196222 | 136 | 1139s |
-| 7 | Merge #118/#119 + PR homologação #120 | lt | sonnet | 49500 | 17 | 132s |
-| 8 | Code Review — PR #120 (desenv→homolog) | code-review | sonnet | 80642 | 52 | 717s |
-| 9 | QA — homolog (reprovado) | qa | sonnet | 88467 | 37 | 509s |
-| 10 | LT mapeamento da falha (QA reprovou) | lt | sonnet | 67850 | 15 | 227s |
-| 11 | Fix Sub-A #116 — upsert de subscribe | dev-dotnet | sonnet | 74736 | 35 | 263s |
-| 12 | Merge fix #116 → desenv + novo PR #122 desenv→homolog | lt | sonnet | 70897 | 20 | 230s |
-| 13 | Code Review — PR #122 (desenv→homolog, reexecução) | code-review | sonnet | 108502 | 23 | 340s |
-| 14 | QA — reexecução homolog (aprovado) | qa | sonnet | 66505 | 22 | 261s |
-
 ## QA — reexecução (homolog)
 **Aprovado.** Relatório completo: `relatorio-qa.md` (mesmo diretório, seção "Rodada 2").
 
@@ -654,3 +636,48 @@ silencioso não persistia `p256dh`/`auth`/`created_at`) está corrigido e revali
 contra Postgres real, reproduzindo exatamente o cenário reprovado. Nenhuma regressão
 colateral encontrada. **QA APROVADO — segue para PR de release `homolog → main` (LT) →
 Gate 2 (Gerente).**
+
+## PR de release homolog -> main (LT)
+Concluído.
+- `git pull origin desenv`: já sincronizado (nenhuma alteração pendente).
+- `git log origin/homolog..origin/desenv --oneline`: apenas 3 commits de documentação
+  (estado.md/relatorio-qa.md — registro do Code Review e QA da reexecução do PR #122),
+  nenhum commit de código de aplicação (já promovido via PR #122). Mesmo padrão usado na
+  Issue #13.
+- PR de sincronização de docs criado e mergeado (merge commit, sem squash):
+  https://github.com/DQM-BETA/omuletachou/pull/123 (`desenv` → `homolog`).
+- PR de release criado: https://github.com/DQM-BETA/omuletachou/pull/124
+  (`homolog` → `main`, merge commit — **mergeado**, aprovado pelo Gerente, Gate 2).
+- Repo devolvido à branch `desenv` (`git checkout desenv`), `git status --porcelain` limpo
+  salvo `.worktrees/` pré-existente.
+
+## Consolidação final (Coordenador)
+Concluído.
+- PR #124 mergeado em `main` (merge commit `35e7bd1abd7f11e2370c020b7d39d93528191915`).
+- Issue #14 fechada (`gh issue close 14 --reason completed`) com comentário resumido.
+- Comentário 📍 Status atualizado: todas as etapas marcadas como concluídas.
+- Campos do board atualizados: `Custo (tokens)` = 1124728, `Tempo proc. (min)` = 87.
+- Comentário `## 💰 Custo` postado na Issue com ledger consolidado (15 etapas, 1124728 tokens, 525 tools, 5255s de processamento).
+- Timestamp de conclusão: `closedAt: 2026-07-24T20:18:29Z`.
+- Status final: **Issue #14 concluída e mergeada para produção (branch main).**
+
+## Custo (ledger)
+| # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
+|---|-------|--------|--------|--------|-------|-----------|
+| 1 | Preparacao | Coordenador | haiku-4.5 | 26844 | 21 | 133s |
+| 2 | PM Fase 1 | pm | sonnet | 27827 | 8 | 46s |
+| 3 | PM Fase 2 | pm-analista-negocios | sonnet | 40649 | 18 | 153s |
+| 4 | Refinamento LT | lider-tecnico | sonnet | 80702 | 42 | 329s |
+| 5 | Dev Sub-B #117 | dev-nodejs | sonnet | 90906 | 64 | 690s |
+| 6 | Dev Sub-A #116 | dev-dotnet | sonnet | 196222 | 136 | 1139s |
+| 7 | Merge #118/#119 + PR homologação #120 | lt | sonnet | 49500 | 17 | 132s |
+| 8 | Code Review — PR #120 (desenv→homolog) | code-review | sonnet | 80642 | 52 | 717s |
+| 9 | QA — homolog (reprovado) | qa | sonnet | 88467 | 37 | 509s |
+| 10 | LT mapeamento da falha (QA reprovou) | lt | sonnet | 67850 | 15 | 227s |
+| 11 | Fix Sub-A #116 — upsert de subscribe | dev-dotnet | sonnet | 74736 | 35 | 263s |
+| 12 | Merge fix #116 → desenv + novo PR #122 desenv→homolog | lt | sonnet | 70897 | 20 | 230s |
+| 13 | Code Review — PR #122 (desenv→homolog, reexecução) | code-review | sonnet | 108502 | 23 | 340s |
+| 14 | QA — reexecução homolog (aprovado) | qa | sonnet | 66505 | 22 | 261s |
+| 15 | Sync docs (PR #123) + PR release #124 (homolog→main) | lt | sonnet | 54479 | 15 | 86s |
+
+**Total: 1124728 tokens | 525 tools | 5255s (87 min) de processamento | Tempo decorrido: 21 dias (3-24 Jul 2026)**
