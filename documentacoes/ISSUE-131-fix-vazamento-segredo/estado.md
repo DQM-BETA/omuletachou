@@ -1,7 +1,7 @@
 issue: 131
 titulo: "fix: Vazamento de segredo curto no mascaramento de Settings"
-etapa_atual: PR #137 mergeado em desenv — absorvido automaticamente no PR #136 (desenv→homolog); aguardando reverificação /code-review + Code Review (agente)
-ultimo_agente: lt
+etapa_atual: Code Review aprovado — PR #136 mergeado em homolog; aguardando QA
+ultimo_agente: code-review
 openspec_change: ~
 tech_stacks:
   - dotnet
@@ -15,7 +15,7 @@ desenv_tasks_merged: []
 sub_issues_frontend: {}
 pr_homologacao: 136
 pr_release: ~
-code_review_homolog_pr: ~
+code_review_homolog_pr: 136
 qa_status: ~
 figma_url: ~
 blockers: nenhum
@@ -72,7 +72,6 @@ status_comment_id: ~
 | 3 | Merge PR #134 + PR homologação #136 | lt | sonnet | 36637 | 14 | 90s |
 | 4 | Dev (fix comprimento fixo, achado /code-review PR #136) | dev-dotnet | sonnet | 51282 | 31 | 286s |
 | 5 | Merge PR #137 -> desenv (absorvido em #136) | lt | sonnet | 38046 | 16 | 82s |
-
 ## Code Review — PR #136 (validacao final)
 - `git pull origin desenv`: já atualizado (HEAD do PR #136 = `desenv`). `dotnet test`: **318/318 passando** (100%).
 - Boot Docker real: `docker compose up -d --build db api` (`.env` local temporario, nunca commitado) — build da imagem `omuletachou-api` OK, containers `afiliado_db` e `afiliado_api` **healthy**, sem exceção de boot/DI, seed do usuário operador executado.

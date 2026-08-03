@@ -1,7 +1,7 @@
 issue: 132
 titulo: "fix: Triggers de collector individual retornam 500 não tratado sem credenciais"
-etapa_atual: Merged em desenv — PR de homologacao compartilhado (#136, junto com #131) — aguardando Code Review + QA + Gate 2
-ultimo_agente: lt
+etapa_atual: Code Review aprovado — PR #136 mergeado em homolog; aguardando QA
+ultimo_agente: code-review
 openspec_change: ~
 tech_stacks:
   - dotnet
@@ -17,7 +17,7 @@ pr_homologacao: 136
 pr_release: ~
 pr_feature: 135
 branch_feature: fix/132-collector-error-handling (deletada apos merge)
-code_review_homolog_pr: ~
+code_review_homolog_pr: 136
 qa_status: ~
 figma_url: ~
 blockers: nenhum
@@ -35,7 +35,6 @@ status_comment_id: ~
 | 1 | Preparacao (compartilhada com #130/#131/#132/#133) | coordenador | haiku-4.5 | 34090 | 19 | 271s |
 | 2 | Dev (fix + testes + PR) | dev-dotnet | sonnet | 61094 | 46 | 358s |
 | 3 | LT (merge PR#135->desenv, decisao de consolidar homologacao em #136) | lt | sonnet | 37476 | 14 | 98s |
-
 ## Code Review — PR #136 (validacao final)
 - `git pull origin desenv`: já atualizado (HEAD do PR #136 = `desenv`). `dotnet test`: **318/318 passando** (100%).
 - Boot Docker real: `docker compose up -d --build db api` (`.env` local temporario, nunca commitado) — build da imagem `omuletachou-api` OK, containers `afiliado_db` e `afiliado_api` **healthy**, sem exceção de boot/DI.
