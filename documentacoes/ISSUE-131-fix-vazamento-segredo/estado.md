@@ -72,3 +72,12 @@ status_comment_id: ~
 | 3 | Merge PR #134 + PR homologação #136 | lt | sonnet | 36637 | 14 | 90s |
 | 4 | Dev (fix comprimento fixo, achado /code-review PR #136) | dev-dotnet | sonnet | 51282 | 31 | 286s |
 | 5 | Merge PR #137 -> desenv (absorvido em #136) | lt | sonnet | 38046 | 16 | 82s |
+
+## Code Review — PR #136 (validacao final)
+- `git pull origin desenv`: já atualizado (HEAD do PR #136 = `desenv`). `dotnet test`: **318/318 passando** (100%).
+- Boot Docker real: `docker compose up -d --build db api` (`.env` local temporario, nunca commitado) — build da imagem `omuletachou-api` OK, containers `afiliado_db` e `afiliado_api` **healthy**, sem exceção de boot/DI, seed do usuário operador executado.
+- Validação ao vivo do fix de mascaramento (fixo desta issue + regressão #136): login via `/api/auth/login`, `PUT /api/settings/claude.api_key` com valores de 1 a 4 caracteres (`"a"`, `"ab"`, `"abc"`, `"abcd"`) — todos retornaram exatamente `"********************"` (20 asteriscos, len=20) tanto na resposta do PUT quanto no `GET /api/settings` subsequente; nenhum caractere real revelado, comprimento da resposta constante (não vaza o tamanho real do segredo por inferência). Valor longo (`"abcde12345longvalue"`, 19 chars) retornou `"****************alue"` (16 asteriscos + últimos 4 chars reais), comportamento preservado.
+- Achados do `/code-review` (plugin) no PR #136: 1 achado inicial (mascara de valor curto usava `16 + value.Length`, vazando o comprimento) — corrigido no commit `0c1c41b` e **reconfirmado pela re-verificação do próprio plugin** (comentário https://github.com/DQM-BETA/omuletachou/pull/136#issuecomment-5167773990); validação ao vivo acima corrobora. Nenhum achado pendente.
+- Checklist de veto: sem segredos commitados no diff (`.env` gerado localmente para o teste, gitignored, removido ao final); código aderente ao CLAUDE.md (stack, convenções de commit/merge); integração real (não mock-only) — endpoints exercitados ponta-a-ponta contra Postgres real em container.
+- Containers derrubados (`docker compose down -v`) e `.env` local removido ao final. Repo checked out em `desenv`.
+- **Veredito: APROVADO.** Merge `desenv` -> `homolog` (PR #136, merge commit) autorizado.

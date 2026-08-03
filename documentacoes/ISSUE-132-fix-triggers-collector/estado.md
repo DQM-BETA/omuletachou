@@ -35,3 +35,15 @@ status_comment_id: ~
 | 1 | Preparacao (compartilhada com #130/#131/#132/#133) | coordenador | haiku-4.5 | 34090 | 19 | 271s |
 | 2 | Dev (fix + testes + PR) | dev-dotnet | sonnet | 61094 | 46 | 358s |
 | 3 | LT (merge PR#135->desenv, decisao de consolidar homologacao em #136) | lt | sonnet | 37476 | 14 | 98s |
+
+## Code Review — PR #136 (validacao final)
+- `git pull origin desenv`: já atualizado (HEAD do PR #136 = `desenv`). `dotnet test`: **318/318 passando** (100%).
+- Boot Docker real: `docker compose up -d --build db api` (`.env` local temporario, nunca commitado) — build da imagem `omuletachou-api` OK, containers `afiliado_db` e `afiliado_api` **healthy**, sem exceção de boot/DI.
+- Validação ao vivo do fix (tratamento de credenciais ausentes nos triggers individuais de collector): login via `/api/auth/login`, sem nenhuma credencial de plataforma configurada (confirmado via `GET /api/settings` — todas as chaves `amazon.*`/`mercadolivre.*`/`shopee.*` nulas). `POST /api/jobs/collector/{amazon|mercadolivre|shopee}/trigger`, todos os 3 retornaram **400** estruturado (não 500):
+  - amazon: `{"message":"Credenciais não configuradas para amazon: Credenciais da Amazon (access_key, secret_key, partner_tag) ausentes ou invalidas."}`
+  - mercadolivre: `{"message":"Credenciais não configuradas para mercadolivre: Credencial ausente: mercadolivre.client_id"}`
+  - shopee: `{"message":"Credenciais não configuradas para shopee: Credencial ausente: shopee.app_id"}`
+- Achados do `/code-review` (plugin) no PR #136: nenhum achado relativo a esta issue (os 2 achados registrados foram sobre o fix de #131/mascaramento); comentário de re-verificação final confirma ausência de pendências.
+- Checklist de veto: sem segredos commitados no diff (`.env` gerado localmente para o teste, gitignored, removido ao final); código aderente ao CLAUDE.md; integração real (não mock-only) — endpoints exercitados ponta-a-ponta contra Postgres real em container, sem credenciais mockadas.
+- Containers derrubados (`docker compose down -v`) e `.env` local removido ao final. Repo checked out em `desenv`.
+- **Veredito: APROVADO.** Merge `desenv` -> `homolog` (PR #136, merge commit) autorizado.
