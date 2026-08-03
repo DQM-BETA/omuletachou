@@ -164,3 +164,4 @@ merge commit — não squash — na promoção conforme convenção da squad).
 | 5 | Refinamento LT | lider-tecnico | sonnet | 74694 | 26 | 306s | 2026-07-30 |
 | 6 | Dev Sub-A #125 (PR #126) | dev-dotnet | sonnet | 130908 | 107 | 1631s | 2026-07-30 |
 | 7 | DevOps — diagnóstico Docker Desktop | devops | haiku-4.5 | 28592 | 13 | 133s | 2026-07-30 |
+| 8 | Merge #125 (PR #126) + PR homologação #127 | lt | sonnet | 71808 | 54 | 593s | 2026-07-30 |
