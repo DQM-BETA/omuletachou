@@ -34,4 +34,4 @@ status_comment_id: ~
 |---|-------|--------|--------|--------|-------|-----------|
 | 1 | Preparacao (compartilhada com #130/#131/#132/#133) | coordenador | haiku-4.5 | 34090 | 19 | 271s |
 | 2 | Dev (fix + testes + PR) | dev-dotnet | sonnet | 61094 | 46 | 358s |
-| 3 | LT (merge PR#135->desenv, decisao de consolidar homologacao em #136) | lt | sonnet | (a ser anexado pela sessao principal via usage do HANDOFF) | - | - |
+| 3 | LT (merge PR#135->desenv, decisao de consolidar homologacao em #136) | lt | sonnet | 37476 | 14 | 98s |
