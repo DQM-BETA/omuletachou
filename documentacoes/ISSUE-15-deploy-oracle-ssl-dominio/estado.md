@@ -1,10 +1,10 @@
 ---
 issue: 15
 titulo: feat: Deploy Oracle Cloud + SSL + Dominio
-etapa_atual: Code Review
+etapa_atual: QA
 rota: normal
 repo: omuletachou
-ultimo_agente: lider-tecnico
+ultimo_agente: code-review
 status_comment_id: 5074045241
 openspec_change: repos/omuletachou/openspec/changes/issue-15-deploy-oracle-ssl-dominio
 tech_stacks: [infra]
@@ -17,7 +17,7 @@ desenv_tasks_merged: ["#125"]
 sub_issues_frontend: {}
 pr_homologacao: 127
 pr_release: ~
-code_review_homolog_pr: ~
+code_review_homolog_pr: 127
 qa_status: ~
 figma_url: ~
 blockers: nenhum
