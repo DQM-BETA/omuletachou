@@ -36,6 +36,12 @@ public class PublicationQueueConfiguration : IEntityTypeConfiguration<Publicatio
             .HasColumnType("timestamptz")
             .IsRequired();
 
+        builder.Property(x => x.Caption)
+            .HasColumnName("caption")
+            .HasColumnType("text")
+            .HasDefaultValue(string.Empty)
+            .IsRequired();
+
         builder.Property(x => x.PublishedAt)
             .HasColumnName("published_at")
             .HasColumnType("timestamptz");

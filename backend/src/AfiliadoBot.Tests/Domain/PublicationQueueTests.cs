@@ -10,7 +10,8 @@ public class PublicationQueueTests
         new PublicationQueue(
             productId: Guid.NewGuid(),
             socialNetwork: SocialNetwork.Telegram,
-            scheduledAt: DateTime.UtcNow.AddHours(1));
+            scheduledAt: DateTime.UtcNow.AddHours(1),
+            caption: "Legenda de teste");
 
     [Fact]
     public void RegisterAttempt_SetsPublished_WhenSuccess()

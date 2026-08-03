@@ -81,7 +81,7 @@ public class QueueControllerTests : IClassFixture<CustomWebApplicationFactory>
             var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
             var product = NewProduct("Produto Fila Default");
             db.Products.Add(product);
-            db.PublicationQueues.Add(new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow));
+            db.PublicationQueues.Add(new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow, "Legenda de teste"));
             await db.SaveChangesAsync();
         }
 
@@ -127,8 +127,8 @@ public class QueueControllerTests : IClassFixture<CustomWebApplicationFactory>
             db.Products.Add(productA);
             db.Products.Add(productB);
 
-            var matching = new PublicationQueue(productA.Id, SocialNetwork.Youtube, DateTime.UtcNow);
-            var wrongNetwork = new PublicationQueue(productB.Id, SocialNetwork.Instagram, DateTime.UtcNow);
+            var matching = new PublicationQueue(productA.Id, SocialNetwork.Youtube, DateTime.UtcNow, "Legenda de teste");
+            var wrongNetwork = new PublicationQueue(productB.Id, SocialNetwork.Instagram, DateTime.UtcNow, "Legenda de teste");
             matchingId = matching.Id;
             wrongNetworkId = wrongNetwork.Id;
 
@@ -178,9 +178,9 @@ public class QueueControllerTests : IClassFixture<CustomWebApplicationFactory>
             db.Products.Add(productA);
             db.Products.Add(productB);
 
-            var manual = new PublicationQueue(productA.Id, SocialNetwork.Facebook, DateTime.UtcNow);
+            var manual = new PublicationQueue(productA.Id, SocialNetwork.Facebook, DateTime.UtcNow, "Legenda de teste");
             manual.MarkAsManualPending();
-            var scheduled = new PublicationQueue(productB.Id, SocialNetwork.Telegram, DateTime.UtcNow);
+            var scheduled = new PublicationQueue(productB.Id, SocialNetwork.Telegram, DateTime.UtcNow, "Legenda de teste");
             manualId = manual.Id;
             scheduledId = scheduled.Id;
 
@@ -224,7 +224,7 @@ public class QueueControllerTests : IClassFixture<CustomWebApplicationFactory>
             var product = NewProduct("Produto Fila Falha");
             db.Products.Add(product);
 
-            var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1));
+            var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1), "Legenda de teste");
             item.RegisterAttempt(success: false, errorMessage: "Timeout ao publicar.");
             itemId = item.Id;
 
@@ -263,7 +263,7 @@ public class QueueControllerTests : IClassFixture<CustomWebApplicationFactory>
             var product = NewProduct("Produto Fila Nao Falha");
             db.Products.Add(product);
 
-            var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(1));
+            var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(1), "Legenda de teste");
             itemId = item.Id;
             originalScheduledAt = item.ScheduledAt;
 
@@ -320,7 +320,7 @@ public class QueueControllerTests : IClassFixture<CustomWebApplicationFactory>
             var product = NewProduct("Produto Fila Facebook Manual");
             db.Products.Add(product);
 
-            var item = new PublicationQueue(product.Id, SocialNetwork.Facebook, DateTime.UtcNow);
+            var item = new PublicationQueue(product.Id, SocialNetwork.Facebook, DateTime.UtcNow, "Legenda de teste");
             item.MarkAsManualPending();
             itemId = item.Id;
 
@@ -357,7 +357,7 @@ public class QueueControllerTests : IClassFixture<CustomWebApplicationFactory>
             var product = NewProduct("Produto Fila Transicao Invalida");
             db.Products.Add(product);
 
-            var item = new PublicationQueue(product.Id, SocialNetwork.Facebook, DateTime.UtcNow);
+            var item = new PublicationQueue(product.Id, SocialNetwork.Facebook, DateTime.UtcNow, "Legenda de teste");
             item.MarkAsManualPending();
             itemId = item.Id;
 
@@ -391,7 +391,7 @@ public class QueueControllerTests : IClassFixture<CustomWebApplicationFactory>
             var product = NewProduct("Produto Fila Nao Manual Pending");
             db.Products.Add(product);
 
-            var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow);
+            var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow, "Legenda de teste");
             itemId = item.Id;
 
             db.PublicationQueues.Add(item);

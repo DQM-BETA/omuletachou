@@ -121,7 +121,7 @@ public class TikTokPublisher : ISocialPublisher
                 return false;
             }
 
-            var caption = SocialDisclosureHelper.AppendIfMissing(product.AiCaption ?? string.Empty);
+            var caption = SocialDisclosureHelper.AppendIfMissing(item.Caption);
             var accessToken = credentials.AccessToken;
             var fileLength = new FileInfo(mediaPath).Length;
             var totalChunks = (int)Math.Ceiling(fileLength / (double)ChunkSizeBytes);

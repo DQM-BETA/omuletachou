@@ -173,7 +173,7 @@ public class InstagramPublisherTests
 
         var product = CriarProduto(mediaLocalPath: null, mediaUrl: "https://cdn.teste/video.mp4", mediaType: "video");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -204,7 +204,7 @@ public class InstagramPublisherTests
 
         var product = CriarProduto(mediaLocalPath: null, mediaUrl: "https://cdn.teste/video.mp4", mediaType: "video");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -231,7 +231,7 @@ public class InstagramPublisherTests
 
         var product = CriarProduto(mediaLocalPath: null, mediaUrl: "https://cdn.teste/video.mp4", mediaType: "video");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -257,7 +257,7 @@ public class InstagramPublisherTests
 
         var product = CriarProduto(mediaLocalPath: null, mediaUrl: "https://cdn.teste/video.mp4", mediaType: "video");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -286,7 +286,7 @@ public class InstagramPublisherTests
 
         var product = CriarProduto(mediaLocalPath: "/app/media/abc123.mp4", mediaUrl: null, mediaType: "video");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -311,7 +311,7 @@ public class InstagramPublisherTests
 
         var product = CriarProduto(mediaLocalPath: null, mediaUrl: "https://cdn.teste/original.mp4", mediaType: "video");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -338,7 +338,7 @@ public class InstagramPublisherTests
         // MediaUrl de fallback.
         var product = CriarProduto(mediaLocalPath: "/app/media/orfao.mp4", mediaUrl: null, mediaType: "video");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -361,9 +361,9 @@ public class InstagramPublisherTests
         using var db = CreateInMemoryContext();
         await SeedCredentialsAsync(db);
 
-        var product = CriarProduto(mediaLocalPath: null, mediaUrl: "https://cdn.teste/video.mp4", mediaType: "video", aiCaption: "Confira essa oferta incrivel!");
+        var product = CriarProduto(mediaLocalPath: null, mediaUrl: "https://cdn.teste/video.mp4", mediaType: "video");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow, "Confira essa oferta incrivel!");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -387,9 +387,9 @@ public class InstagramPublisherTests
         using var db = CreateInMemoryContext();
         await SeedCredentialsAsync(db);
 
-        var product = CriarProduto(mediaLocalPath: null, mediaUrl: "https://cdn.teste/video.mp4", mediaType: "video", aiCaption: captionComDisclosure);
+        var product = CriarProduto(mediaLocalPath: null, mediaUrl: "https://cdn.teste/video.mp4", mediaType: "video");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow, captionComDisclosure);
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -416,7 +416,7 @@ public class InstagramPublisherTests
 
         var product = CriarProduto(mediaLocalPath: null, mediaUrl: "https://cdn.teste/video.mp4", mediaType: "video");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -447,7 +447,7 @@ public class InstagramPublisherTests
 
         var product = CriarProduto(mediaLocalPath: null, mediaUrl: "https://cdn.teste/video.mp4", mediaType: "video");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -470,7 +470,7 @@ public class InstagramPublisherTests
 
         var product = CriarProduto(mediaLocalPath: null, mediaUrl: "https://cdn.teste/video.mp4", mediaType: "video");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -498,7 +498,7 @@ public class InstagramPublisherTests
 
         var product = CriarProduto(mediaLocalPath: null, mediaUrl: null, mediaType: "image");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -524,7 +524,7 @@ public class InstagramPublisherTests
 
         var product = CriarProduto(mediaLocalPath: null, mediaUrl: null, mediaType: "video");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -544,7 +544,7 @@ public class InstagramPublisherTests
 
         var product = CriarProduto(mediaLocalPath: null, mediaUrl: "https://cdn.teste/video.mp4", mediaType: "video");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -567,7 +567,7 @@ public class InstagramPublisherTests
 
         var product = CriarProduto(mediaLocalPath: null, mediaUrl: "https://cdn.teste/video.mp4", mediaType: "video");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 

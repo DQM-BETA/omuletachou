@@ -115,7 +115,7 @@ public class InstagramPublisher : ISocialPublisher
             return false;
         }
 
-        var caption = SocialDisclosureHelper.AppendIfMissing(product.AiCaption ?? string.Empty);
+        var caption = SocialDisclosureHelper.AppendIfMissing(item.Caption);
 
         // Etapa 1: criacao do container de midia (CA1).
         var (creationId, createError) = await CreateMediaContainerAsync(videoUrl, caption, pageId, accessToken, ct);
