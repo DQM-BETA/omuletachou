@@ -1,7 +1,7 @@
 issue: 130
 titulo: "fix: Legenda de IA nunca é persistida — todo post sai sem legenda"
-etapa_atual: QA
-ultimo_agente: code-review
+etapa_atual: aguardando Gate 2 (Gerente)
+ultimo_agente: lider-tecnico
 openspec_change: openspec/changes/issue-130-fix-legenda-de-ia
 tech_stacks:
   - dotnet
@@ -20,7 +20,7 @@ desenv_tasks_merged:
 sub_issues_frontend:
   "#140": angular
 pr_homologacao: 143
-pr_release: ~
+pr_release: 144
 code_review_homolog_pr: 143
 qa_status: aprovado
 figma_url: ~
@@ -386,6 +386,17 @@ não reaproveitando evidência do Code Review.
 
 **Veredito: APROVADO.** Pronto para PR de release `homolog` → `main` (Gate 2: Gerente).
 
+## Líder Técnico (PR release)
+`git pull origin desenv` — já atualizada, sem divergência. Verificação de sincronização: `git diff
+origin/homolog..origin/desenv` mostrou apenas o próprio `estado.md` pendente (docs, esperado); `git diff
+origin/main..origin/homolog` confirmou o diff completo do fix (backend + frontend + migration + testes +
+docs), sem código pendente de sincronizar.
+
+PR de release criado: https://github.com/DQM-BETA/omuletachou/pull/144 (`homolog` → `main`, merge commit,
+NUNCA squash — corpo descreve o bug completo, o fix, sub-issues #139/#140, aprovação de Code Review e QA
+18/18, e a origem/auditoria pedida pelo Gerente em 2026-08-03). **Não mergeado** — aguarda aprovação
+humana (Gate 2: Gerente).
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|-------|--------|--------|--------|-------|-----------|
@@ -399,3 +410,4 @@ não reaproveitando evidência do Code Review.
 | 8 | Merge Sub-B #140 (PR #142) + PR homologacao (PR #143) | lt | sonnet | 47068 | 11 | 129s |
 | 9 | Code Review — validacao final PR #143 | code-review | sonnet | 80154 | 58 | 755s |
 | 10 | QA — homolog (18/18 CAs) | qa | sonnet | 100909 | 55 | 599s |
+| 11 | PR release (homolog→main, PR #144) | lt | sonnet | ~ | ~ | ~ |
