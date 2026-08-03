@@ -12,9 +12,10 @@ repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-130-fix-legenda-de-ia
 openspec_path: repos/omuletachou/openspec/changes/issue-130-fix-legenda-de-ia
 sub_issues:
-  - "#139 (stack:dotnet, task_id: Sub-A) — backend: migration, PublicationQueue.Caption, ProcessorJob, 4 publishers, ProductDetailDto, ProcessorJobTests.cs — BLOQUEANTE"
+  - "#139 (stack:dotnet, task_id: Sub-A) — backend: migration, PublicationQueue.Caption, ProcessorJob, 4 publishers, ProductDetailDto, ProcessorJobTests.cs — BLOQUEANTE — MERGED (PR #141)"
   - "#140 (stack:angular, task_id: Sub-B) — frontend: ProductDetail/ProductsService + facebook-manual.component consomem ai_caption — depende do contrato do DTO da Sub-A"
-desenv_tasks_merged: []
+desenv_tasks_merged:
+  - "#139"
 sub_issues_frontend:
   "#140": angular
 pr_homologacao: ~
@@ -127,6 +128,19 @@ aplicada automaticamente no startup, seed de usuário ok, Hangfire registrado). 
 
 PR aberto: https://github.com/DQM-BETA/omuletachou/pull/141 (`fix/139-caption-backend` → `desenv`, contém
 nota de changelog CA18 no corpo do PR). Worktree removido após push.
+
+## Líder Técnico (merge Sub-A #139)
+PR #141 revisado (diff completo, 22 arquivos, +904/-99) — atenção especial à migration
+(`AddCaptionToPublicationQueue`: coluna `caption text NOT NULL DEFAULT ''`, aditiva, sem risco de
+quebra em dados existentes) e ao contrato do DTO (`ProductDetailDto.AiCaption` → `ai_caption`, novo
+campo opcional, não quebra consumidores existentes do endpoint). Os 4 publishers confirmados lendo
+`item.Caption` em vez de `product.AiCaption` (bug original corrigido de forma consistente).
+
+Merge squash `fix/139-caption-backend` → `desenv` (PR #141), branch remota deletada. Fast-forward
+limpo em `desenv` local, sem conflitos (`e9328d2..1276278`). Sub-issue #139 fechada com comentário de
+resumo (https://github.com/DQM-BETA/omuletachou/issues/139).
+
+Sub-B (#140, Angular) desbloqueada: contrato `ai_caption` já disponível em `desenv`.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
