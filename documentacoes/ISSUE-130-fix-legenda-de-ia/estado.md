@@ -51,4 +51,4 @@ PRD consolidado e postado (comentário https://github.com/DQM-BETA/omuletachou/i
 |---|-------|--------|--------|--------|-------|-----------|
 | 1 | Preparacao (compartilhada com #130/#131/#132/#133) | coordenador | haiku-4.5 | 34090 | 19 | 271s |
 | 2 | PM Fase 1 | pm-analista-negocios | sonnet | 29010 | 14 | 95s |
-| 3 | PM Fase 2 | pm-analista-negocios | sonnet | TBD | TBD | TBD |
+| 3 | PM Fase 2 | pm-analista-negocios | sonnet | 44474 | 21 | 188s |
