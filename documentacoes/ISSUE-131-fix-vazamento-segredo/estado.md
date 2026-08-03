@@ -75,7 +75,7 @@ status_comment_id: ~
 | 5 | Merge PR #137 -> desenv (absorvido em #136) | lt | sonnet | 38046 | 16 | 82s |
 | 6 | Code Review — validacao final PR #136 | code-review | sonnet | 62979 | 46 | 359s |
 | 7 | QA — homolog | qa | sonnet | 57237 | 26 | 310s |
-| 8 | LT PR release homolog-main #138 | lt | sonnet | TBD | TBD | TBD |
+| 8 | LT PR release homolog-main #138 | lt | sonnet | 49510 | 19 | 113s |
 ## Code Review — PR #136 (validacao final)
 - `git pull origin desenv`: já atualizado (HEAD do PR #136 = `desenv`). `dotnet test`: **318/318 passando** (100%).
 - Boot Docker real: `docker compose up -d --build db api` (`.env` local temporario, nunca commitado) — build da imagem `omuletachou-api` OK, containers `afiliado_db` e `afiliado_api` **healthy**, sem exceção de boot/DI, seed do usuário operador executado.
