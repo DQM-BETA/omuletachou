@@ -136,4 +136,5 @@ PR aberto: `feature/125-deploy-artifacts` → `desenv`.
 | 3 | PM Fase 2 | pm-analista-negocios | sonnet | 57585 | 34 | 311s | 2026-07-30 |
 | 4 | Arquiteto | arquiteto | sonnet | 63814 | 38 | 216s | 2026-07-30 |
 | 5 | Refinamento LT | lider-tecnico | sonnet | 74694 | 26 | 306s | 2026-07-30 |
-| 6 | Dev Sub-A #125 | dev-dotnet | sonnet | 130908 | 107 | 1631s | 2026-07-30 |
+| 6 | Dev Sub-A #125 (PR #126) | dev-dotnet | sonnet | 130908 | 107 | 1631s | 2026-07-30 |
+| 7 | DevOps — diagnóstico Docker Desktop | devops | haiku-4.5 | 28592 | 13 | 133s | 2026-07-30 |
