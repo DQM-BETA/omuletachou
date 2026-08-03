@@ -399,4 +399,4 @@ DNS, Nginx Proxy Manager, certificados SSL) é manual e cabe ao Gerente, fora do
 | 10 | Merge PR #128 + verificação propagação PR #127 | lt | sonnet | 51005 | 21 | 178s | 2026-08-03 |
 | 11 | Code Review — validação final PR #127 (build+boot+testes) | code-review | sonnet | 81301 | 45 | 602s | 2026-08-03 |
 | 12 | QA — homolog (aprovado) | qa | sonnet | 69397 | 30 | 323s | 2026-08-03 |
-| 13 | LT — PR release homolog→main (#129) | lt | sonnet | (a preencher pela sessão principal via usage) | - | - | 2026-08-03 |
+| 13 | LT — PR release homolog→main (#129) | lt | sonnet | 62404 | 9 | 176s | 2026-08-03 |
