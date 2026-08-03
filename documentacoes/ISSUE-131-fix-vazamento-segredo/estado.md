@@ -71,4 +71,4 @@ status_comment_id: ~
 | 2 | Dev (fix + TDD + validacao Docker + PR) | dev-dotnet | sonnet | 48620 | 32 | 313s |
 | 3 | Merge PR #134 + PR homologação #136 | lt | sonnet | 36637 | 14 | 90s |
 | 4 | Dev (fix comprimento fixo, achado /code-review PR #136) | dev-dotnet | sonnet | 51282 | 31 | 286s |
-| 5 | Merge PR #137 -> desenv (absorvido em #136) | lt | sonnet | (pendente ledger orquestrador) | - | - |
+| 5 | Merge PR #137 -> desenv (absorvido em #136) | lt | sonnet | 38046 | 16 | 82s |
