@@ -201,4 +201,4 @@ completo, sub-issues e origem/auditoria pedida pelo Gerente em 2026-08-03).
 | 5 | Dev Sub-A #139 | dev-dotnet | sonnet | 183618 | 115 | 724s |
 | 6 | Merge Sub-A #139 (PR #141) | lt | sonnet | 47158 | 18 | 87s |
 | 7 | Dev Sub-B #140 | dev-angular | sonnet | 87255 | 47 | 526s |
-| 8 | Merge Sub-B #140 (PR #142) + PR homologacao (PR #143) | lt | sonnet | TBD | TBD | TBD |
+| 8 | Merge Sub-B #140 (PR #142) + PR homologacao (PR #143) | lt | sonnet | 47068 | 11 | 129s |
