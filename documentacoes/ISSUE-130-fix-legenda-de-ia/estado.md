@@ -410,4 +410,4 @@ humana (Gate 2: Gerente).
 | 8 | Merge Sub-B #140 (PR #142) + PR homologacao (PR #143) | lt | sonnet | 47068 | 11 | 129s |
 | 9 | Code Review — validacao final PR #143 | code-review | sonnet | 80154 | 58 | 755s |
 | 10 | QA — homolog (18/18 CAs) | qa | sonnet | 100909 | 55 | 599s |
-| 11 | PR release (homolog→main, PR #144) | lt | sonnet | ~ | ~ | ~ |
+| 11 | PR release (homolog→main, PR #144) | lt | sonnet | 60189 | 9 | 163s |
