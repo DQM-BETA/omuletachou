@@ -28,6 +28,7 @@ export interface ProductDetail extends ProductListItem {
   mediaUrl: string | null;
   mediaLocalPath: string | null;
   updatedAt: string;
+  ai_caption?: string | null;
 }
 
 export interface ProductsListParams {
