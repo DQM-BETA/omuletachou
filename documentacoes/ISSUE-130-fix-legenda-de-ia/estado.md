@@ -279,3 +279,4 @@ PR #143. Containers derrubados ao final (`docker compose down -v`), `.env` local
 | 6 | Merge Sub-A #139 (PR #141) | lt | sonnet | 47158 | 18 | 87s |
 | 7 | Dev Sub-B #140 | dev-angular | sonnet | 87255 | 47 | 526s |
 | 8 | Merge Sub-B #140 (PR #142) + PR homologacao (PR #143) | lt | sonnet | 47068 | 11 | 129s |
+| 9 | Code Review — validacao final PR #143 | code-review | sonnet | 80154 | 58 | 755s |
