@@ -1,10 +1,10 @@
 ---
 issue: 15
 titulo: feat: Deploy Oracle Cloud + SSL + Dominio
-etapa_atual: aguardando Gate 2 (Gerente)
+etapa_atual: Concluído
 rota: normal
 repo: omuletachou
-ultimo_agente: lt
+ultimo_agente: coordenador
 status_comment_id: 5074045241
 openspec_change: repos/omuletachou/openspec/changes/issue-15-deploy-oracle-ssl-dominio
 tech_stacks: [infra]
@@ -21,7 +21,7 @@ code_review_homolog_pr: 127
 qa_status: aprovado
 figma_url: ~
 blockers: nenhum
-closedAt: ~
+closedAt: 2026-08-03T13:13:24Z
 ---
 
 ## Contexto
@@ -383,6 +383,10 @@ na VM Oracle real, o bug de `NEXT_PUBLIC_API_URL` encontrado pelo Code Review e 
 o merge é bookkeeping do Coordenador; a execução do runbook na VM Oracle real (provisionamento,
 DNS, Nginx Proxy Manager, certificados SSL) é manual e cabe ao Gerente, fora do escopo deste PR.
 
+## Coordenador — Encerramento e consolidação de custo (2026-08-03)
+
+PR #129 (`homolog`→`main`) mergeado com sucesso via `gh pr merge 129 --repo DQM-BETA/omuletachou --merge` em 2026-08-03 13:13:04Z. Issue #15 fechada (2026-08-03 13:13:24Z) com comentário resumido.
+
 ## Custo (ledger)
 
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) | Data |
@@ -400,3 +404,10 @@ DNS, Nginx Proxy Manager, certificados SSL) é manual e cabe ao Gerente, fora do
 | 11 | Code Review — validação final PR #127 (build+boot+testes) | code-review | sonnet | 81301 | 45 | 602s | 2026-08-03 |
 | 12 | QA — homolog (aprovado) | qa | sonnet | 69397 | 30 | 323s | 2026-08-03 |
 | 13 | LT — PR release homolog→main (#129) | lt | sonnet | 62404 | 9 | 176s | 2026-08-03 |
+
+**Totais:**
+- **Tokens processados**: 905,801 tokens (consumo total agregado, sem split in/out)
+- **Tempo de processamento (squad)**: 5,059 segundos = 84.32 minutos
+- **Tempo decorrido (Issue #15)**: 31 dias (createdAt 2026-07-03 12:46:27Z até closedAt 2026-08-03 13:13:24Z) = 44,664 minutos
+
+Nota: overhead do orquestrador não incluído nos totais; custo é do pipeline de agentes.
