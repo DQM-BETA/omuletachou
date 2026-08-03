@@ -1,7 +1,7 @@
 issue: 132
 titulo: "fix: Triggers de collector individual retornam 500 não tratado sem credenciais"
-etapa_atual: QA aprovado — PR #136 mergeado em homolog; aguardando LT (PR release homolog->main)
-ultimo_agente: qa
+etapa_atual: aguardando Gate 2 (Gerente) — PR release #138 (homolog->main) criado
+ultimo_agente: lt
 openspec_change: ~
 tech_stacks:
   - dotnet
@@ -14,7 +14,7 @@ sub_issues: []
 desenv_tasks_merged: []
 sub_issues_frontend: {}
 pr_homologacao: 136
-pr_release: ~
+pr_release: 138
 pr_feature: 135
 branch_feature: fix/132-collector-error-handling (deletada apos merge)
 code_review_homolog_pr: 136
@@ -28,6 +28,7 @@ status_comment_id: ~
 - 2026-08-03 — LT (merge de sub-issue / rota rapido): `git pull origin desenv` limpo (sem pendencias). Revisado diff do PR #135 (`gh pr diff 135`) — try/catch `InvalidOperationException` nos 3 triggers individuais + 3 testes novos, consistente com o historico do dev. Confirmado `mergeable: MERGEABLE` / `mergeStateStatus: CLEAN`. Merge squash de `fix/132-collector-error-handling` -> `desenv` (PR #135), branch remota deletada. `git pull origin desenv` fast-forward (941dbe3..5cc212c), sem conflitos. Comentario postado na Issue #132 informando o merge (issue mantida aberta).
   **Decisao de homologacao:** o PR #136 (`desenv` -> `homolog`, aberto para a issue #131) ja existia com `head=desenv` (branch, nao SHA fixo) e ainda nao tinha sido processado por Code Review/QA. Ao mergear #135 em desenv, o PR #136 automaticamente absorveu o novo commit (confirmado: de 15 para 16 commits, `mergeable: MERGEABLE` / `mergeStateStatus: CLEAN` apos o merge). Como #131 e #132 sao fixes pequenos e independentes, e #136 ainda estava aberto e limpo, optou-se por **NAO criar um PR #137 separado** — #136 agora cobre ambos os fixes (#131 + #132) no mesmo ciclo de homologacao, evitando dois PRs `desenv->homolog` concorrentes (o que geraria conflito/duplicacao ao tentar mergear qualquer um dos dois). Este e o cenario "desenv ja avancou, #136 ainda nao processado" previsto no criterio de decisao.
   `pr_homologacao` atualizado para 136 (compartilhado com #131). Nenhum PR novo criado nesta invocacao.
+- 2026-08-03 — LT (release): `git pull origin desenv` limpo (working tree clean, up to date). Verificada sincronizacao de codigo entre `desenv` e `homolog` — `git diff origin/homolog origin/desenv --stat` mostrou apenas os `estado.md` de docs pendentes (esperado), nenhum codigo divergente. Criado PR de release `homolog` -> `main` (merge commit, sem squash), cobrindo as Issues #131 e #132 (aprovadas por Code Review e QA em `homolog` via PR #136): https://github.com/DQM-BETA/omuletachou/pull/138. PR NAO mergeado — aguarda Gate 2 (Gerente). Repo local checked out em `desenv`.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -37,6 +38,7 @@ status_comment_id: ~
 | 3 | LT (merge PR#135->desenv, decisao de consolidar homologacao em #136) | lt | sonnet | 37476 | 14 | 98s |
 | 4 | Code Review — validacao final PR #136 (compartilhada com #131) | code-review | sonnet | 62979 | 46 | 359s |
 | 5 | QA — homolog (compartilhada com #131) | qa | sonnet | 57237 | 26 | 310s |
+| 6 | LT PR release homolog-main #138 | lt | sonnet | TBD | TBD | TBD |
 ## Code Review — PR #136 (validacao final)
 - `git pull origin desenv`: já atualizado (HEAD do PR #136 = `desenv`). `dotnet test`: **318/318 passando** (100%).
 - Boot Docker real: `docker compose up -d --build db api` (`.env` local temporario, nunca commitado) — build da imagem `omuletachou-api` OK, containers `afiliado_db` e `afiliado_api` **healthy**, sem exceção de boot/DI.

@@ -1,7 +1,7 @@
 issue: 131
 titulo: "fix: Vazamento de segredo curto no mascaramento de Settings"
-etapa_atual: QA aprovado — PR #136 mergeado em homolog; aguardando LT (PR release homolog->main)
-ultimo_agente: qa
+etapa_atual: aguardando Gate 2 (Gerente) — PR release #138 (homolog->main) criado
+ultimo_agente: lt
 openspec_change: ~
 tech_stacks:
   - dotnet
@@ -14,7 +14,7 @@ sub_issues: []
 desenv_tasks_merged: []
 sub_issues_frontend: {}
 pr_homologacao: 136
-pr_release: ~
+pr_release: 138
 code_review_homolog_pr: 136
 qa_status: aprovado
 figma_url: ~
@@ -63,6 +63,7 @@ status_comment_id: ~
   que o PR #136 (`desenv` -> `homolog`, ainda OPEN) absorveu automaticamente o commit `0c1c41b`
   como seu ultimo commit (mesmo padrao ja usado para consolidar #131+#132 anteriormente) — nenhuma
   acao de merge foi necessaria em #136. Repo local checked out em `desenv`.
+- 2026-08-03 — LT (release): `git pull origin desenv` limpo (working tree clean, up to date). Verificada sincronizacao de codigo entre `desenv` e `homolog` — `git diff origin/homolog origin/desenv --stat` mostrou apenas os `estado.md` de docs pendentes (esperado), nenhum codigo divergente. Criado PR de release `homolog` -> `main` (merge commit, sem squash), cobrindo as Issues #131 e #132 (aprovadas por Code Review e QA em `homolog` via PR #136): https://github.com/DQM-BETA/omuletachou/pull/138. PR NAO mergeado — aguarda Gate 2 (Gerente). Repo local checked out em `desenv`.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -74,6 +75,7 @@ status_comment_id: ~
 | 5 | Merge PR #137 -> desenv (absorvido em #136) | lt | sonnet | 38046 | 16 | 82s |
 | 6 | Code Review — validacao final PR #136 | code-review | sonnet | 62979 | 46 | 359s |
 | 7 | QA — homolog | qa | sonnet | 57237 | 26 | 310s |
+| 8 | LT PR release homolog-main #138 | lt | sonnet | TBD | TBD | TBD |
 ## Code Review — PR #136 (validacao final)
 - `git pull origin desenv`: já atualizado (HEAD do PR #136 = `desenv`). `dotnet test`: **318/318 passando** (100%).
 - Boot Docker real: `docker compose up -d --build db api` (`.env` local temporario, nunca commitado) — build da imagem `omuletachou-api` OK, containers `afiliado_db` e `afiliado_api` **healthy**, sem exceção de boot/DI, seed do usuário operador executado.
