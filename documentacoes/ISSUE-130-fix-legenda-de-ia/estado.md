@@ -78,6 +78,56 @@ Sumário técnico postado na Issue #130 (comentário
 https://github.com/DQM-BETA/omuletachou/issues/130#issuecomment-5169710249). Comentário 📍 Status editado
 para "Em Desenvolvimento".
 
+## Dev Sub-A #139
+Worktree `.worktrees/139-fix-caption-backend` (branch `fix/139-caption-backend`, a partir de `desenv`).
+
+Implementado (TDD RED→GREEN):
+- Migration `AddCaptionToPublicationQueue` (`ALTER TABLE publication_queue ADD COLUMN caption TEXT NOT NULL
+  DEFAULT ''`), gerada via `dotnet ef migrations add` — SQL efetivo conferido, igual ao especificado.
+- `PublicationQueue.cs`: nova propriedade `Caption`; construtor com 4º parâmetro `caption` (breaking change
+  interno — único caller de produção era `ProcessorJob`; todos os ~80 call sites de teste em
+  `PublicationQueueTests.cs`, `ReportsControllerTests.cs`, `QueueControllerTests.cs`,
+  `InstagramPublisherTests.cs`, `PublisherJobTests.cs`, `TelegramPublisherTests.cs`,
+  `TikTokPublisherTests.cs`, `YoutubePublisherTests.cs` atualizados para o novo construtor).
+- `PublicationQueueConfiguration.cs`: mapeamento da coluna `caption`.
+- `ProcessorJob.cs` (`CreatePublicationQueueEntriesAsync`): retorno de `GenerateCaptionAsync` agora
+  persistido no item de `PublicationQueue` criado por rede (antes descartado).
+- 4 publishers (`TelegramPublisher`, `YoutubePublisher` — `BuildMetadataJson` ganhou parâmetro `caption`,
+  `InstagramPublisher`, `TikTokPublisher`): leitura trocada de `product.AiCaption` para `item.Caption`.
+  Confirmado via grep: nenhuma referência a `AiCaption` restante nos 4 arquivos (CA5).
+- `ProductDetailDto`/`ProductsController.GetProduct`: novo campo `ai_caption`, resolvido do item de
+  `PublicationQueue` mais recente (`OrderByDescending(CreatedAt)`) da rede Facebook associado ao produto —
+  `null` quando não existe item para essa rede (distinto de `""`, valor válido para itens legados).
+- `ProcessorJobTests.cs`: mock de `GenerateCaptionAsync` retorna valor determinístico por rede (`$"Legenda
+  {network}"`); asserts de persistência real em `PublicationQueue.Caption` (CA15); novo teste de múltiplas
+  redes habilitadas comprovando captions distintas sem sobrescrita (CA16); testes `Times.Never` existentes
+  (CA17) mantidos, já continham `entries.Should().BeEmpty()/NotContain(...)`.
+- 2 novos testes em `ProductsControllerTests.cs` (CA12): `ai_caption` retorna a caption do item Facebook
+  mais recente (múltiplos itens, incl. Telegram, para comprovar filtro por rede) / `null` quando não há
+  item de fila para Facebook.
+- Corrigidos 3 testes de publisher que quebraram silenciosamente com a extração mecânica dos call sites
+  (`InstagramPublisherTests.PublishAsync_AnexaDisclosure_QuandoLegendaNaoContem`,
+  `PublishAsync_NaoDuplicaDisclosure_QuandoJaPresente`, `TikTokPublisherTests` equivalentes): a legenda de
+  teste precisa vir de `item.Caption`, não mais de `product.AiCaption`.
+
+Gate de testes: `dotnet test` → **321/321 passando (100%)**.
+
+Boot real (evidência, não suposição): `.env` local criado (gitignored) com `DB_USER`/`DB_PASSWORD`/
+`JWT_SIGNING_KEY`/seed de usuário; `docker compose up -d --build db api` — API sobe sem exceção (migration
+aplicada automaticamente no startup, seed de usuário ok, Hangfire registrado). Verificação funcional via
+`psql` + chamadas HTTP internas ao container (`docker exec afiliado_api curl ...`):
+- `\d publication_queue` confirma coluna `caption text NOT NULL DEFAULT ''::text` (CA1).
+- Produto de teste inserido (`Status=Queued`, Telegram habilitado) + `POST /api/jobs/processor/trigger`
+  (autenticado) → `publication_queue.caption` preenchida com texto real e não vazio (fallback determinístico
+  do `ClaudeAiService.GenerateCaptionAsync` quando a API Claude não está configurada no ambiente local, que
+  nunca lança exceção — comportamento preexistente, CA6 preservado).
+- Item de fila Facebook inserido manualmente com caption própria → `GET /api/products/{id}` retornou
+  `"ai_caption":"Legenda Facebook de teste real via banco"`, confirmando CA12 fim-a-fim.
+- Dados de teste removidos, `docker compose down`, `.env` local removido ao final (não versionado).
+
+PR aberto: https://github.com/DQM-BETA/omuletachou/pull/141 (`fix/139-caption-backend` → `desenv`, contém
+nota de changelog CA18 no corpo do PR). Worktree removido após push.
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|-------|--------|--------|--------|-------|-----------|
@@ -85,3 +135,4 @@ para "Em Desenvolvimento".
 | 2 | PM Fase 1 | pm-analista-negocios | sonnet | 29010 | 14 | 95s |
 | 3 | PM Fase 2 | pm-analista-negocios | sonnet | 44474 | 21 | 188s |
 | 4 | Refinamento LT | lider-tecnico | sonnet | 107624 | 42 | 359s |
+| 5 | Dev Sub-A #139 | dev-dotnet | sonnet | 183618 | 115 | 724s |
