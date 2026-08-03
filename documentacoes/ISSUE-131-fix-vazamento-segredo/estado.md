@@ -44,3 +44,4 @@ status_comment_id: ~
 |---|-------|--------|--------|--------|-------|-----------|
 | 1 | Preparacao (compartilhada com #130/#131/#132/#133) | coordenador | haiku-4.5 | 34090 | 19 | 271s |
 | 2 | Dev (fix + TDD + validacao Docker + PR) | dev-dotnet | sonnet | 48620 | 32 | 313s |
+| 3 | Merge PR #134 + PR homologação #136 | lt | sonnet | 36637 | 14 | 90s |
