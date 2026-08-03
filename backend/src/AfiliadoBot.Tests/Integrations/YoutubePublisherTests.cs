@@ -185,7 +185,7 @@ public class YoutubePublisherTests
 
         var product = CriarProduto(mediaLocalPath: null, mediaUrl: null, mediaType: "image");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -212,7 +212,7 @@ public class YoutubePublisherTests
         {
             var product = CriarProduto(mediaLocalPath: tempFile, mediaUrl: null, mediaType: "video");
             db.Products.Add(product);
-            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow);
+            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow, "Legenda de teste");
             db.PublicationQueues.Add(item);
             await db.SaveChangesAsync();
 
@@ -246,7 +246,7 @@ public class YoutubePublisherTests
 
         var product = CriarProduto(mediaLocalPath: null, mediaUrl: null, mediaType: "video");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -276,7 +276,7 @@ public class YoutubePublisherTests
         {
             var product = CriarProduto(mediaLocalPath: tempFile, mediaUrl: "https://cdn.teste/video.mp4", mediaType: "video");
             db.Products.Add(product);
-            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow);
+            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow, "Legenda de teste");
             db.PublicationQueues.Add(item);
             await db.SaveChangesAsync();
 
@@ -307,7 +307,7 @@ public class YoutubePublisherTests
         {
             var product = CriarProduto(mediaLocalPath: null, mediaUrl: "https://cdn.teste/video.mp4", mediaType: "video");
             db.Products.Add(product);
-            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow);
+            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow, "Legenda de teste");
             db.PublicationQueues.Add(item);
             await db.SaveChangesAsync();
 
@@ -346,7 +346,7 @@ public class YoutubePublisherTests
         {
             var product = CriarProduto(mediaLocalPath: tempFile, mediaUrl: null, mediaType: "video", category: categoria);
             db.Products.Add(product);
-            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow);
+            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow, "Legenda de teste");
             db.PublicationQueues.Add(item);
             await db.SaveChangesAsync();
 
@@ -377,7 +377,7 @@ public class YoutubePublisherTests
 
         var product = CriarProduto(mediaLocalPath: null, mediaUrl: null, mediaType: "video");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -403,7 +403,7 @@ public class YoutubePublisherTests
         {
             var product = CriarProduto(mediaLocalPath: tempFile, mediaUrl: null, mediaType: "video");
             db.Products.Add(product);
-            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow);
+            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow, "Legenda de teste");
             db.PublicationQueues.Add(item);
             await db.SaveChangesAsync();
 
@@ -444,7 +444,7 @@ public class YoutubePublisherTests
 
             var product = CriarProduto(mediaLocalPath: tempFile, mediaUrl: null, mediaType: "video", title: tituloLongo);
             db.Products.Add(product);
-            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow);
+            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow, "Legenda de teste");
             db.PublicationQueues.Add(item);
             await db.SaveChangesAsync();
 
@@ -470,7 +470,7 @@ public class YoutubePublisherTests
     }
 
     [Fact]
-    public async Task PublishAsync_DescricaoNoMetadata_IgualAoAiCaption()
+    public async Task PublishAsync_DescricaoNoMetadata_IgualAoItemCaption()
     {
         using var db = CreateInMemoryContext();
         await SeedCredentialsAsync(db);
@@ -480,7 +480,7 @@ public class YoutubePublisherTests
         {
             var product = CriarProduto(mediaLocalPath: tempFile, mediaUrl: null, mediaType: "video");
             db.Products.Add(product);
-            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow);
+            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow, "Legenda de teste");
             db.PublicationQueues.Add(item);
             await db.SaveChangesAsync();
 
@@ -491,12 +491,12 @@ public class YoutubePublisherTests
             var result = await publisher.PublishAsync(item);
 
             result.Should().BeTrue();
-            product.AiCaption.Should().NotBeNullOrWhiteSpace();
+            item.Caption.Should().NotBeNullOrWhiteSpace();
 
             using var metadata = await ParseMetadataAsync(requests);
             var description = metadata.RootElement.GetProperty("snippet").GetProperty("description").GetString();
 
-            description.Should().Be(product.AiCaption);
+            description.Should().Be(item.Caption);
         }
         finally
         {
@@ -516,7 +516,7 @@ public class YoutubePublisherTests
         {
             var product = CriarProduto(mediaLocalPath: tempFile, mediaUrl: null, mediaType: "video");
             db.Products.Add(product);
-            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow);
+            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow, "Legenda de teste");
             db.PublicationQueues.Add(item);
             await db.SaveChangesAsync();
 
@@ -554,7 +554,7 @@ public class YoutubePublisherTests
         {
             var product = CriarProduto(mediaLocalPath: tempFile, mediaUrl: null, mediaType: "video");
             db.Products.Add(product);
-            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow);
+            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow, "Legenda de teste");
             db.PublicationQueues.Add(item);
             await db.SaveChangesAsync();
 
@@ -597,7 +597,7 @@ public class YoutubePublisherTests
         {
             var product = CriarProduto(mediaLocalPath: tempFile, mediaUrl: null, mediaType: "video");
             db.Products.Add(product);
-            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow);
+            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow, "Legenda de teste");
             db.PublicationQueues.Add(item);
             await db.SaveChangesAsync();
 
@@ -635,7 +635,7 @@ public class YoutubePublisherTests
         {
             var product = CriarProduto(mediaLocalPath: tempFile, mediaUrl: null, mediaType: "video");
             db.Products.Add(product);
-            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow);
+            var item = new PublicationQueue(product.Id, SocialNetwork.Youtube, DateTime.UtcNow, "Legenda de teste");
             db.PublicationQueues.Add(item);
             await db.SaveChangesAsync();
 

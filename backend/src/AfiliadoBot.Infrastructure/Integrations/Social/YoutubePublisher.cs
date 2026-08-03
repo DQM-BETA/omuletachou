@@ -113,7 +113,7 @@ public class YoutubePublisher : ISocialPublisher
 
         try
         {
-            var metadataJson = BuildMetadataJson(product);
+            var metadataJson = BuildMetadataJson(product, item.Caption);
             var fileLength = new FileInfo(mediaPath).Length;
 
             using var totalCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -249,10 +249,10 @@ public class YoutubePublisher : ISocialPublisher
         }
     }
 
-    private static string BuildMetadataJson(Product product)
+    private static string BuildMetadataJson(Product product, string caption)
     {
         var title = product.Title.Length > 100 ? product.Title[..100] : product.Title;
-        var description = product.AiCaption ?? string.Empty;
+        var description = caption ?? string.Empty;
         var categoryId = CategoryMap.TryGetValue(product.Category, out var mapped) ? mapped : DefaultCategoryId;
 
         var metadata = new

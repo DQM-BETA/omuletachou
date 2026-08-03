@@ -218,6 +218,64 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
     }
 
     [Fact]
+    public async Task GetProduct_ComItemFacebookNaFila_RetornaAiCaptionDoItemFacebook()
+    {
+        // CA12: ai_caption expõe a Caption do item de PublicationQueue mais recente da rede
+        // Facebook associado ao produto — não a descrição original nem product.AiCaption.
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var product = NewProduct("Produto Com Caption Facebook", Platform.MercadoLivre);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            db.Products.Add(product);
+
+            var telegramItem = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow, "Legenda Telegram — não deve aparecer");
+            var facebookItemAntigo = new PublicationQueue(product.Id, SocialNetwork.Facebook, DateTime.UtcNow.AddMinutes(-10), "Legenda Facebook antiga");
+            var facebookItemRecente = new PublicationQueue(product.Id, SocialNetwork.Facebook, DateTime.UtcNow, "Legenda Facebook mais recente");
+
+            db.PublicationQueues.Add(telegramItem);
+            db.PublicationQueues.Add(facebookItemAntigo);
+            db.PublicationQueues.Add(facebookItemRecente);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync($"/api/products/{product.Id}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("ai_caption").GetString().Should().Be("Legenda Facebook mais recente");
+    }
+
+    [Fact]
+    public async Task GetProduct_SemItemFacebookNaFila_RetornaAiCaptionNulo()
+    {
+        // CA12: produto ainda não enfileirado para Facebook — ai_caption deve ser null (distinto
+        // de string vazia, que é um valor válido para itens legados com Caption='').
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var product = NewProduct("Produto Sem Caption Facebook", Platform.Amazon);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            db.Products.Add(product);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync($"/api/products/{product.Id}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("ai_caption").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    [Fact]
     public async Task GetProduct_Inexistente_Retorna404()
     {
         var client = _factory.CreateClient();

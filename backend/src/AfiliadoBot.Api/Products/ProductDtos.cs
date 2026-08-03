@@ -42,6 +42,7 @@ public record ProductDetailDto(
     string Status,
     [property: JsonPropertyName("ai_score")] int? AiScore,
     [property: JsonPropertyName("ai_reason")] string? AiReason,
+    [property: JsonPropertyName("ai_caption")] string? AiCaption,
     DateTime CreatedAt,
     DateTime UpdatedAt);
 

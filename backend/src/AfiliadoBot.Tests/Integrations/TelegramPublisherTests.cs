@@ -79,7 +79,7 @@ public class TelegramPublisherTests
 
         var product = CriarProduto(mediaLocalPath: "arquivo-inexistente.mp4", mediaUrl: null, mediaType: "video");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -101,7 +101,7 @@ public class TelegramPublisherTests
 
         var product = CriarProduto(mediaLocalPath: "arquivo-inexistente.jpg", mediaUrl: null, mediaType: "image");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -122,7 +122,7 @@ public class TelegramPublisherTests
 
         var product = CriarProduto(mediaLocalPath: null, mediaUrl: null, mediaType: null);
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -148,7 +148,7 @@ public class TelegramPublisherTests
         {
             var product = CriarProduto(mediaLocalPath: tempFile, mediaUrl: "https://cdn.teste/img.jpg", mediaType: "image");
             db.Products.Add(product);
-            var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow);
+            var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow, "Legenda de teste");
             db.PublicationQueues.Add(item);
             await db.SaveChangesAsync();
 
@@ -175,7 +175,7 @@ public class TelegramPublisherTests
 
         var product = CriarProduto(mediaLocalPath: null, mediaUrl: "https://cdn.teste/img.jpg", mediaType: "image");
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
@@ -197,7 +197,7 @@ public class TelegramPublisherTests
 
         var product = CriarProduto(mediaLocalPath: null, mediaUrl: null, mediaType: null);
         db.Products.Add(product);
-        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow, "Legenda de teste");
         db.PublicationQueues.Add(item);
         await db.SaveChangesAsync();
 
