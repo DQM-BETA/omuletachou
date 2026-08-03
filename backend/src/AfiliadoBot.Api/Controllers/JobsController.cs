@@ -26,22 +26,43 @@ public class JobsController : ControllerBase
     [HttpPost("collector/amazon/trigger")]
     public async Task<IActionResult> TriggerAmazonCollector([FromServices] AmazonCollector collector, CancellationToken ct)
     {
-        var products = await collector.CollectAsync(ct);
-        return Ok(new { count = products.Count() });
+        try
+        {
+            var products = await collector.CollectAsync(ct);
+            return Ok(new { count = products.Count() });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = $"Credenciais não configuradas para amazon: {ex.Message}" });
+        }
     }
 
     [HttpPost("collector/mercadolivre/trigger")]
     public async Task<IActionResult> TriggerMercadoLivreCollector([FromServices] MercadoLivreCollector collector, CancellationToken ct)
     {
-        var products = await collector.CollectAsync(ct);
-        return Ok(new { count = products.Count() });
+        try
+        {
+            var products = await collector.CollectAsync(ct);
+            return Ok(new { count = products.Count() });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = $"Credenciais não configuradas para mercadolivre: {ex.Message}" });
+        }
     }
 
     [HttpPost("collector/shopee/trigger")]
     public async Task<IActionResult> TriggerShopeeCollector([FromServices] ShopeeCollector collector, CancellationToken ct)
     {
-        var products = await collector.CollectAsync(ct);
-        return Ok(new { count = products.Count() });
+        try
+        {
+            var products = await collector.CollectAsync(ct);
+            return Ok(new { count = products.Count() });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = $"Credenciais não configuradas para shopee: {ex.Message}" });
+        }
     }
 
     [HttpPost("processor/trigger")]
