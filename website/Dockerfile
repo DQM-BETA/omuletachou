@@ -7,6 +7,10 @@ FROM node:20-alpine AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# NEXT_PUBLIC_* é embutido no bundle do browser em BUILD TIME pelo Next.js — precisa
+# chegar como ARG/ENV antes do `npm run build`, não apenas como env var de runtime.
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN npm run build
 
 FROM node:20-alpine AS runtime

@@ -53,12 +53,18 @@ services:
   website:
     build:
       context: ./website
+      args:
+        # Next.js embute NEXT_PUBLIC_* no bundle do browser em BUILD TIME (npm run build),
+        # não em runtime — precisa ser passado como build arg, não só como environment:.
+        NEXT_PUBLIC_API_URL: ${API_PUBLIC_URL}
     container_name: afiliado_website
     restart: unless-stopped
     depends_on:
       - api
     environment:
-      # Client-side (bundle do browser) — precisa de host público real, não mais localhost:5000
+      # Mantido por completude/inspeção (docker inspect), mas o valor que importa para o
+      # bundle do browser é o de build (args acima) — este env de runtime não é lido pelo
+      # código client-side já compilado.
       NEXT_PUBLIC_API_URL: ${API_PUBLIC_URL}
       # Server-side (Server Components/SSR) — já existente, resolve via rede Docker interna
       API_INTERNAL_URL: http://api:8080

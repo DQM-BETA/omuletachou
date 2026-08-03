@@ -153,6 +153,38 @@ PR #126 squash-merged em `desenv` (commit único, branch remota deletada). Sub-i
 Como é a única sub-issue da Issue #15, PR de homologação criado: `desenv` → `homolog` (**PR #127**,
 merge commit — não squash — na promoção conforme convenção da squad).
 
+## Fix — NEXT_PUBLIC_API_URL build-time (PR #127 code review) (2026-08-03)
+
+Bug apontado pelo `/code-review` no PR #127 (comentário
+https://github.com/DQM-BETA/omuletachou/pull/127#issuecomment-5166321017): `NEXT_PUBLIC_API_URL`
+estava definida apenas em `environment:` (runtime) no serviço `website` do `docker-compose.yml`,
+mas o Next.js embute variáveis `NEXT_PUBLIC_*` no bundle do browser em **build time**
+(`npm run build`) — o `website/Dockerfile` não tinha `ARG`/`ENV` correspondente antes do build, e
+o `docker-compose.yml` não passava `args:` no `website.build:`. Resultado: valor vazio/undefined no
+bundle real, quebrando a subscription de push (`website/lib/push.ts`, Issue #14) — o mesmo bug que
+o PR #127 deveria ter corrigido, só que silenciosamente.
+
+**Fix aplicado** (branch `fix/127-nextpublic-api-url`, a partir de `desenv`):
+- `docker-compose.yml`: adicionado `build.args: NEXT_PUBLIC_API_URL: ${API_PUBLIC_URL}` no serviço
+  `website` (build-time). Mantida a mesma variável em `environment:` (runtime) por completude de
+  inspeção via `docker inspect` — comentário no arquivo deixa explícito que o valor que importa
+  para o bundle do browser é o de `args`, não o de `environment`.
+- `website/Dockerfile`: adicionado `ARG NEXT_PUBLIC_API_URL` + `ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL`
+  no estágio `build`, antes de `RUN npm run build`.
+- Confirmado por leitura de `website/lib/push.ts` que o único consumo client-side é via
+  `NEXT_PUBLIC_API_URL` (nenhum uso novo introduzido); `website/lib/api.ts` só menciona
+  `NEXT_PUBLIC_*` em comentário (server-only, não é consumo real).
+- Validação real com Docker: `.env` de teste com `API_PUBLIC_URL=https://api-teste.omuletachou.com.br`,
+  `docker compose build website` executado com sucesso, e
+  `grep -rl 'api-teste.omuletachou.com.br' /app/.next/static/` dentro do container **encontrou o
+  valor embutido** em `chunks/app/layout-7e699a36f804729e.js` — confirma que o build-time embedding
+  funciona de fato, não apenas por inspeção de configuração.
+- `npm test` (website, Jest): **79/79 aprovados**, nenhuma regressão.
+- Containers/imagens de teste (`docker compose down -v`, `docker image rm`) e `.env` de teste
+  removidos ao final — nenhum resíduo no repo ou na máquina.
+
+PR aberto: `fix/127-nextpublic-api-url` → `desenv` (NÃO mergeado — aguarda Líder Técnico).
+
 ## Custo (ledger)
 
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) | Data |
@@ -165,3 +197,4 @@ merge commit — não squash — na promoção conforme convenção da squad).
 | 6 | Dev Sub-A #125 (PR #126) | dev-dotnet | sonnet | 130908 | 107 | 1631s | 2026-07-30 |
 | 7 | DevOps — diagnóstico Docker Desktop | devops | haiku-4.5 | 28592 | 13 | 133s | 2026-07-30 |
 | 8 | Merge #125 (PR #126) + PR homologação #127 | lt | sonnet | 71808 | 54 | 593s | 2026-07-30 |
+| 9 | Fix NEXT_PUBLIC_API_URL (code review PR #127) | dev-nodejs | sonnet | | | | 2026-08-03 |
