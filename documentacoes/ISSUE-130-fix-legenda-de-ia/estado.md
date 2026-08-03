@@ -1,7 +1,7 @@
 issue: 130
 titulo: "fix: Legenda de IA nunca é persistida — todo post sai sem legenda"
-etapa_atual: aguardando Gate 2 (Gerente)
-ultimo_agente: lider-tecnico
+etapa_atual: Concluído
+ultimo_agente: coordenador
 openspec_change: openspec/changes/issue-130-fix-legenda-de-ia
 tech_stacks:
   - dotnet
@@ -21,11 +21,14 @@ sub_issues_frontend:
   "#140": angular
 pr_homologacao: 143
 pr_release: 144
+pr_release_merged_at: "2026-08-03T19:08:28Z"
+pr_release_merge_commit: "787e1626ed12b920cbfc17e8d625cc2ea1609fe5"
 code_review_homolog_pr: 143
 qa_status: aprovado
 figma_url: ~
 blockers: nenhum
 status_comment_id: 5167525186
+closedAt: "2026-08-03T19:08:28Z"
 
 ## PM Fase 1
 Levantamento de requisitos postado na Issue #130 (comentário https://github.com/DQM-BETA/omuletachou/issues/130#issuecomment-5167522736), com 5 perguntas objetivas para o Gerente:
@@ -394,8 +397,7 @@ docs), sem código pendente de sincronizar.
 
 PR de release criado: https://github.com/DQM-BETA/omuletachou/pull/144 (`homolog` → `main`, merge commit,
 NUNCA squash — corpo descreve o bug completo, o fix, sub-issues #139/#140, aprovação de Code Review e QA
-18/18, e a origem/auditoria pedida pelo Gerente em 2026-08-03). **Não mergeado** — aguarda aprovação
-humana (Gate 2: Gerente).
+18/18, e a origem/auditoria pedida pelo Gerente em 2026-08-03). **Merged em 2026-08-03 às 19:08:28 UTC** (merge commit 787e1626ed12b920cbfc17e8d625cc2ea1609fe5).
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -411,3 +413,9 @@ humana (Gate 2: Gerente).
 | 9 | Code Review — validacao final PR #143 | code-review | sonnet | 80154 | 58 | 755s |
 | 10 | QA — homolog (18/18 CAs) | qa | sonnet | 100909 | 55 | 599s |
 | 11 | PR release (homolog→main, PR #144) | lt | sonnet | 60189 | 9 | 163s |
+
+**Totais consolidados (2026-08-03T14:09:24Z → 2026-08-03T19:08:28Z):**
+- Tempo decorrido: 4 horas 59 minutos 4 segundos (299 minutos)
+- Tokens totais processados: 821,549
+- Tempo de processamento (CPU): 4,476 segundos (74.6 minutos / 1.24 horas)
+- Nota: não inclui overhead do orquestrador; `subagent_tokens` é agregado (consumo real)
