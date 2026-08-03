@@ -206,6 +206,79 @@ PR **#128 squash-merged em `desenv`** (commit `942c9d8`, branch remota `fix/127-
   **Code Review** (que tem escopo de build/boot/testes) reexecute essa validação como parte da
   checagem do PR #127 já com o fix incorporado.
 
+## Code Review — PR #127 (validação final) (2026-08-03)
+
+Segunda camada (execução real) sobre o PR #127 (`desenv`→`homolog`), após o fix do PR #128
+(commit `942c9d8`) já incorporado e reverificado pelo plugin `/code-review`
+(https://github.com/DQM-BETA/omuletachou/pull/127#issuecomment-5166443181 — sem novos
+problemas).
+
+**Achados do plugin `/code-review` incorporados ao veredito:**
+- 1ª rodada: achou o bug real do `NEXT_PUBLIC_API_URL` (env de runtime em vez de build-arg) —
+  corrigido no PR #128.
+- 2ª rodada (reverificação): confirmou o fix correto, nenhum novo problema.
+
+**Boot real completo (a partir de `desenv`, head do PR #127):**
+- `.env` de teste criado na raiz (baseado no `.env.example`, valores fake
+  `*-teste.omuletachou.com.br`) — nunca commitado (confirmado `git check-ignore -v .env` →
+  ignorado por `.gitignore:13`).
+- `docker compose up -d --build`: as 5 imagens buildam sem erro (api, website, dashboard,
+  db, nginx-proxy-manager).
+- Ajuste local apenas de execução (não commitado, revertido ao final): portas 80/443/81 do
+  host Windows já ocupadas por outro processo (`netstat` → PID 4/System) — portas do
+  `nginx-proxy-manager` remapeadas temporariamente para 18080/18443/18081 só para rodar o
+  teste local; `docker-compose.yml` restaurado ao original via backup (`diff` limpo após).
+  Não é um problema do PR — é conflito de porta local do ambiente Windows do Code Review, os
+  binds `80:80`/`443:443`/`81:81` do compose estão corretos para a VM Oracle (Linux).
+
+**`docker compose ps` (evidência):**
+```
+afiliado_api         Up (healthy)   8080/tcp
+afiliado_dashboard   Up             80/tcp
+afiliado_db          Up (healthy)   5432/tcp
+afiliado_npm         Up             0.0.0.0:18080->80/tcp, 0.0.0.0:18081->81/tcp, 0.0.0.0:18443->443/tcp
+afiliado_website     Up             3000/tcp
+```
+Confirmado: nenhum serviço além do `nginx-proxy-manager` publica porta ao host (api/db/website/
+dashboard só aparecem com porta interna `container/tcp`, sem bind `0.0.0.0:`).
+
+**Validação específica do fix (item mais crítico):** `docker compose exec website sh -c
+'grep -orl "api-teste" /app/.next/static'` → encontrou
+`/app/.next/static/chunks/app/layout-7e699a36f804729e.js` contendo
+`api-teste.omuletachou.com.br`. Confirma que `API_PUBLIC_URL` de teste foi embutido no bundle
+JS do browser em build-time (não apenas env var de runtime) — o bug original do plugin
+`/code-review` está corrigido e comprovado empiricamente, não só por leitura de código.
+
+**`curl` na imagem da API:** `docker compose exec api curl --version` → `curl 7.88.1`
+instalado corretamente (healthcheck do compose depende disso).
+
+**Nginx Proxy Manager UI:** `curl -s -o /dev/null -w "%{http_code}" http://localhost:18081/`
+→ `HTTP 200`. Sobe corretamente (porta 81 real, remapeada só para o teste local).
+
+**Suítes de teste (todas passando, acima do mínimo exigido):**
+- Backend: `dotnet test` → 306/306 aprovados (mínimo 306 ✓).
+- Website: `npm test` → 79/79 aprovados, 14 suites (mínimo 79 ✓).
+- Dashboard: `npm test -- --watch=false --browsers=ChromeHeadless` → 105/105 aprovados
+  (mínimo 105 ✓).
+
+**Checklist de veto:**
+- Compila e sobe: ✓ (build + boot completos, 5/5 serviços, db/api healthy).
+- Integração real: ✓ (boot real via Docker Compose, não mock — é o critério de aceite desta
+  issue de infra, já que não há VM Oracle provisionada para SSH real).
+- Conformidade com spec: ✓ (`criterios-aceite.md`/`design.md` — compose consolidado,
+  `deploy.sh`, `.env.example`, runbook, apenas NPM publica porta, healthchecks db/api,
+  `curl` na imagem API, build-arg do Next.js).
+- Sem teste-lixo, sem segredo commitado (`.env` de teste nunca versionado, confirmado
+  `git status` limpo antes/depois), cobertura ≥ 80% mantida nos 3 projetos.
+- `.first()`/`.nth()`/`.last()` em specs E2E: busca em `*.spec.ts`/`*.e2e.ts` não
+  encontrou nenhuma ocorrência — não aplicável a este PR (sem specs E2E estruturais alterados).
+
+**Limpeza pós-validação:** `docker compose down -v` (containers + volumes removidos),
+`docker-compose.yml` restaurado ao original (backup + restore, `git diff` limpo), `.env` de
+teste removido. Working tree limpo, sem artefatos deixados para trás.
+
+**Veredito: APROVADO.** Todos os itens do checklist de veto comprovados por execução real
+(não "parece ok"). Merge `desenv`→`homolog` autorizado.
 
 ## Custo (ledger)
 
@@ -221,3 +294,4 @@ PR **#128 squash-merged em `desenv`** (commit `942c9d8`, branch remota `fix/127-
 | 8 | Merge #125 (PR #126) + PR homologação #127 | lt | sonnet | 71808 | 54 | 593s | 2026-07-30 |
 | 9 | Fix NEXT_PUBLIC_API_URL (code review PR #127) | dev-nodejs | sonnet | 60788 | 36 | 414s | 2026-08-03 |
 | 10 | Merge PR #128 + verificação propagação PR #127 | lt | sonnet | 51005 | 21 | 178s | 2026-08-03 |
+| 11 | Code Review — validação final PR #127 (build+boot+testes) | code-review | sonnet | ~ | ~ | ~ | 2026-08-03 |
