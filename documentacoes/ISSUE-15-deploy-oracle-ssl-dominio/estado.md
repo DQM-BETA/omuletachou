@@ -294,4 +294,4 @@ teste removido. Working tree limpo, sem artefatos deixados para trás.
 | 8 | Merge #125 (PR #126) + PR homologação #127 | lt | sonnet | 71808 | 54 | 593s | 2026-07-30 |
 | 9 | Fix NEXT_PUBLIC_API_URL (code review PR #127) | dev-nodejs | sonnet | 60788 | 36 | 414s | 2026-08-03 |
 | 10 | Merge PR #128 + verificação propagação PR #127 | lt | sonnet | 51005 | 21 | 178s | 2026-08-03 |
-| 11 | Code Review — validação final PR #127 (build+boot+testes) | code-review | sonnet | ~ | ~ | ~ | 2026-08-03 |
+| 11 | Code Review — validação final PR #127 (build+boot+testes) | code-review | sonnet | 81301 | 45 | 602s | 2026-08-03 |
