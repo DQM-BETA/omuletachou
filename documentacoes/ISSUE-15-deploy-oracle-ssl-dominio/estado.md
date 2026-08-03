@@ -197,4 +197,4 @@ PR aberto: `fix/127-nextpublic-api-url` → `desenv` (NÃO mergeado — aguarda 
 | 6 | Dev Sub-A #125 (PR #126) | dev-dotnet | sonnet | 130908 | 107 | 1631s | 2026-07-30 |
 | 7 | DevOps — diagnóstico Docker Desktop | devops | haiku-4.5 | 28592 | 13 | 133s | 2026-07-30 |
 | 8 | Merge #125 (PR #126) + PR homologação #127 | lt | sonnet | 71808 | 54 | 593s | 2026-07-30 |
-| 9 | Fix NEXT_PUBLIC_API_URL (code review PR #127) | dev-nodejs | sonnet | | | | 2026-08-03 |
+| 9 | Fix NEXT_PUBLIC_API_URL (code review PR #127) | dev-nodejs | sonnet | 60788 | 36 | 414s | 2026-08-03 |
