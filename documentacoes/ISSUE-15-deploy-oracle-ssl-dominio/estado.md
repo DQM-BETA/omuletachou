@@ -1,7 +1,7 @@
 ---
 issue: 15
 titulo: feat: Deploy Oracle Cloud + SSL + Dominio
-etapa_atual: Em Desenvolvimento
+etapa_atual: Code Review
 rota: normal
 repo: omuletachou
 ultimo_agente: lider-tecnico
@@ -13,9 +13,9 @@ repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-15-deploy-oracle-ssl-dominio
 openspec_path: repos/omuletachou/openspec/changes/issue-15-deploy-oracle-ssl-dominio
 sub_issues: ["#125 (stack:infra, task_id:Sub-A)"]
-desenv_tasks_merged: []
+desenv_tasks_merged: ["#125"]
 sub_issues_frontend: {}
-pr_homologacao: ~
+pr_homologacao: 127
 pr_release: ~
 code_review_homolog_pr: ~
 qa_status: ~
@@ -126,6 +126,32 @@ subir os containers (`docker compose up -d --build`) nem validar healthchecks/po
   "os 4 serviços + NPM sobem saudáveis" não foi validado por boot real neste PR.
 
 PR aberto: `feature/125-deploy-artifacts` → `desenv`.
+
+## Líder Técnico — Merge Sub-A #125 e validação de boot real (2026-08-03)
+
+Conflito trivial em `estado.md` resolvido (edições aditivas concorrentes: linha de custo do Dev
+Sub-A #125 na branch do PR + linha de custo do DevOps já em `desenv`) — ambas mantidas, sem
+duplicação (merge de `origin/desenv` na branch `feature/125-deploy-artifacts`, commit `9e197f9`).
+
+**Validação de boot real** (Docker Desktop do Dev estava indisponível na implementação; ambiente
+corrigido após reboot do host — confirmado `docker ps`/`docker info` funcionais):
+- `docker compose up -d --build`: os 5 serviços (`db`, `api`, `website`, `dashboard`,
+  `nginx-proxy-manager`) subiram sem erro (usando um remapeamento temporário de portas do host
+  para `nginx-proxy-manager`, revertido antes do merge — porta 80/443 do host local já ocupada por
+  outro processo do Windows, HTTP.sys; **não afeta a validação**, que é sobre publicação de portas
+  no `docker-compose.yml`, não disponibilidade da porta específica na máquina do LT).
+- `db` e `api` reportaram `healthy` (`docker compose ps`): `pg_isready` e
+  `curl -f http://localhost:8080/health` passando.
+- `docker compose ps` confirmou **nenhum serviço além do `nginx-proxy-manager`** com porta
+  publicada ao host (`PublishedPort: 0` em `api`/`db`/`website`/`dashboard`).
+- `docker compose exec api curl --version`: `curl 7.88.1` confirmado instalado na imagem final da API.
+- UI de admin do Nginx Proxy Manager acessível (HTTP 200).
+- `docker compose down -v` ao final; `docker-compose.yml`/`.env` revertidos ao estado commitado
+  (nenhuma alteração permanente no repo ou na máquina).
+
+PR #126 squash-merged em `desenv` (commit único, branch remota deletada). Sub-issue #125 fechada.
+Como é a única sub-issue da Issue #15, PR de homologação criado: `desenv` → `homolog` (**PR #127**,
+merge commit — não squash — na promoção conforme convenção da squad).
 
 ## Custo (ledger)
 
