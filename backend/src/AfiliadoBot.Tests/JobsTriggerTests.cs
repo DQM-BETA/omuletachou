@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using AfiliadoBot.Tests.TestHelpers;
 using Microsoft.AspNetCore.Mvc.Testing;
 
@@ -80,6 +81,53 @@ public class JobsTriggerTests : IClassFixture<CustomWebApplicationFactory>
         var response = await client.PostAsync("/api/jobs/collector/trigger", null);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    // Issue #132: sem credenciais reais configuradas (cenario padrao no host de teste), os
+    // collectors individuais devem retornar uma resposta estruturada (400) com mensagem clara,
+    // e nao 500 com corpo vazio (excecao nao tratada propagando do collector ate o controller).
+    [Fact]
+    public async Task PostAmazonCollectorTrigger_SemCredenciais_Retorna400ComMensagemClara()
+    {
+        var client = AuthenticatedClient(_factory.CreateClient());
+
+        var response = await client.PostAsync("/api/jobs/collector/amazon/trigger", null);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+        Assert.NotNull(body?.Message);
+        Assert.NotEmpty(body!.Message);
+    }
+
+    [Fact]
+    public async Task PostMercadoLivreCollectorTrigger_SemCredenciais_Retorna400ComMensagemClara()
+    {
+        var client = AuthenticatedClient(_factory.CreateClient());
+
+        var response = await client.PostAsync("/api/jobs/collector/mercadolivre/trigger", null);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+        Assert.NotNull(body?.Message);
+        Assert.NotEmpty(body!.Message);
+    }
+
+    [Fact]
+    public async Task PostShopeeCollectorTrigger_SemCredenciais_Retorna400ComMensagemClara()
+    {
+        var client = AuthenticatedClient(_factory.CreateClient());
+
+        var response = await client.PostAsync("/api/jobs/collector/shopee/trigger", null);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+        Assert.NotNull(body?.Message);
+        Assert.NotEmpty(body!.Message);
+    }
+
+    private sealed class ErrorResponse
+    {
+        public string? Message { get; set; }
     }
 
     [Fact]
