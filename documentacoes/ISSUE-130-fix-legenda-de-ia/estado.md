@@ -142,6 +142,41 @@ resumo (https://github.com/DQM-BETA/omuletachou/issues/139).
 
 Sub-B (#140, Angular) desbloqueada: contrato `ai_caption` já disponível em `desenv`.
 
+## Dev Sub-B #140
+Worktree `.worktrees/140-fix-caption-frontend` (branch `fix/140-caption-frontend`, a partir de `desenv`).
+
+Implementado (TDD RED→GREEN):
+- `ProductDetail` (`products.service.ts`): campo opcional `ai_caption?: string | null` adicionado (mesmo
+  padrão snake_case de `ai_score`/`ai_reason`, sem decorators de serialização).
+- `facebook-manual.component.html`: texto exibido/copiado do botão "copiar legenda" trocado de
+  `post.product?.description` para `post.product?.ai_caption`, com fallback `'Legenda não disponível'`
+  quando `null` (item legado ou job de IA ainda não gerou legenda para Facebook) — decisão de copy tomada
+  pelo dev por não haver string exata fechada na especificação (CA14 exige apenas fallback explícito, não
+  string literal); documentada aqui por transparência.
+- `facebook-manual.component.ts`: sem mudança de lógica (confirmado pela especificação — só o template lia
+  a propriedade).
+- `facebook-manual.component.spec.ts`: fixture `productDetail` passa a ter `description` distinta de
+  `ai_caption` (evita falso positivo de teste); CA-D1 ajustado para validar `ai_caption`; novo teste CA13
+  (clique real no botão copia o valor de `ai_caption`, nunca `description`); novo teste CA14 (`ai_caption:
+  null` → UI exibe fallback, não quebra, botão copia string vazia).
+- `products.service.spec.ts`: revisado (CA-D1 existente) — não precisou de ajuste, `ai_caption` é opcional.
+
+Gate de testes: `npm test` → **107/107 passando (100%)**. `ng build` → build de produção ok (warning de
+budget de bundle pré-existente, fora de escopo desta correção).
+
+Boot real (evidência, não suposição): `.env` local criado (gitignored, removido ao final) +
+`docker-compose.override.test.yml` temporário (removido antes do commit, só expôs portas de teste) —
+`docker compose up -d --build db api dashboard`. Migration da Sub-A confirmada aplicada automaticamente
+(`\d publication_queue` mostra a coluna `caption`). Produto + item de `PublicationQueue` (Facebook,
+`caption` preenchida) inseridos via SQL direto no Postgres do container. `GET /api/products/{id}`
+autenticado, feito através do próprio proxy nginx do container `dashboard` (mesmo caminho de rede que o
+Angular usa em produção), retornou `"ai_caption":"Legenda de IA real gerada para Facebook..."` distinto de
+`"description"` — confirma que o contrato consumido pelo componente está correto fim-a-fim. Containers e
+dados de teste removidos ao final (`docker compose down -v`).
+
+PR aberto: https://github.com/DQM-BETA/omuletachou/pull/142 (`fix/140-caption-frontend` → `desenv`).
+Worktree removido após push.
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|-------|--------|--------|--------|-------|-----------|
@@ -151,3 +186,4 @@ Sub-B (#140, Angular) desbloqueada: contrato `ai_caption` já disponível em `de
 | 4 | Refinamento LT | lider-tecnico | sonnet | 107624 | 42 | 359s |
 | 5 | Dev Sub-A #139 | dev-dotnet | sonnet | 183618 | 115 | 724s |
 | 6 | Merge Sub-A #139 (PR #141) | lt | sonnet | 47158 | 18 | 87s |
+| 7 | Dev Sub-B #140 | dev-angular | sonnet | 87255 | 47 | 526s |
