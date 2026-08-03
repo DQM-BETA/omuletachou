@@ -1,7 +1,7 @@
 issue: 132
 titulo: "fix: Triggers de collector individual retornam 500 não tratado sem credenciais"
-etapa_atual: Code Review aprovado — PR #136 mergeado em homolog; aguardando QA
-ultimo_agente: code-review
+etapa_atual: QA aprovado — PR #136 mergeado em homolog; aguardando LT (PR release homolog->main)
+ultimo_agente: qa
 openspec_change: ~
 tech_stacks:
   - dotnet
@@ -18,7 +18,7 @@ pr_release: ~
 pr_feature: 135
 branch_feature: fix/132-collector-error-handling (deletada apos merge)
 code_review_homolog_pr: 136
-qa_status: ~
+qa_status: aprovado
 figma_url: ~
 blockers: nenhum
 status_comment_id: ~
@@ -36,6 +36,7 @@ status_comment_id: ~
 | 2 | Dev (fix + testes + PR) | dev-dotnet | sonnet | 61094 | 46 | 358s |
 | 3 | LT (merge PR#135->desenv, decisao de consolidar homologacao em #136) | lt | sonnet | 37476 | 14 | 98s |
 | 4 | Code Review — validacao final PR #136 (compartilhada com #131) | code-review | sonnet | 62979 | 46 | 359s |
+| 5 | QA — homolog (compartilhada com #131) | qa | sonnet | 57237 | 26 | 310s |
 ## Code Review — PR #136 (validacao final)
 - `git pull origin desenv`: já atualizado (HEAD do PR #136 = `desenv`). `dotnet test`: **318/318 passando** (100%).
 - Boot Docker real: `docker compose up -d --build db api` (`.env` local temporario, nunca commitado) — build da imagem `omuletachou-api` OK, containers `afiliado_db` e `afiliado_api` **healthy**, sem exceção de boot/DI.
@@ -47,3 +48,16 @@ status_comment_id: ~
 - Checklist de veto: sem segredos commitados no diff (`.env` gerado localmente para o teste, gitignored, removido ao final); código aderente ao CLAUDE.md; integração real (não mock-only) — endpoints exercitados ponta-a-ponta contra Postgres real em container, sem credenciais mockadas.
 - Containers derrubados (`docker compose down -v`) e `.env` local removido ao final. Repo checked out em `desenv`.
 - **Veredito: APROVADO.** Merge `desenv` -> `homolog` (PR #136, merge commit) autorizado.
+
+## QA — homolog
+- `git fetch origin && git checkout homolog && git pull origin homolog`: fast-forward `9a28436..67fff0a`. Confirmado merge commit do PR #136 presente (`67fff0a Merge pull request #136 from DQM-BETA/desenv`) no `git log`.
+- `dotnet test` a partir de `homolog`: **318/318 passando** (100%), sem regressão.
+- Boot Docker real a partir de `homolog` (projeto isolado `docker compose -p qahomolog up -d --build db api`, `.env` local temporário nunca commitado): containers `afiliado_db` e `afiliado_api` **healthy** em ~26s, sem exceção de boot/DI.
+- Validação independente dos triggers de collector (revalidação, não reaproveitando evidência do Code Review): confirmado via `GET /api/settings` que todas as chaves `amazon.*`/`mercadolivre.*`/`shopee.*` estavam `null` (sem credenciais configuradas). `POST /api/jobs/collector/{amazon|mercadolivre|shopee}/trigger` com JWT válido:
+  - amazon: HTTP 400 — `{"message":"Credenciais não configuradas para amazon: Credenciais da Amazon (access_key, secret_key, partner_tag) ausentes ou invalidas."}`
+  - mercadolivre: HTTP 400 — `{"message":"Credenciais não configuradas para mercadolivre: Credencial ausente: mercadolivre.client_id"}`
+  - shopee: HTTP 400 — `{"message":"Credenciais não configuradas para shopee: Credencial ausente: shopee.app_id"}`
+  Nenhum dos 3 endpoints retornou 500; mensagens estruturadas e claras por plataforma.
+- Logs do container `afiliado_api` verificados (`docker logs`): nenhuma exceção/500 durante a sessão de validação.
+- Containers derrubados (`docker compose -p qahomolog down -v`) e `.env` local removido ao final. Repo retornado para `desenv` (`git checkout desenv && git pull`).
+- **Veredito: APROVADO.** Critério de tratamento de credenciais ausentes nos triggers de collector (Issue #132) validado de forma independente em `homolog`, sem regressão. Pronto para PR de release `homolog` -> `main` (Gate 2).

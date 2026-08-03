@@ -1,7 +1,7 @@
 issue: 131
 titulo: "fix: Vazamento de segredo curto no mascaramento de Settings"
-etapa_atual: Code Review aprovado — PR #136 mergeado em homolog; aguardando QA
-ultimo_agente: code-review
+etapa_atual: QA aprovado — PR #136 mergeado em homolog; aguardando LT (PR release homolog->main)
+ultimo_agente: qa
 openspec_change: ~
 tech_stacks:
   - dotnet
@@ -16,7 +16,7 @@ sub_issues_frontend: {}
 pr_homologacao: 136
 pr_release: ~
 code_review_homolog_pr: 136
-qa_status: ~
+qa_status: aprovado
 figma_url: ~
 blockers: nenhum
 status_comment_id: ~
@@ -73,6 +73,7 @@ status_comment_id: ~
 | 4 | Dev (fix comprimento fixo, achado /code-review PR #136) | dev-dotnet | sonnet | 51282 | 31 | 286s |
 | 5 | Merge PR #137 -> desenv (absorvido em #136) | lt | sonnet | 38046 | 16 | 82s |
 | 6 | Code Review — validacao final PR #136 | code-review | sonnet | 62979 | 46 | 359s |
+| 7 | QA — homolog | qa | sonnet | 57237 | 26 | 310s |
 ## Code Review — PR #136 (validacao final)
 - `git pull origin desenv`: já atualizado (HEAD do PR #136 = `desenv`). `dotnet test`: **318/318 passando** (100%).
 - Boot Docker real: `docker compose up -d --build db api` (`.env` local temporario, nunca commitado) — build da imagem `omuletachou-api` OK, containers `afiliado_db` e `afiliado_api` **healthy**, sem exceção de boot/DI, seed do usuário operador executado.
@@ -81,3 +82,12 @@ status_comment_id: ~
 - Checklist de veto: sem segredos commitados no diff (`.env` gerado localmente para o teste, gitignored, removido ao final); código aderente ao CLAUDE.md (stack, convenções de commit/merge); integração real (não mock-only) — endpoints exercitados ponta-a-ponta contra Postgres real em container.
 - Containers derrubados (`docker compose down -v`) e `.env` local removido ao final. Repo checked out em `desenv`.
 - **Veredito: APROVADO.** Merge `desenv` -> `homolog` (PR #136, merge commit) autorizado.
+
+## QA — homolog
+- `git fetch origin && git checkout homolog && git pull origin homolog`: fast-forward `9a28436..67fff0a`. Confirmado merge commit do PR #136 presente (`67fff0a Merge pull request #136 from DQM-BETA/desenv`) no `git log`.
+- `dotnet test` a partir de `homolog`: **318/318 passando** (100%), sem regressão.
+- Boot Docker real a partir de `homolog` (projeto isolado `docker compose -p qahomolog up -d --build db api`, `.env` local temporário nunca commitado): containers `afiliado_db` e `afiliado_api` **healthy** em ~26s, sem exceção de boot/DI.
+- Validação independente de mascaramento (revalidação, não reaproveitando evidência do Code Review): login via `/api/auth/login` com usuário seed; `PUT /api/settings/claude.api_key` com valores de 1, 2, 3 e 4 caracteres (`"a"`, `"ab"`, `"abc"`, `"abcd"`) — **todos** retornaram exatamente `"********************"` (20 asteriscos, len=20), confirmado tanto na resposta do PUT quanto no `GET /api/settings` (listagem completa). Nenhum segredo real nem seu comprimento real vazado. Valor longo (`"abcde12345longvalue"`, 19 chars) retornou `"****************alue"` (16 asteriscos + últimos 4 chars reais `"alue"`) — comportamento de valor longo preservado.
+- Logs do container `afiliado_api` verificados (`docker logs`): nenhuma exceção/500 durante a sessão de validação.
+- Containers derrubados (`docker compose -p qahomolog down -v`) e `.env` local removido ao final. Repo retornado para `desenv` (`git checkout desenv && git pull`).
+- **Veredito: APROVADO.** Critério de mascaramento de segredo curto (Issue #131 + regressão #136) validado de forma independente em `homolog`, sem regressão. Pronto para PR de release `homolog` -> `main` (Gate 2).
