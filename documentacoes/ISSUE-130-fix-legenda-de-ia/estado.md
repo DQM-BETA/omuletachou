@@ -150,3 +150,4 @@ Sub-B (#140, Angular) desbloqueada: contrato `ai_caption` já disponível em `de
 | 3 | PM Fase 2 | pm-analista-negocios | sonnet | 44474 | 21 | 188s |
 | 4 | Refinamento LT | lider-tecnico | sonnet | 107624 | 42 | 359s |
 | 5 | Dev Sub-A #139 | dev-dotnet | sonnet | 183618 | 115 | 724s |
+| 6 | Merge Sub-A #139 (PR #141) | lt | sonnet | 47158 | 18 | 87s |
