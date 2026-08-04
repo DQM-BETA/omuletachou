@@ -66,6 +66,7 @@ public class PushController : ControllerBase
     }
 
     [HttpDelete("unsubscribe")]
+    [EnableRateLimiting(RateLimiterConfigurator.PublicWritePolicy)]
     public async Task<IActionResult> Unsubscribe([FromQuery] string endpoint, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(endpoint))
