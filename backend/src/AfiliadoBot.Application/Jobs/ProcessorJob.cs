@@ -87,9 +87,20 @@ public class ProcessorJob
                 continue;
             }
 
-            await CreatePublicationQueueEntriesAsync(product, settingsMap, slots[i], ct);
+            var queuedCount = await CreatePublicationQueueEntriesAsync(product, settingsMap, slots[i], ct);
 
-            product.MarkAsPublished();
+            if (queuedCount == 0)
+            {
+                // Item A4 (Issue #133 / #145): nenhuma rede qualificou (nenhuma habilitada com
+                // credenciais completas) — nao marcar como Published incondicionalmente.
+                // Reaproveita ProductStatus.Error (sem introduzir novo status de dominio).
+                product.MarkAsError("Nenhuma rede social habilitada com credenciais validas para publicar este produto.");
+            }
+            else
+            {
+                product.MarkAsPublished();
+            }
+
             await _dbContext.SaveChangesAsync(ct);
         }
     }
@@ -222,12 +233,19 @@ public class ProcessorJob
         return true;
     }
 
-    private async Task CreatePublicationQueueEntriesAsync(
+    /// <returns>
+    /// Quantidade de entradas de <see cref="PublicationQueue"/> efetivamente adicionadas ao
+    /// contexto para o produto (item A4 — usado por <see cref="ExecuteAsync"/> para decidir
+    /// entre <c>MarkAsPublished</c> e <c>MarkAsError</c>).
+    /// </returns>
+    private async Task<int> CreatePublicationQueueEntriesAsync(
         Product product,
         IReadOnlyDictionary<string, string> settingsMap,
         DateTime scheduledAt,
         CancellationToken ct)
     {
+        var queuedCount = 0;
+
         foreach (var (network, enabledKey, credentialKeys) in NetworkSettings)
         {
             if (!IsTrue(settingsMap, enabledKey))
@@ -261,7 +279,10 @@ public class ProcessorJob
                 entry.MarkAsManualPending();
 
             _dbContext.PublicationQueues.Add(entry);
+            queuedCount++;
         }
+
+        return queuedCount;
     }
 
     /// <summary>

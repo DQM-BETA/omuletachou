@@ -45,8 +45,15 @@ public class LocalMediaStorageTests : IDisposable
         return new HttpClient(handlerMock.Object);
     }
 
-    private static LocalMediaStorage CreateSut(HttpClient httpClient) =>
-        new(httpClient, NullLogger<LocalMediaStorage>.Instance);
+    // Resolvedor de DNS falso: retorna sempre um IP publico para qualquer host, mantendo a
+    // suite hermetica (sem depender de resolucao de rede real para hosts como
+    // "cdn.example.com") — item A3 (allowlist SSRF) e coberto por testes dedicados que
+    // injetam IPs privados/loopback via este mesmo mecanismo.
+    private static readonly IPAddress PublicTestIp = IPAddress.Parse("93.184.216.34");
+
+    private static LocalMediaStorage CreateSut(HttpClient httpClient, IPAddress? resolvedIp = null) =>
+        new(httpClient, NullLogger<LocalMediaStorage>.Instance,
+            (_, _) => Task.FromResult(new[] { resolvedIp ?? PublicTestIp }));
 
     [Fact]
     public async Task DownloadAsync_RetornaPath_QuandoDownloadSucesso()
@@ -138,6 +145,103 @@ public class LocalMediaStorageTests : IDisposable
 
         mediaType.Should().Be("image");
         localPath.Should().NotBeNullOrWhiteSpace();
+
+        File.Delete(localPath!);
+    }
+
+    // --- SSRF allowlist (Issue #133 / #145, item A3) ---
+
+    [Theory]
+    [InlineData("http://169.254.169.254/latest/meta-data/")]
+    [InlineData("http://10.0.0.5/foto.jpg")]
+    [InlineData("http://172.16.0.5/foto.jpg")]
+    [InlineData("http://192.168.1.5/foto.jpg")]
+    [InlineData("http://127.0.0.1/foto.jpg")]
+    public async Task DownloadAsync_RetornaNull_QuandoUrlApontaParaIpLiteralPrivado(string url)
+    {
+        // URLs cujo host ja e um IP literal (nao passa pelo resolvedor fake) — cobre a
+        // checagem direta de IPAddress.TryParse antes de qualquer chamada de DNS.
+        var httpCalled = false;
+        var httpClient = CreateHttpClient(_ =>
+        {
+            httpCalled = true;
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(new byte[] { 1 }) };
+        });
+        var sut = CreateSut(httpClient);
+
+        var (localPath, _) = await sut.DownloadAsync(url);
+
+        localPath.Should().BeNull();
+        httpCalled.Should().BeFalse("a allowlist deve bloquear antes de qualquer chamada HTTP");
+    }
+
+    [Fact]
+    public async Task DownloadAsync_RetornaNull_QuandoHostnameLocalhostResolveParaLoopback()
+    {
+        // "localhost" nao e um IP literal — passa pelo resolvedor (fake, aqui simulando o
+        // comportamento real de resolver para 127.0.0.1).
+        var httpCalled = false;
+        var httpClient = CreateHttpClient(_ =>
+        {
+            httpCalled = true;
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(new byte[] { 1 }) };
+        });
+        var sut = CreateSut(httpClient, resolvedIp: IPAddress.Loopback);
+
+        var (localPath, _) = await sut.DownloadAsync("http://localhost/foto.jpg");
+
+        localPath.Should().BeNull();
+        httpCalled.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DownloadAsync_RetornaNull_QuandoHostResolveParaIpPrivado()
+    {
+        // Host publico ("cdn.example.com") cujo DNS (fake) resolve para um IP privado —
+        // cobre o caminho de resolucao via _hostResolver, nao apenas IP literal na URL.
+        var httpCalled = false;
+        var httpClient = CreateHttpClient(_ =>
+        {
+            httpCalled = true;
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(new byte[] { 1 }) };
+        });
+        var sut = CreateSut(httpClient, resolvedIp: IPAddress.Parse("127.0.0.1"));
+
+        var (localPath, _) = await sut.DownloadAsync("https://cdn.example.com/foto.jpg");
+
+        localPath.Should().BeNull();
+        httpCalled.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DownloadAsync_RetornaNull_QuandoSchemeNaoEhHttpOuHttps()
+    {
+        var httpClient = CreateHttpClient(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(new byte[] { 1 })
+        });
+        var sut = CreateSut(httpClient);
+
+        var (localPath, _) = await sut.DownloadAsync("ftp://cdn.example.com/foto.jpg");
+
+        localPath.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task DownloadAsync_ContinuaFuncionando_QuandoUrlEhPublica()
+    {
+        // Regressao: a allowlist nao pode quebrar o caminho feliz existente (host publico
+        // resolvendo para IP publico).
+        var httpClient = CreateHttpClient(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(new byte[] { 1, 2, 3 })
+        });
+        var sut = CreateSut(httpClient);
+
+        var (localPath, mediaType) = await sut.DownloadAsync("https://cdn.example.com/foto.jpg");
+
+        localPath.Should().NotBeNullOrWhiteSpace();
+        mediaType.Should().Be("image");
 
         File.Delete(localPath!);
     }
