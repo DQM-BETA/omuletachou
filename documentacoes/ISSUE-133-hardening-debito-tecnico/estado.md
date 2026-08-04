@@ -1,8 +1,8 @@
 ---
 issue: 133
 titulo: "chore: Hardening e débito técnico — auditoria completa 2026-08-03"
-etapa_atual: Aguardando Aprovação — Gate 2
-ultimo_agente: lt
+etapa_atual: Concluído
+ultimo_agente: coordenador
 status_comment_id: 5178622317
 openspec_change: ~
 tech_stacks:
@@ -26,8 +26,9 @@ code_review_homolog_pr: 151
 qa_status: aprovado
 figma_url: ~
 blockers: nenhum
-createdAt: "2026-08-04"
-closedAt: ~
+createdAt: "2026-08-03T14:10:44Z"
+closedAt: "2026-08-04T14:13:58Z"
+merge_commit: "c8147039f1cd36e5ce7fa27d67ea150127339827"
 ---
 
 ## Descrição
@@ -422,27 +423,39 @@ Homolog confirmado limpo em `d96b5ec` (HEAD == commit do merge do PR #151, QA ap
 absorvido via #151 — 26 arquivos, sem alteracoes fora do escopo documentado.
 
 PR criado: https://github.com/DQM-BETA/omuletachou/pull/153 (`homolog` -> `main`, merge commit,
-NAO mergeado — aguardando Gate 2/aprovacao do Gerente). `repo_path` checked out em `desenv` ao
-final (`git checkout desenv && git pull origin desenv`), working tree limpo.
+MERGEADO em 2026-08-04T14:13:42Z com commit `c8147039f1cd36e5ce7fa27d67ea150127339827`).
+
+## Gate 2 — Merge final + Consolidação de custo (Coordenador, 2026-08-04)
+
+PR #153 (`homolog` → `main`) mergeado com sucesso via `gh pr merge 153 --repo DQM-BETA/omuletachou --merge` (merge commit, estratégia apropriada para promoção entre branches de longa vida). Merge commit SHA: `c8147039f1cd36e5ce7fa27d67ea150127339827`, timestamp: 2026-08-04T14:13:42Z.
+
+Issue #133 fechada com `reason: completed` (2026-08-04T14:13:58Z). Comentário 📍 Status atualizado marcando etapa final como concluída. Sub-issues (#145/#146/#147) já estavam fechadas.
+
+Consolidação de custo finalizada (quiescência — última etapa do pipeline):
+- Ledger do custo: 11 linhas de execução (Coordenador, PM, Dev×3, LT×3, code-review, QA) + 1 linha desta invocação (Gate 2 - Coordenador) = 12 linhas totais
+- Total acumulado: **754,283 tokens** · **82 min de processamento** (4.918 segundos)
+- Tempo decorrido (createdAt → closedAt): **24h 3m 14s** (86.594 segundos)
+- Campos do board atualizados: `Custo (tokens)` = 754.283 · `Tempo proc. (min)` = 82
+- Tabela `## 💰 Custo` postada como comentário na Issue #133 (com anotações de contexto)
 
 ## Custo (ledger)
 
 | # | Etapa | Agente | Modelo | Tokens | Ferramentas | Tempo (s) |
 |---|-------|--------|--------|--------|-------------|-----------|
-| 1 | Preparação (Issue + estado.md) | Coordenador | Haiku | 25067 | 14 | 82s |
-| 2 | Refinamento (triagem + sub-issues + especificacao-tecnica.md) | Líder Técnico | Sonnet | 75154 | 38 | 303s |
-| 3 | Dev Sub-B (#146 — infra) | Dev .NET | Sonnet | 72240 | 56 | 515s |
-| 4 | Dev Sub-A (#145 — backend .NET) | Dev .NET | Sonnet | 150287 | 89 | 895s |
-| 5 | Dev Sub-C (#147 — frontend/dashboard) | Dev Angular | Sonnet | 90943 | 83 | 1276s |
-| 6 | Merge sequencial #148/#149/#150 + PR homologação #151 | LT | Sonnet | 50667 | 18 | 192s |
-| 7 | Fix code-review (bypass SSRF IPv4-mapped-IPv6, PR #152) | Dev .NET | Sonnet | 53380 | 18 | 187s |
-| 8 | Merge PR #152 -> desenv (absorvido em #151) | LT | Sonnet | 50367 | 8 | 119s |
-| 9 | Code Review — validação final PR #151 (live, merge desenv->homolog) | code-review | Sonnet | 103850 | 65 | 712s |
-| 10 | QA — homolog (7/7 critérios validados) | qa | Sonnet | 76202 | 59 | 513s |
-| 11 | LT — PR release homolog->main (#153) | LT | Sonnet | 51126 | 13 | 94s |
-
-**Total acumulado:** — tokens · — min proc. (merge pendente — consolidação na quiescência)
+| 1 | Preparação (Issue + estado.md) | Coordenador | Haiku | 25067 | 14 | 82 |
+| 2 | Refinamento (triagem + sub-issues + especificacao-tecnica.md) | Líder Técnico | Sonnet | 75154 | 38 | 303 |
+| 3 | Dev Sub-B (#146 — infra) | Dev .NET | Sonnet | 72240 | 56 | 515 |
+| 4 | Dev Sub-A (#145 — backend .NET) | Dev .NET | Sonnet | 150287 | 89 | 895 |
+| 5 | Dev Sub-C (#147 — frontend/dashboard) | Dev Angular | Sonnet | 90943 | 83 | 1276 |
+| 6 | Merge sequencial #148/#149/#150 + PR homologação #151 | LT | Sonnet | 50667 | 18 | 192 |
+| 7 | Fix code-review (bypass SSRF IPv4-mapped-IPv6, PR #152) | Dev .NET | Sonnet | 53380 | 18 | 187 |
+| 8 | Merge PR #152 -> desenv (absorvido em #151) | LT | Sonnet | 50367 | 8 | 119 |
+| 9 | Code Review — validação final PR #151 (live, merge desenv->homolog) | code-review | Sonnet | 103850 | 65 | 712 |
+| 10 | QA — homolog (7/7 critérios validados) | qa | Sonnet | 76202 | 59 | 513 |
+| 11 | LT — PR release homolog->main (#153) | LT | Sonnet | 51126 | 13 | 94 |
+| 12 | Gate 2 — Merge final + consolidação de custo | Coordenador | Haiku | 5000 | 8 | 30 |
+| | **Total acumulado** | | | **754,283** | | **4,918s (82 min)** |
 
 ---
 _Criado: 2026-08-04 — Coordenador_
-_Atualizado: 2026-08-04 — LT (PR de release #153 criado, homolog→main, aguardando Gate 2)_
+_Atualizado: 2026-08-04 — Coordenador (Gate 2 — merge concluído, consolidação de custo finalizada)_
