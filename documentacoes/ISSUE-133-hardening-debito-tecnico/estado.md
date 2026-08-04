@@ -1,8 +1,8 @@
 ---
 issue: 133
 titulo: "chore: Hardening e débito técnico — auditoria completa 2026-08-03"
-etapa_atual: Code Review
-ultimo_agente: lt
+etapa_atual: QA
+ultimo_agente: code_review
 status_comment_id: 5178622317
 openspec_change: ~
 tech_stacks:
@@ -22,7 +22,7 @@ desenv_tasks_merged: ["#145", "#146", "#147"]
 sub_issues_frontend: {}
 pr_homologacao: 151
 pr_release: ~
-code_review_homolog_pr: ~
+code_review_homolog_pr: 151
 qa_status: ~
 figma_url: ~
 blockers: nenhum
@@ -249,6 +249,83 @@ para #148/#149/#150 e antes para #131/#132; nenhuma ação extra de merge necess
 `git pull origin desenv` confirma fast-forward local (`747ea97..e46c8e7`); repo_path checked out em
 `desenv`, limpo e atualizado ao final desta invocação.
 
+## Code Review — PR #151 (validação final)
+
+Camada 2 (Code Review agente — execução ao vivo, complementar ao `/code-review` estático já rodado
+2x no PR, cujo único achado — bypass SSRF IPv4-mapped-IPv6 — já havia sido corrigido no PR #152 e
+revalidado em comentário anterior: https://github.com/DQM-BETA/omuletachou/pull/151#issuecomment-5179262074).
+
+**1. Estado do branch:** `git fetch && git checkout desenv && git pull origin desenv` — HEAD em
+`d13332e` (mais recente que o `d13332e` esperado), com `e46c8e7` (fix SSRF) presente no histórico.
+
+**2. Build/boot Docker real:** `.env` local descartável gerado a partir de `.env.example`
+(credenciais dummy, `SEED_USER_EMAIL`/`SEED_USER_PASSWORD` para permitir login de teste).
+`docker compose up -d --build db api dashboard` — build dos 3 serviços sem erro; `docker compose ps`
+confirma `db` e `api` `healthy`, `dashboard` `Up` (sem healthcheck definido). Logs do `api` sem
+exceção de boot/DI; migrações aplicadas até `20260804120430_SeedFacebookCredentials` (confirmado
+via `__EFMigrationsHistory` e `SELECT` em `app_settings` — ids 49/50 `facebook.access_token`/
+`facebook.page_id` presentes com valor vazio, id 32 `hangfire.dashboard_password` presente vazio);
+seed do usuário operador (`cr-test@example.com`) executado com sucesso.
+
+**3. Suítes de teste:**
+- `dotnet test` (backend): **340/340 aprovados**, 0 falhas, ~25s.
+- `ng test --watch=false --browsers=ChromeHeadless` (dashboard): **104/104 aprovados**, 0 falhas.
+Sem regressão em relação ao esperado (340+/104+).
+
+**4. Validação funcional ao vivo dos pontos críticos:**
+- **Rate-limit `unsubscribe`**: 11 requisições `DELETE /api/public/push/unsubscribe?endpoint=...`
+  do mesmo IP (via `curl` de dentro do container `api`, endpoints distintos por request para não
+  colidir com dedupe de negócio) — requisições 1–10 → `204`, 11ª → `429`. Confirma
+  `PublicWritePolicy` (10 req/min/IP) aplicada corretamente ao endpoint.
+- **Hangfire lockout**: senha configurada em `app_settings` via SQL direto
+  (`CorrectHangfirePass123`). 5 tentativas com senha errada seguidas do mesmo IP → `401` cada uma;
+  6ª tentativa **com a senha correta** → ainda `401` (lockout ativo, janela de 5 min). Sanity check
+  adicional: reiniciado o container `api` (limpa o `ConcurrentDictionary` em memória) — senha
+  correta em estado "fresco" → `200`; senha errada isolada → `401`. Confirma tanto o
+  comportamento normal quanto o lockout timing-safe.
+- **SSRF allowlist**: dois produtos inseridos diretamente no banco com `status=Queued` (1) —
+  `media_url=http://127.0.0.1:8080/health` (loopback) e (2)
+  `media_url=http://[::ffff:169.254.169.254]/latest/meta-data/` (IPv4-mapped-IPv6 apontando para o
+  metadata endpoint — exatamente o bypass corrigido no PR #152). Login via `POST /api/auth/login`
+  para obter JWT, `POST /api/jobs/processor/trigger` disparado com o token. Logs do `api` confirmam
+  os dois warnings dedicados (`LocalMediaStorage: URL de midia bloqueada pela allowlist SSRF...`)
+  para ambas as URLs; `SELECT media_local_path FROM products` confirma que nenhum arquivo foi
+  baixado para nenhum dos dois produtos (campo vazio). Validação ao vivo do exato bypass
+  encontrado pelo `/code-review` — comprovadamente fechado no ambiente real, não só nos testes
+  unitários mockados.
+
+**5. Checklist de veto:**
+- Sem segredos commitados: `gh pr diff 151` inspecionado — únicas ocorrências de padrões
+  sensíveis (`amazon.secret_key`, `youtube.api_key`, `claude.api_key`) são chaves de configuração
+  seedadas com `Value = ""` (mesmo padrão de todas as outras migrations de seed já existentes),
+  não segredos reais.
+- Conformidade com `repos/omuletachou/CLAUDE.md`: stack, convenções de branch/commit e estratégia
+  de merge (squash feature→desenv, merge commit desenv→homolog) seguidas.
+- Integração real: toda a validação funcional (item 4) foi feita contra containers Docker reais
+  (Postgres real, API real, Hangfire real com storage Postgres real) — não há mock-only nos
+  caminhos críticos desta issue. Os testes automatizados (`dotnet test`/`ng test`) usam mocks onde
+  apropriado (unitários), mas a suíte inclui testes de integração reais (ex.
+  `PushSubscribeRateLimitIntegrationTests`, `HangfireAuthFilterTests`) e esta validação ao vivo
+  complementa com o boot real end-to-end.
+- Sem OWASP Top 10 introduzido: os 3 itens de segurança desta issue (rate-limit, timing-safe +
+  lockout, SSRF allowlist) são fixes de hardening, não introduzem superfície nova.
+- `.first()`/`.nth()`/`.last()` em specs E2E: `gh pr diff 151` não contém nenhum spec Playwright
+  (`.spec.ts` de E2E) — nenhum arquivo E2E tocado nesta PR. Item não aplicável.
+- Diff coerente com o escopo descrito (backend .NET #145, infra #146, frontend #147 + fix SSRF
+  #152 absorvido) — confirmado via `gh pr diff --json files`/lista de arquivos tocados.
+
+**6. Achados do `/code-review` (plugin, análise estática):** 1 achado real (bypass SSRF
+IPv4-mapped-IPv6), já corrigido no PR #152 e revalidado em comentário próprio no PR. Nenhum outro
+achado pendente.
+
+**7. Ambiente limpo:** `docker compose down -v` executado ao final (containers, network e volumes
+`postgres_data`/`media_files` removidos); `.env` local removido. `repo_path` checked out em
+`desenv` (confirmado via `git branch --show-current`), working tree limpo.
+
+**Veredito: APROVADO.** `gh pr merge 151 --repo DQM-BETA/omuletachou --merge` executado com
+sucesso (`mergeCommit: d96b5ec`, `mergedAt: 2026-08-04T12:54:47Z`, `state: MERGED`). Card
+permanece em Em Desenvolvimento; próxima etapa: QA.
+
 ## Custo (ledger)
 
 | # | Etapa | Agente | Modelo | Tokens | Ferramentas | Tempo (s) |
@@ -260,9 +337,11 @@ para #148/#149/#150 e antes para #131/#132; nenhuma ação extra de merge necess
 | 5 | Dev Sub-C (#147 — frontend/dashboard) | Dev Angular | Sonnet | 90943 | 83 | 1276s |
 | 6 | Merge sequencial #148/#149/#150 + PR homologação #151 | LT | Sonnet | 50667 | 18 | 192s |
 | 7 | Fix code-review (bypass SSRF IPv4-mapped-IPv6, PR #152) | Dev .NET | Sonnet | 53380 | 18 | 187s |
+| 8 | Merge PR #152 -> desenv (absorvido em #151) | LT | Sonnet | 50367 | 8 | 119s |
+| 9 | Code Review — validação final PR #151 (live, merge desenv->homolog) | code-review | Sonnet | 103850 | 65 | 712s |
 
 **Total acumulado:** — tokens · — min proc. (merge pendente — consolidação na quiescência)
 
 ---
 _Criado: 2026-08-04 — Coordenador_
-_Atualizado: 2026-08-04 — LT (merge PR #152 → desenv, absorvido automaticamente em #151)_
+_Atualizado: 2026-08-04 — Code Review (PR #151 aprovado e mergeado desenv→homolog, próximo: QA)_
