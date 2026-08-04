@@ -232,7 +232,22 @@ de migração do banco (falha apenas por ausência de Postgres real no ambiente 
 esperado e não relacionado à mudança).
 
 PR: https://github.com/DQM-BETA/omuletachou/pull/152 (`fix/151-ssrf-ipv4-mapped-ipv6` → `desenv`,
-**NÃO mergeado** — aguardando LT). Worktree removido após push.
+**MERGED via squash** em 2026-08-04). Worktree removido após push.
+
+## Merge do fix SSRF (LT, 2026-08-04)
+
+Revisado o diff do PR #152 antes do merge: fix mínimo e contido — extrai o range-check IPv4 para
+`IsPublicIPv4Address` e reusa via `address.MapToIPv4()` no ramo IPv6 quando `IsIPv4MappedToIPv6`;
+3 testes de regressão cobrindo IP literal (`::ffff:169.254.169.254`, `::ffff:10.0.0.1`), resolução
+DNS fake e o caso positivo (IPv6 público legítimo `2001:4860:4860::8888` continua aceito).
+
+`gh pr merge 152 --squash --delete-branch` executado com sucesso (`mergedAt: 2026-08-04T12:42:34Z`,
+branch remota deletada). PR #151 (`desenv` → `homolog`, ainda OPEN) absorveu automaticamente o
+commit squash como seu último commit
+(`fix(ISSUE-133): desembrulhar IPv4-mapped-IPv6 no allowlist SSRF...`) — mesmo padrão já observado
+para #148/#149/#150 e antes para #131/#132; nenhuma ação extra de merge necessária em #151.
+`git pull origin desenv` confirma fast-forward local (`747ea97..e46c8e7`); repo_path checked out em
+`desenv`, limpo e atualizado ao final desta invocação.
 
 ## Custo (ledger)
 
@@ -250,4 +265,4 @@ PR: https://github.com/DQM-BETA/omuletachou/pull/152 (`fix/151-ssrf-ipv4-mapped-
 
 ---
 _Criado: 2026-08-04 — Coordenador_
-_Atualizado: 2026-08-04 — Dev .NET (fix bypass SSRF IPv4-mapped-IPv6, PR #152 fix/151-ssrf-ipv4-mapped-ipv6 → desenv)_
+_Atualizado: 2026-08-04 — LT (merge PR #152 → desenv, absorvido automaticamente em #151)_
