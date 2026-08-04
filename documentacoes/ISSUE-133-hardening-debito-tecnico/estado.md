@@ -79,8 +79,8 @@ deploy.sh + .gitignore, dashboard/). Podem ser desenvolvidas em paralelo por dev
 
 | # | Etapa | Agente | Modelo | Tokens | Ferramentas | Tempo (s) |
 |---|-------|--------|--------|--------|-------------|-----------|
-| 1 | Preparação (Issue + estado.md) | Coordenador | Haiku | — | — | — |
-| 2 | Refinamento (triagem + sub-issues + especificacao-tecnica.md) | Líder Técnico | Sonnet | — | — | — |
+| 1 | Preparação (Issue + estado.md) | Coordenador | Haiku | 25067 | 14 | 82s |
+| 2 | Refinamento (triagem + sub-issues + especificacao-tecnica.md) | Líder Técnico | Sonnet | 75154 | 38 | 303s |
 
 **Total acumulado:** — tokens · — min proc. (merge pendente)
 
