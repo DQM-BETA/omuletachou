@@ -1,9 +1,9 @@
 ---
 issue: 133
 titulo: "chore: Hardening e débito técnico — auditoria completa 2026-08-03"
-etapa_atual: Backlog
+etapa_atual: Em Desenvolvimento — Gerente autorizou resolver agora ("resolva", 2026-08-04)
 ultimo_agente: coordenador
-rota: backlog
+rota: normal
 status_comment_id: 5178622317
 openspec_change: ~
 tech_stacks:
