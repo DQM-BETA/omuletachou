@@ -75,12 +75,35 @@ As 3 sub-issues (#145 backend .NET, #146 infra, #147 frontend/dashboard) não t�
 funcional entre si — tocam arquivos/repos-lógicos disjuntos (backend/, docker-compose.yml +
 deploy.sh + .gitignore, dashboard/). Podem ser desenvolvidas em paralelo por devs distintos.
 
+## Sub-B (#146) — infra: dockerignore, healthcheck no deploy.sh, pin de imagens
+
+Implementado em worktree isolado (`fix/146-hardening-infra`, base `desenv`). Escopo:
+
+1. Removida a linha `.dockerignore` do `.gitignore` raiz.
+2. Criados `backend/.dockerignore`, `dashboard/.dockerignore`, `website/.dockerignore`.
+3. `deploy.sh`: aguarda `db`/`api` ficarem `healthy` (poll, 30 tentativas × 2s) antes de imprimir
+   "deploy concluído"; falha com `exit 1` se algum ficar `unhealthy`, parar/crashar ou não existir.
+4. `docker-compose.yml`: `postgres:16-alpine` → `postgres:16.14-alpine`; `jc21/nginx-proxy-manager:latest`
+   → `jc21/nginx-proxy-manager:2.15.1` (últimas tags estáveis no Docker Hub em 2026-08-04).
+
+Validação real (boot Docker): build dos 3 serviços com os `.dockerignore` novos ok; `db`/`api`/
+`website`/`dashboard` sobem saudáveis com as imagens pinadas; lógica de espera do `deploy.sh`
+extraída e testada nos dois caminhos — sucesso (`healthy` → "deploy concluído") e falha (container
+parado → `exit 1`, sem "deploy concluído"). `nginx-proxy-manager` não pôde subir localmente por
+conflito de porta 80 no host Windows (ambiente de dev, não relacionado às mudanças) — pin/config
+validado via `docker compose config` + resolução da tag no Docker Hub. Ambiente de teste limpo
+(`docker compose down -v`) ao final.
+
+PR: https://github.com/DQM-BETA/omuletachou/pull/148 (`fix/146-hardening-infra` → `desenv`, aberto,
+não mergeado).
+
 ## Custo (ledger)
 
 | # | Etapa | Agente | Modelo | Tokens | Ferramentas | Tempo (s) |
 |---|-------|--------|--------|--------|-------------|-----------|
 | 1 | Preparação (Issue + estado.md) | Coordenador | Haiku | 25067 | 14 | 82s |
 | 2 | Refinamento (triagem + sub-issues + especificacao-tecnica.md) | Líder Técnico | Sonnet | 75154 | 38 | 303s |
+| 3 | Dev Sub-B (#146 — infra) | Dev .NET | Sonnet | 72240 | 56 | 515s |
 
 **Total acumulado:** — tokens · — min proc. (merge pendente)
 
