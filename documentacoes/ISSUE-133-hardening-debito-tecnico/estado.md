@@ -148,6 +148,52 @@ dedicado, `media_local_path` permanece vazio) mas segue publicado normalmente vi
 PR: https://github.com/DQM-BETA/omuletachou/pull/149 (`fix/145-hardening-backend` → `desenv`,
 aberto, não mergeado).
 
+## Sub-C (#147) — frontend/dashboard: nginx headers + limpeza de teste boilerplate
+
+Implementado em worktree isolado (`fix/147-hardening-frontend`, base `desenv`). Escopo:
+
+1. `dashboard/nginx.conf`, location `/api/`: adicionados explicitamente
+   `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;` e
+   `proxy_set_header X-Forwarded-Proto $scheme;` — `$proxy_add_x_forwarded_for` encadeia (append)
+   ao valor já recebido do NPM em vez de sobrescrever, mantendo a cadeia de proxies íntegra para o
+   `ForwardedHeadersMiddleware` do backend.
+2. `dashboard/src/app/app.component.spec.ts`: removido (opção (a) da especificação técnica).
+   Decisão: `AppComponent` não tem responsabilidade própria além de renderizar `<router-outlet>`
+   (`app.component.html` é só `<router-outlet></router-outlet>`; a propriedade `title` nunca é
+   lida/bindada no template) — os 3 testes eram o boilerplate padrão do `ng new`
+   (`should create the app` / `should have the title` / `should render the router outlet`), nunca
+   customizados, sem valor real de regressão para este app. Nenhum outro spec referencia
+   `AppComponent` (Gate obrigatório verificado via Grep antes do PR).
+
+`ng test --watch=false`: 104/104 passando (100%, eram 107 antes — 3 a menos pelos testes
+removidos). `ng build`: produção sem erros (warning de budget pré-existente de 285KB acima do
+limite, não relacionado a esta mudança).
+
+Validação real via boot Docker (`db`, `api`, `dashboard`), em projeto Compose isolado
+(`-p omuletachou-147`, com `docker-compose.override.yml` temporário removendo `container_name`
+fixo dos 3 serviços) para não colidir com a stack `afiliado_*` de outra sub-issue rodando em
+paralelo no mesmo host — `.env` local descartável gerado a partir de `.env.example`, removido ao
+final junto com o override:
+- `nginx -t` dentro do container `dashboard`: config sintaticamente válida.
+- Requisição via proxy do dashboard (`/api/public/deals`) chega corretamente na API (200, JSON
+  válido) — proxy_pass segue funcionando após o fix.
+- Rate-limiter `public-write` (`POST /api/public/push/subscribe`, 10 req/min/IP): 9 requisições em
+  400 (validação), 10ª/11ª em 429 — confirma que o IP resolvido pelo `ForwardedHeadersMiddleware` a
+  partir do header agora setado explicitamente pelo nginx do dashboard segue particionando
+  corretamente por IP real.
+- Confirmado também (teste adicional, exec direto no container `dashboard` via `curl -H
+  "X-Forwarded-For:..."`) que o `ForwardLimit=1` do backend ignora um `X-Forwarded-For` injetado
+  pelo próprio cliente e confia apenas no hop imediato adicionado pelo nginx via
+  `$proxy_add_x_forwarded_for` — comportamento de segurança esperado (evita spoofing de IP para
+  escapar do rate limit).
+
+Ambiente Docker limpo (`docker compose -p omuletachou-147 down -v`) ao final; worktree removido
+após push. Stack `afiliado_*` da sub-issue paralela (#146) não foi tocada pelos comandos desta
+sessão (escopo isolado via `-p`/`--network` explícitos).
+
+PR: https://github.com/DQM-BETA/omuletachou/pull/150 (`fix/147-hardening-frontend` → `desenv`,
+aberto, não mergeado).
+
 ## Custo (ledger)
 
 | # | Etapa | Agente | Modelo | Tokens | Ferramentas | Tempo (s) |
@@ -156,6 +202,7 @@ aberto, não mergeado).
 | 2 | Refinamento (triagem + sub-issues + especificacao-tecnica.md) | Líder Técnico | Sonnet | 75154 | 38 | 303s |
 | 3 | Dev Sub-B (#146 — infra) | Dev .NET | Sonnet | 72240 | 56 | 515s |
 | 4 | Dev Sub-A (#145 — backend .NET) | Dev .NET | Sonnet | 150287 | 89 | 895s |
+| 5 | Dev Sub-C (#147 — frontend/dashboard) | Dev Angular | Sonnet | 90943 | 83 | 1276s |
 
 **Total acumulado:** — tokens · — min proc. (merge pendente)
 
