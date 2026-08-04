@@ -1,8 +1,8 @@
 ---
 issue: 133
 titulo: "chore: Hardening e débito técnico — auditoria completa 2026-08-03"
-etapa_atual: QA_aprovado
-ultimo_agente: qa
+etapa_atual: Aguardando Aprovação — Gate 2
+ultimo_agente: lt
 status_comment_id: 5178622317
 openspec_change: ~
 tech_stacks:
@@ -21,7 +21,7 @@ sub_issues:
 desenv_tasks_merged: ["#145", "#146", "#147"]
 sub_issues_frontend: {}
 pr_homologacao: 151
-pr_release: ~
+pr_release: 153
 code_review_homolog_pr: 151
 qa_status: aprovado
 figma_url: ~
@@ -415,6 +415,16 @@ a partir de `homolog` (commit `d96b5ec`), sem regressão nas suítes automatizad
 104 dashboard). Nenhum achado bloqueante. Próxima etapa: Líder Técnico para PR de release
 (`homolog` → `main`) e Gate 2 (Gerente).
 
+## PR de release — homolog -> main (LT, 2026-08-04)
+
+Homolog confirmado limpo em `d96b5ec` (HEAD == commit do merge do PR #151, QA aprovado). Diff
+`main`...`homolog` cobre as 3 sub-issues (#145/#146/#147) mais o fix SSRF IPv4-mapped-IPv6 (#152)
+absorvido via #151 — 26 arquivos, sem alteracoes fora do escopo documentado.
+
+PR criado: https://github.com/DQM-BETA/omuletachou/pull/153 (`homolog` -> `main`, merge commit,
+NAO mergeado — aguardando Gate 2/aprovacao do Gerente). `repo_path` checked out em `desenv` ao
+final (`git checkout desenv && git pull origin desenv`), working tree limpo.
+
 ## Custo (ledger)
 
 | # | Etapa | Agente | Modelo | Tokens | Ferramentas | Tempo (s) |
@@ -429,9 +439,10 @@ a partir de `homolog` (commit `d96b5ec`), sem regressão nas suítes automatizad
 | 8 | Merge PR #152 -> desenv (absorvido em #151) | LT | Sonnet | 50367 | 8 | 119s |
 | 9 | Code Review — validação final PR #151 (live, merge desenv->homolog) | code-review | Sonnet | 103850 | 65 | 712s |
 | 10 | QA — homolog (7/7 critérios validados) | qa | Sonnet | 76202 | 59 | 513s |
+| 11 | LT — PR release homolog->main (#153) | LT | Sonnet | 51126 | 13 | 94s |
 
 **Total acumulado:** — tokens · — min proc. (merge pendente — consolidação na quiescência)
 
 ---
 _Criado: 2026-08-04 — Coordenador_
-_Atualizado: 2026-08-04 — QA (homolog aprovado, 7/7 critérios validados, próximo: Líder Técnico para PR de release homolog→main)_
+_Atualizado: 2026-08-04 — LT (PR de release #153 criado, homolog→main, aguardando Gate 2)_
