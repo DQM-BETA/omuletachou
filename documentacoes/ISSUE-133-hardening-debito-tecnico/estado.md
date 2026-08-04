@@ -1,7 +1,7 @@
 ---
 issue: 133
 titulo: "chore: Hardening e débito técnico — auditoria completa 2026-08-03"
-etapa_atual: Em Desenvolvimento
+etapa_atual: Code Review
 ultimo_agente: lt
 status_comment_id: 5178622317
 openspec_change: ~
@@ -18,9 +18,9 @@ sub_issues:
   - "#145 (stack:dotnet, task_id:Sub-A)"
   - "#146 (infra, task_id:Sub-B)"
   - "#147 (stack:angular, task_id:Sub-C)"
-desenv_tasks_merged: []
+desenv_tasks_merged: ["#145", "#146", "#147"]
 sub_issues_frontend: {}
-pr_homologacao: ~
+pr_homologacao: 151
 pr_release: ~
 code_review_homolog_pr: ~
 qa_status: ~
@@ -94,8 +94,8 @@ conflito de porta 80 no host Windows (ambiente de dev, não relacionado às muda
 validado via `docker compose config` + resolução da tag no Docker Hub. Ambiente de teste limpo
 (`docker compose down -v`) ao final.
 
-PR: https://github.com/DQM-BETA/omuletachou/pull/148 (`fix/146-hardening-infra` → `desenv`, aberto,
-não mergeado).
+PR: https://github.com/DQM-BETA/omuletachou/pull/148 (`fix/146-hardening-infra` → `desenv`,
+**MERGED via squash**).
 
 ## Sub-A (#145) — backend .NET: rate-limit, timing-safe, SSRF, ProcessorJob, Facebook seed, Newtonsoft.Json
 
@@ -146,7 +146,7 @@ dedicado, `media_local_path` permanece vazio) mas segue publicado normalmente vi
 (`docker compose down -v`) ao final.
 
 PR: https://github.com/DQM-BETA/omuletachou/pull/149 (`fix/145-hardening-backend` → `desenv`,
-aberto, não mergeado).
+**MERGED via squash**).
 
 ## Sub-C (#147) — frontend/dashboard: nginx headers + limpeza de teste boilerplate
 
@@ -192,7 +192,19 @@ após push. Stack `afiliado_*` da sub-issue paralela (#146) não foi tocada pelo
 sessão (escopo isolado via `-p`/`--network` explícitos).
 
 PR: https://github.com/DQM-BETA/omuletachou/pull/150 (`fix/147-hardening-frontend` → `desenv`,
-aberto, não mergeado).
+**MERGED via squash**).
+
+## Merge sequencial das 3 sub-issues (LT, 2026-08-04)
+
+Ordem: #148 (infra) → #149 (backend) → #150 (frontend), um de cada vez, com `git pull origin
+desenv` + revalidação de `mergeable` entre cada merge, conforme regra de merge sequencial da
+squad. Todos os PRs `mergeStateStatus: CLEAN` antes do merge (squash), sem conflitos — as 3
+sub-issues tocam áreas disjuntas (backend/, docker-compose.yml+deploy.sh+.gitignore, dashboard/)
+como previsto na triagem. Branches remotas deletadas após cada merge. Sub-issues #145, #146, #147
+fechadas com comentário de resumo.
+
+PR de homologação criado: https://github.com/DQM-BETA/omuletachou/pull/151
+(`desenv` → `homolog`, merge commit, aguardando Code Review + QA + Gate 2).
 
 ## Custo (ledger)
 
@@ -204,8 +216,8 @@ aberto, não mergeado).
 | 4 | Dev Sub-A (#145 — backend .NET) | Dev .NET | Sonnet | 150287 | 89 | 895s |
 | 5 | Dev Sub-C (#147 — frontend/dashboard) | Dev Angular | Sonnet | 90943 | 83 | 1276s |
 
-**Total acumulado:** — tokens · — min proc. (merge pendente)
+**Total acumulado:** — tokens · — min proc. (merge pendente — consolidação na quiescência)
 
 ---
 _Criado: 2026-08-04 — Coordenador_
-_Atualizado: 2026-08-04 — Líder Técnico (triagem + task breakdown)_
+_Atualizado: 2026-08-04 — Líder Técnico (merge sequencial #148/#149/#150 → desenv; PR #151 desenv→homolog)_
