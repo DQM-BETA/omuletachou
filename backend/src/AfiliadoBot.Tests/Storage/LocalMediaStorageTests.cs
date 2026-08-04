@@ -227,6 +227,67 @@ public class LocalMediaStorageTests : IDisposable
         localPath.Should().BeNull();
     }
 
+    [Theory]
+    [InlineData("http://[::ffff:169.254.169.254]/latest/meta-data/")]
+    [InlineData("http://[::ffff:10.0.0.1]/foto.jpg")]
+    public async Task DownloadAsync_RetornaNull_QuandoUrlApontaParaIpv4MapeadoParaIpv6Privado(string url)
+    {
+        // Regressao (code-review do PR #151): "::ffff:169.254.169.254" e "::ffff:10.0.0.1" tem
+        // AddressFamily.InterNetworkV6 mas embrulham um endereco IPv4 privado/metadata. Antes do
+        // fix, IsPublicAddress so checava link-local/site-local/ULA no ramo IPv6 e deixava esses
+        // enderecos passarem como publicos — bypass do allowlist SSRF via resposta DNS hostil.
+        var httpCalled = false;
+        var httpClient = CreateHttpClient(_ =>
+        {
+            httpCalled = true;
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(new byte[] { 1 }) };
+        });
+        var sut = CreateSut(httpClient);
+
+        var (localPath, _) = await sut.DownloadAsync(url);
+
+        localPath.Should().BeNull();
+        httpCalled.Should().BeFalse("um IPv4 mapeado para IPv6 privado/metadata deve ser bloqueado igual ao IPv4 puro");
+    }
+
+    [Fact]
+    public async Task DownloadAsync_RetornaNull_QuandoHostResolveParaIpv4MapeadoParaIpv6Metadata()
+    {
+        // Mesmo cenario, mas via resolucao DNS (nao IP literal na URL) — cobre o caminho
+        // _hostResolver, que e o vetor real de um DNS hostil retornando esse tipo de endereco.
+        var httpCalled = false;
+        var httpClient = CreateHttpClient(_ =>
+        {
+            httpCalled = true;
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(new byte[] { 1 }) };
+        });
+        var sut = CreateSut(httpClient, resolvedIp: IPAddress.Parse("::ffff:169.254.169.254"));
+
+        var (localPath, _) = await sut.DownloadAsync("https://cdn.example.com/foto.jpg");
+
+        localPath.Should().BeNull();
+        httpCalled.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DownloadAsync_ContinuaFuncionando_QuandoUrlResolveParaIpv6Publico()
+    {
+        // Regressao: enderecos IPv6 publicos legitimos (nao mapeados de IPv4, nao
+        // link-local/site-local/ULA) devem continuar sendo aceitos apos o fix.
+        var httpClient = CreateHttpClient(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(new byte[] { 1, 2, 3 })
+        });
+        var sut = CreateSut(httpClient, resolvedIp: IPAddress.Parse("2001:4860:4860::8888"));
+
+        var (localPath, mediaType) = await sut.DownloadAsync("https://cdn.example.com/foto.jpg");
+
+        localPath.Should().NotBeNullOrWhiteSpace();
+        mediaType.Should().Be("image");
+
+        File.Delete(localPath!);
+    }
+
     [Fact]
     public async Task DownloadAsync_ContinuaFuncionando_QuandoUrlEhPublica()
     {
