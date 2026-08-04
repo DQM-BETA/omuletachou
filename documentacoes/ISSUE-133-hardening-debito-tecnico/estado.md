@@ -206,6 +206,34 @@ fechadas com comentário de resumo.
 PR de homologação criado: https://github.com/DQM-BETA/omuletachou/pull/151
 (`desenv` → `homolog`, merge commit, aguardando Code Review + QA + Gate 2).
 
+## Fix pós-code-review (PR #151) — bypass SSRF via IPv4-mapped-IPv6
+
+O `/code-review` (plugin) rodado no PR #151 (desenv→homolog) encontrou um bug real em
+`LocalMediaStorage.IsPublicAddress` (herdado da Sub-A #145): endereços IPv6 mapeados de IPv4 (ex.
+`::ffff:169.254.169.254`, `::ffff:10.0.0.1`) têm `AddressFamily.InterNetworkV6` e pulavam
+inteiramente as checagens de range IPv4 (metadata endpoint 169.254.169.254, redes privadas
+10/8, 172.16/12, 192.168/16), caindo só nas checagens de link-local/site-local/ULA IPv6 — nenhuma
+das quais cobre esse caso. Uma resposta DNS hostil retornando esse tipo de endereço bypassava o
+allowlist recém-adicionado.
+
+Fix implementado em worktree isolado (`fix/151-ssrf-ipv4-mapped-ipv6`, base `desenv`, já que o bug
+está em `desenv` atual): no ramo `AddressFamily.InterNetworkV6` de `IsPublicAddress`, detecta
+`address.IsIPv4MappedToIPv6` e, se verdadeiro, desembrulha via `address.MapToIPv4()` e reexecuta
+as checagens de range IPv4 (extraídas para o novo método `IsPublicIPv4Address`) antes de aceitar
+como público.
+
+TDD: 4 testes de regressão novos em `LocalMediaStorageTests` — `::ffff:169.254.169.254` e
+`::ffff:10.0.0.1` bloqueados via IP literal na URL, mesmo cenário via resolução DNS (fake
+resolver), e confirmação de que IPv6 público legítimo (`2001:4860:4860::8888`, não mapeado)
+continua sendo aceito. `dotnet test`: 340/340 passando (100%). Gate obrigatório (Grep por
+referências ao módulo modificado): só o próprio arquivo de teste e `Program.cs` (registro de DI)
+referenciam a classe — nada mais a ajustar. `dotnet run` confirma boot do DI/container até a etapa
+de migração do banco (falha apenas por ausência de Postgres real no ambiente local de teste,
+esperado e não relacionado à mudança).
+
+PR: https://github.com/DQM-BETA/omuletachou/pull/152 (`fix/151-ssrf-ipv4-mapped-ipv6` → `desenv`,
+**NÃO mergeado** — aguardando LT). Worktree removido após push.
+
 ## Custo (ledger)
 
 | # | Etapa | Agente | Modelo | Tokens | Ferramentas | Tempo (s) |
@@ -216,9 +244,10 @@ PR de homologação criado: https://github.com/DQM-BETA/omuletachou/pull/151
 | 4 | Dev Sub-A (#145 — backend .NET) | Dev .NET | Sonnet | 150287 | 89 | 895s |
 | 5 | Dev Sub-C (#147 — frontend/dashboard) | Dev Angular | Sonnet | 90943 | 83 | 1276s |
 | 6 | Merge sequencial #148/#149/#150 + PR homologação #151 | LT | Sonnet | 50667 | 18 | 192s |
+| 7 | Fix code-review (bypass SSRF IPv4-mapped-IPv6, PR #152) | Dev .NET | Sonnet | 53380 | 18 | 187s |
 
 **Total acumulado:** — tokens · — min proc. (merge pendente — consolidação na quiescência)
 
 ---
 _Criado: 2026-08-04 — Coordenador_
-_Atualizado: 2026-08-04 — Líder Técnico (merge sequencial #148/#149/#150 → desenv; PR #151 desenv→homolog)_
+_Atualizado: 2026-08-04 — Dev .NET (fix bypass SSRF IPv4-mapped-IPv6, PR #152 fix/151-ssrf-ipv4-mapped-ipv6 → desenv)_
