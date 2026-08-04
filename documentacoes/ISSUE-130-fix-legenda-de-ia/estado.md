@@ -1,7 +1,7 @@
 issue: 130
 titulo: "fix: Legenda de IA nunca é persistida — todo post sai sem legenda"
-etapa_atual: QA
-ultimo_agente: code-review
+etapa_atual: Concluído
+ultimo_agente: coordenador
 openspec_change: openspec/changes/issue-130-fix-legenda-de-ia
 tech_stacks:
   - dotnet
@@ -20,12 +20,15 @@ desenv_tasks_merged:
 sub_issues_frontend:
   "#140": angular
 pr_homologacao: 143
-pr_release: ~
+pr_release: 144
+pr_release_merged_at: "2026-08-03T19:08:28Z"
+pr_release_merge_commit: "787e1626ed12b920cbfc17e8d625cc2ea1609fe5"
 code_review_homolog_pr: 143
-qa_status: ~
+qa_status: aprovado
 figma_url: ~
 blockers: nenhum
 status_comment_id: 5167525186
+closedAt: "2026-08-03T19:08:28Z"
 
 ## PM Fase 1
 Levantamento de requisitos postado na Issue #130 (comentário https://github.com/DQM-BETA/omuletachou/issues/130#issuecomment-5167522736), com 5 perguntas objetivas para o Gerente:
@@ -268,6 +271,134 @@ backfill necessario).
 **Veredito: APROVADO.** Merge `desenv` → `homolog` (merge commit, sem squash) executado:
 PR #143. Containers derrubados ao final (`docker compose down -v`), `.env` local removido.
 
+## QA — homolog
+
+**Sincronizacao de branch:** `git fetch origin && git checkout homolog && git pull origin homolog`
+(`67fff0a..bfed8ea`, fast-forward). Commit `bfed8ea` (merge PR #143) confirmado no `git log -5` de
+`homolog`. Validacao executada de forma independente (sem reaproveitar evidencia do Code Review) — novo
+boot Docker, novas credenciais fake, novos produtos de teste inseridos via SQL.
+
+**1. Suites completas (a partir de `homolog`):**
+- `dotnet test` (backend) — **321/321 passando (100%)**, sem falhas, sem skip.
+- `npm test` (dashboard, Karma/Chrome headless) — **107/107 passando (100%)**.
+- Sem regressao em relacao ao numero de testes reportado pelo Code Review (mesmos totais).
+
+**2. Gate visual / E2E:** `dashboard/package.json` e `website/package.json` inspecionados — nenhum dos
+dois define script `test:visual`. **E2E/screenshots: N/A (projeto sem UI Playwright configurada — sem
+script `test:visual`)**. Gate visual do passo d2 nao se aplica (nao ha screenshots arquivadas).
+
+**3. Boot Docker real (independente, `homolog`):** `.env` local temporario criado (gitignored, removido
+ao final) + `docker compose up -d --build db api dashboard`. Build dos 3 servicos sem erro. `docker
+compose ps` confirma `afiliado_db` (healthy), `afiliado_api` (healthy), `afiliado_dashboard` (up). Logs
+da API sem excecao — migration `AddCaptionToPublicationQueue` aplicada automaticamente no startup (`psql
+\d publication_queue` confirma coluna `caption text NOT NULL DEFAULT ''::text`), seed de usuario ok,
+Hangfire registrado.
+
+**4. Fluxo Telegram (ProcessorJob) — validacao independente:**
+- Login via `POST /api/auth/login` (usuario seed proprio do QA) → token JWT.
+- Credenciais fake de Telegram configuradas via `PUT /api/settings/{telegram.bot_token,
+  telegram.channel_id, networks.telegram.enabled}`.
+- Produto de teste proprio (`qa-telegram-001`, `status=Queued`) inserido via SQL direto.
+- `POST /api/jobs/processor/trigger` (autenticado) executado.
+- `psql` confirma: 1 entrada em `publication_queue` (`social_network=Telegram(0)`,
+  `status=Scheduled(0)`) com `caption` = "Achei essa oferta: Produto Teste QA Telegram por R$ 20.00 (33%
+  OFF) https://example.com/aff" (91 caracteres, texto real, nao vazio, nao descartado) — **CA3, CA6,
+  CA15 confirmados fim-a-fim de forma independente**.
+
+**5. Fluxo Facebook Manual — validacao independente:**
+- Produto de teste proprio (`qa-facebook-001`, `description` deliberadamente diferente da caption) +
+  item `publication_queue` (`social_network=Facebook(4)`, `status=ManualPending(3)`,
+  `caption='Legenda de IA REAL do Facebook para teste QA independente'`) inseridos via SQL direto.
+- `GET /api/products/{id}` via `afiliado_api` **e** via proxy nginx do `afiliado_dashboard` (mesmo
+  caminho que o Angular usa em producao) — ambos retornaram `"ai_caption":"Legenda de IA REAL do
+  Facebook para teste QA independente"`, distinto de `"description":"Descricao original DIFERENTE da
+  legenda de IA"` — **CA12 confirmado fim-a-fim, duas rotas de rede**.
+- `GET /api/queue/manual` via proxy do dashboard confirma o item `ManualPending` listado
+  (`socialNetwork:"Facebook"`), mesmo endpoint que `facebook-manual.component.ts` consome.
+- Leitura do template `facebook-manual.component.html` (path real:
+  `dashboard/src/app/pages/facebook-manual/facebook-manual.component.html`) confirma
+  `{{ post.product?.ai_caption || 'Legenda não disponível' }}` no texto exibido e
+  `copyCaption(post.product?.ai_caption || '')` no botao "Copiar legenda" — nunca
+  `post.product?.description` — **CA13 confirmado** (sem Playwright visual configurado no projeto,
+  validacao por leitura de codigo do template real + dado de origem ja confirmado fim-a-fim via API).
+
+**6. Caso nulo (produto sem item de fila Facebook) — CA14:**
+- `GET /api/products/{id}` do produto de teste Telegram (sem item Facebook) retornou
+  `"ai_caption":null` — **nao erro**, confirma resolucao `null` quando nao ha item para a rede.
+- Template confirma fallback `'Legenda não disponível'` quando `ai_caption` e `null`/`undefined`
+  (`|| 'Legenda não disponível'`), e `copyCaption` usa `|| ''` para nao copiar `undefined` —
+  **CA14 confirmado**.
+
+**7. Publishers (CA7–CA10, CA11) — leitura de codigo (grep) apos validacao viva do Telegram:**
+- `TelegramPublisher.cs:51` → `var caption = item.Caption ?? string.Empty;` (nao lanca excecao com
+  caption vazia — CA11).
+- `YoutubePublisher.cs:116` → `BuildMetadataJson(product, item.Caption)`.
+- `InstagramPublisher.cs:118` → `SocialDisclosureHelper.AppendIfMissing(item.Caption)`.
+- `TikTokPublisher.cs:124` → `SocialDisclosureHelper.AppendIfMissing(item.Caption)`.
+- Grep por `AiCaption` nos 4 publishers e no `ProductsController.cs` (fonte, exclui binarios) —
+  **nenhuma ocorrencia** — confirma CA5 (Product.AiCaption nao e mais lido por nenhum publisher).
+
+**8. Migration (CA1, CA2):**
+- `20260803173650_AddCaptionToPublicationQueue.cs`: `AddColumn<string>("caption", nullable: false,
+  defaultValue: "")` — aditiva, sem backfill (nenhum `UPDATE` na migration), confirma CA2.
+- Coluna confirmada via `psql` no boot real (item 3 acima) — CA1.
+
+**9. Testes (CA15–CA17) — leitura de `ProcessorJobTests.cs`, todos passando na suite (item 1):**
+- Linha ~230-233: assert de `entries.Single(e => e.SocialNetwork == SocialNetwork.Telegram).Caption`
+  contra o valor do mock — persistencia real, nao so `Times.Once` (CA15).
+- `ExecuteAsync_PersisteCaptionDistintaPorRede_QuandoMultiplasRedesHabilitadas` (linha ~238): asserts
+  por rede (Telegram/Instagram/TikTok) com captions distintas, sem sobrescrita (CA16).
+- Testes `Times.Never` preexistentes mantidos e complementados com `entries.Should().BeEmpty()` /
+  `NotContain(...)` (linhas 279, 374, 402, 436, 484-485, 509) (CA17).
+
+**10. Changelog (CA18):** corpo do PR #141 contem a nota "Publicações enfileiradas antes desta
+migration permanecem com `Caption=''`... sem processamento retroativo (backfill)"; PR #143 reforca
+"Sem backfill/retrocompatibilidade (decisão do Gerente) — apenas changelog." — **CA18 confirmado**.
+
+**Limpeza:** dados de teste (2 produtos, 2 itens de fila, 3 settings de Telegram) removidos via SQL ao
+final. `docker compose down -v` executado — containers e volumes removidos. `.env` local removido (nunca
+commitado).
+
+### Tabela de critérios de aceite — veredito
+
+| CA | Descrição resumida | Método | Veredito |
+|----|---|---|---|
+| CA1 | Coluna `caption` NOT NULL DEFAULT '' | Execução (psql, boot homolog) | ✅ |
+| CA2 | Itens legados sem backfill | Leitura de código (migration, sem UPDATE) | ✅ |
+| CA3 | Legenda gerada persistida em `Caption` | Execução (Telegram, fluxo real) | ✅ |
+| CA4 | Caption por rede, sem sobrescrita | Leitura de código (testes CA16) + suite passando | ✅ |
+| CA5 | `Product.AiCaption` não é mais lido | Execução (grep fonte, 0 ocorrências) | ✅ |
+| CA6 | Falha na geração não quebra enfileiramento | Execução (fallback determinístico sem exceção) | ✅ |
+| CA7 | TelegramPublisher lê `item.Caption` | Leitura de código + execução (fluxo real Telegram) | ✅ |
+| CA8 | YoutubePublisher lê `item.Caption` | Leitura de código | ✅ |
+| CA9 | InstagramPublisher lê `item.Caption` | Leitura de código | ✅ |
+| CA10 | TikTokPublisher lê `item.Caption` | Leitura de código | ✅ |
+| CA11 | Caption vazia não quebra publishers | Leitura de código (`?? string.Empty`) | ✅ |
+| CA12 | `ProductDetailDto` expõe `ai_caption` real | Execução (GET via API + proxy dashboard) | ✅ |
+| CA13 | Frontend consome `ai_caption`, não `description` | Execução (contrato) + leitura de template | ✅ |
+| CA14 | Fallback claro quando `ai_caption` ausente | Execução (`null` confirmado) + leitura de template | ✅ |
+| CA15 | Teste valida persistência, não só mock | Leitura de código (`ProcessorJobTests.cs`) + suite passando | ✅ |
+| CA16 | Teste cobre múltiplas redes sem sobrescrita | Leitura de código + suite passando | ✅ |
+| CA17 | Regressão `Times.Never` preservada | Leitura de código + suite passando | ✅ |
+| CA18 | Nota de changelog sobre ausência de backfill | Leitura do corpo dos PRs #141/#143 | ✅ |
+
+**18/18 critérios de aceite aprovados (100%).** Sem regressão nos testes (321 backend + 107 frontend,
+mesmos totais do Code Review). Validação integrada obrigatória (boot Docker real, fluxo Telegram +
+Facebook Manual ponta a ponta) executada de forma independente, com dados e credenciais próprios do QA,
+não reaproveitando evidência do Code Review.
+
+**Veredito: APROVADO.** Pronto para PR de release `homolog` → `main` (Gate 2: Gerente).
+
+## Líder Técnico (PR release)
+`git pull origin desenv` — já atualizada, sem divergência. Verificação de sincronização: `git diff
+origin/homolog..origin/desenv` mostrou apenas o próprio `estado.md` pendente (docs, esperado); `git diff
+origin/main..origin/homolog` confirmou o diff completo do fix (backend + frontend + migration + testes +
+docs), sem código pendente de sincronizar.
+
+PR de release criado: https://github.com/DQM-BETA/omuletachou/pull/144 (`homolog` → `main`, merge commit,
+NUNCA squash — corpo descreve o bug completo, o fix, sub-issues #139/#140, aprovação de Code Review e QA
+18/18, e a origem/auditoria pedida pelo Gerente em 2026-08-03). **Merged em 2026-08-03 às 19:08:28 UTC** (merge commit 787e1626ed12b920cbfc17e8d625cc2ea1609fe5).
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|-------|--------|--------|--------|-------|-----------|
@@ -279,3 +410,12 @@ PR #143. Containers derrubados ao final (`docker compose down -v`), `.env` local
 | 6 | Merge Sub-A #139 (PR #141) | lt | sonnet | 47158 | 18 | 87s |
 | 7 | Dev Sub-B #140 | dev-angular | sonnet | 87255 | 47 | 526s |
 | 8 | Merge Sub-B #140 (PR #142) + PR homologacao (PR #143) | lt | sonnet | 47068 | 11 | 129s |
+| 9 | Code Review — validacao final PR #143 | code-review | sonnet | 80154 | 58 | 755s |
+| 10 | QA — homolog (18/18 CAs) | qa | sonnet | 100909 | 55 | 599s |
+| 11 | PR release (homolog→main, PR #144) | lt | sonnet | 60189 | 9 | 163s |
+
+**Totais consolidados (2026-08-03T14:09:24Z → 2026-08-03T19:08:28Z):**
+- Tempo decorrido: 4 horas 59 minutos 4 segundos (299 minutos)
+- Tokens totais processados: 821,549
+- Tempo de processamento (CPU): 4,476 segundos (74.6 minutos / 1.24 horas)
+- Nota: não inclui overhead do orquestrador; `subagent_tokens` é agregado (consumo real)

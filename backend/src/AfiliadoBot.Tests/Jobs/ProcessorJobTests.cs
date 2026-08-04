@@ -125,6 +125,7 @@ public class ProcessorJobTests
         using var db = CreateInMemoryContext();
         var product = CriarProduto(mediaUrl: null);
         db.Products.Add(product);
+        await SeedNetworkAsync(db, "telegram", true, ("telegram.bot_token", "abc"), ("telegram.channel_id", "123"));
         await db.SaveChangesAsync();
 
         var job = CreateJob(db);
@@ -343,6 +344,7 @@ public class ProcessorJobTests
         using var db = CreateInMemoryContext();
         var product = CriarProduto();
         db.Products.Add(product);
+        await SeedNetworkAsync(db, "telegram", true, ("telegram.bot_token", "abc"), ("telegram.channel_id", "123"));
         await db.SaveChangesAsync();
 
         var job = CreateJob(db);
@@ -350,6 +352,47 @@ public class ProcessorJobTests
 
         var reloaded = await db.Products.FirstAsync();
         reloaded.Status.Should().Be(ProductStatus.Published);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MarcaError_QuandoNenhumaRedeQualificada()
+    {
+        // Item A4 (Issue #133 / #145): zero entradas de PublicationQueue criadas (nenhuma rede
+        // habilitada e com credenciais completas) — o produto deve ir para Error, nao Published.
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto();
+        db.Products.Add(product);
+        // Nenhuma rede habilitada/configurada.
+        await db.SaveChangesAsync();
+
+        var job = CreateJob(db);
+        await job.ExecuteAsync();
+
+        var reloaded = await db.Products.FirstAsync();
+        reloaded.Status.Should().Be(ProductStatus.Error);
+        reloaded.AiReason.Should().Contain("Nenhuma rede social habilitada");
+
+        var entries = await db.PublicationQueues.Where(q => q.ProductId == product.Id).ToListAsync();
+        entries.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MarcaError_QuandoRedeHabilitadaMasSemCredenciais()
+    {
+        // Regressao do fix A4: rede habilitada porem sem credenciais completas nao qualifica —
+        // zero entradas criadas, produto vai para Error (mesmo comportamento do teste acima,
+        // agora coberto tambem quando ha uma rede "quase" configurada).
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto();
+        db.Products.Add(product);
+        await SeedNetworkAsync(db, "instagram", true); // habilitada, sem credenciais
+        await db.SaveChangesAsync();
+
+        var job = CreateJob(db);
+        await job.ExecuteAsync();
+
+        var reloaded = await db.Products.FirstAsync();
+        reloaded.Status.Should().Be(ProductStatus.Error);
     }
 
     [Fact]
@@ -558,6 +601,7 @@ public class ProcessorJobTests
         using var db = CreateInMemoryContext();
         var product = CriarProduto(platform: Platform.Amazon, affiliateLink: "https://amzn.to/existing");
         db.Products.Add(product);
+        await SeedNetworkAsync(db, "telegram", true, ("telegram.bot_token", "abc"), ("telegram.channel_id", "123"));
         await db.SaveChangesAsync();
 
         var callCount = 0;

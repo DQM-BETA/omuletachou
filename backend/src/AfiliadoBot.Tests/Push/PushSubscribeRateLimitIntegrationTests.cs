@@ -74,6 +74,24 @@ public class PushSubscribeRateLimitIntegrationTests : IClassFixture<PushSubscrib
         response.StatusCode.Should().Be(HttpStatusCode.Created, "o limite e por IP, um IP distinto nao pode ser afetado");
     }
 
+    [Fact]
+    public async Task Unsubscribe_AposExcederLimitePorIp_Retorna429()
+    {
+        // Item 1 (Issue #133 / #145): DELETE /api/public/push/unsubscribe passa a aplicar a
+        // mesma policy "public-write" ja usada em Subscribe/GetVapidPublicKey.
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Forwarded-For", "10.1.0.9");
+
+        HttpResponseMessage? lastResponse = null;
+        for (var i = 0; i < TestPermitLimit + 1; i++)
+        {
+            lastResponse = await client.DeleteAsync(
+                $"/api/public/push/unsubscribe?endpoint={Uri.EscapeDataString("https://fcm.googleapis.com/fcm/send/" + Guid.NewGuid())}");
+        }
+
+        lastResponse!.StatusCode.Should().Be((HttpStatusCode)429, "unsubscribe deve estar sob a mesma policy public-write de subscribe");
+    }
+
     public class LowLimitFactory : WebApplicationFactory<Program>
     {
         // Mesma justificativa de PublicDealsRateLimitIntegrationTests.LowLimitFactory: valores
