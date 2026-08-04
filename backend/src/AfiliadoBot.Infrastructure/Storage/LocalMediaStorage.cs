@@ -150,34 +150,18 @@ public class LocalMediaStorage : IMediaStorage
             return false;
 
         if (address.AddressFamily == AddressFamily.InterNetwork)
-        {
-            var bytes = address.GetAddressBytes();
-
-            // 10.0.0.0/8
-            if (bytes[0] == 10)
-                return false;
-
-            // 172.16.0.0/12
-            if (bytes[0] == 172 && bytes[1] is >= 16 and <= 31)
-                return false;
-
-            // 192.168.0.0/16
-            if (bytes[0] == 192 && bytes[1] == 168)
-                return false;
-
-            // 169.254.0.0/16 (link-local, inclui o metadata endpoint 169.254.169.254)
-            if (bytes[0] == 169 && bytes[1] == 254)
-                return false;
-
-            // 127.0.0.0/8 (redundante com IsLoopback, mantido por clareza)
-            if (bytes[0] == 127)
-                return false;
-
-            return true;
-        }
+            return IsPublicIPv4Address(address);
 
         if (address.AddressFamily == AddressFamily.InterNetworkV6)
         {
+            // Bug do PR #151 (code-review): endereco IPv6 mapeado de IPv4 (ex.
+            // "::ffff:169.254.169.254") tem AddressFamily.InterNetworkV6 e cairia so nas
+            // checagens de link-local/site-local/ULA abaixo, pulando as checagens de range
+            // IPv4 (10/8, 172.16/12, 192.168/16, 169.254/16 incluindo o metadata endpoint).
+            // Desembrulha para IPv4 e reexecuta as mesmas checagens antes de aceitar.
+            if (address.IsIPv4MappedToIPv6)
+                return IsPublicIPv4Address(address.MapToIPv4());
+
             if (address.IsIPv6LinkLocal || address.IsIPv6SiteLocal)
                 return false;
 
@@ -192,6 +176,33 @@ public class LocalMediaStorage : IMediaStorage
 
         // Familia de endereco desconhecida: nao permitir por padrao.
         return false;
+    }
+
+    private static bool IsPublicIPv4Address(IPAddress address)
+    {
+        var bytes = address.GetAddressBytes();
+
+        // 10.0.0.0/8
+        if (bytes[0] == 10)
+            return false;
+
+        // 172.16.0.0/12
+        if (bytes[0] == 172 && bytes[1] is >= 16 and <= 31)
+            return false;
+
+        // 192.168.0.0/16
+        if (bytes[0] == 192 && bytes[1] == 168)
+            return false;
+
+        // 169.254.0.0/16 (link-local, inclui o metadata endpoint 169.254.169.254)
+        if (bytes[0] == 169 && bytes[1] == 254)
+            return false;
+
+        // 127.0.0.0/8 (redundante com IsLoopback, mantido por clareza)
+        if (bytes[0] == 127)
+            return false;
+
+        return true;
     }
 
     private static string DetectMediaType(string mediaUrl)
