@@ -1,8 +1,8 @@
 ---
 issue: 133
 titulo: "chore: Hardening e débito técnico — auditoria completa 2026-08-03"
-etapa_atual: QA
-ultimo_agente: code_review
+etapa_atual: QA_aprovado
+ultimo_agente: qa
 status_comment_id: 5178622317
 openspec_change: ~
 tech_stacks:
@@ -23,7 +23,7 @@ sub_issues_frontend: {}
 pr_homologacao: 151
 pr_release: ~
 code_review_homolog_pr: 151
-qa_status: ~
+qa_status: aprovado
 figma_url: ~
 blockers: nenhum
 createdAt: "2026-08-04"
@@ -326,6 +326,95 @@ achado pendente.
 sucesso (`mergeCommit: d96b5ec`, `mergedAt: 2026-08-04T12:54:47Z`, `state: MERGED`). Card
 permanece em Em Desenvolvimento; próxima etapa: QA.
 
+## QA — homolog
+
+Validação independente (não reaproveitou a evidência do Code Review documentada acima — nova
+sessão, novo boot Docker, novos testes ao vivo).
+
+**1. Sincronização de branch:** `git fetch origin && git checkout homolog && git pull origin
+homolog` — fast-forward `bfed8ea..d96b5ec`, commit `d96b5ec` (merge do PR #151) confirmado em
+`git log --oneline -8` como HEAD de `homolog`.
+
+**2. Testes sem regressão (a partir de `homolog`):**
+- `dotnet test` (backend): **340/340 aprovados**, 0 falhas, ~23s.
+- `ng test --watch=false --browsers=ChromeHeadless` (dashboard): **104/104 aprovados**, 0 falhas.
+
+**3. Gate visual / E2E Playwright:** `dashboard/package.json` e `website/package.json`
+inspecionados — nenhum dos dois define script `test:visual`. Registrado explicitamente:
+**E2E/screenshots: N/A (projeto sem script `test:visual` no package.json)**. Não é reprovação.
+
+**4. Boot Docker real e validação funcional dos 7 critérios de aceite** (`.env` local descartável
+a partir de `.env.example`, `docker-compose.override.yml` temporário só para expor `api:8080` e
+`dashboard:8081` no host — necessário pois nenhum dos dois serviços expõe `ports:` no compose
+original, só alcançáveis via rede interna/NPM; ambos removidos ao final, nunca commitados):
+`docker compose -p omuletachou-qa133 up -d --build db api dashboard` — `db` e `api` `healthy`,
+`dashboard` `Up`. Logs do `api` sem exceção de boot/DI; migração
+`20260804120430_SeedFacebookCredentials` aplicada; seed do usuário operador
+(`qa-test@example.com`) executado.
+
+- **CA1 — Rate-limit `unsubscribe`:** 11 requisições `DELETE /api/public/push/unsubscribe`
+  (endpoints distintos por request) do mesmo IP — requisições 1–10 → `204`, **11ª → `429`**.
+  Confirma `PublicWritePolicy` (10 req/min/IP) aplicada. **PASS.**
+- **CA2 — Hangfire timing-safe + lockout:** senha configurada via SQL direto
+  (`CorrectHangfirePass123`). 5 tentativas erradas seguidas do mesmo IP → `401` cada; **6ª
+  tentativa com a senha CORRETA → ainda `401`** (lockout ativo). Sanity adicional: reinício do
+  container `api` (limpa o `ConcurrentDictionary` em memória) — senha correta em estado fresco →
+  `200`, confirmando que o lockout é uma janela temporária, não uma quebra permanente de acesso.
+  **PASS.**
+- **CA3 — SSRF allowlist `LocalMediaStorage`:** 2 produtos inseridos via SQL — (1)
+  `media_url=http://127.0.0.1:8080/health` (loopback direto) e (2)
+  `media_url=http://[::ffff:169.254.169.254]/latest/meta-data/` (bypass IPv4-mapped-IPv6, exato
+  caso corrigido no PR #152). `POST /api/jobs/processor/trigger` (JWT do usuário seed) disparado.
+  Logs do `api` confirmam os 2 warnings dedicados (`LocalMediaStorage: URL de midia bloqueada pela
+  allowlist SSRF...`) para ambas as URLs; `SELECT media_local_path FROM products` confirma campo
+  vazio para os 2. Telegram habilitado + credenciais preenchidas via SQL (`telegram.bot_token`/
+  `telegram.channel_id`) para permitir qualificação de rede sem depender de API externa real —
+  ambos os produtos avançaram para `status=2` (`Published`) com entrada em `publication_queue`
+  (`social_network=0`/Telegram, `status=0`), confirmando que o bloqueio de mídia NÃO impede a
+  publicação pelas redes que não dependem dela. **PASS.**
+- **CA4 — `ProcessorJob` bug de falso "publicado":** com `networks.telegram.enabled=false`
+  (única rede antes credenciada) e as demais redes (Instagram/YouTube/TikTok/Facebook) sem
+  credenciais preenchidas, um produto novo processado via o mesmo trigger foi marcado
+  `status=5` (`ProductStatus.Error`), não mais `Published` incondicional. `networks.telegram.
+  enabled` restaurado para `true` logo em seguida. **PASS.**
+- **CA5 — Seed de credenciais Facebook:** `GET /api/settings` (JWT) expõe `facebook.access_token`
+  e `facebook.page_id` (antes ausentes da resposta). Com valores de teste preenchidos via SQL,
+  `facebook.access_token` retorna mascarado (`****************7890` — 16 asteriscos fixos + 4
+  últimos caracteres reais, conforme `SettingsMasker`). `facebook.page_id` retorna em claro — **não
+  é regressão desta issue**: confirmado por comparação direta que `instagram.page_id` (rede já
+  existente, fora do escopo desta issue) segue o mesmo comportamento — a regra de mascaramento em
+  `SettingsMasker.IsSensitive` é por sufixo de chave (`_key`/`_secret`/`_token`/`_password`), não
+  por rede; `page_id` nunca foi coberto pela regra, em nenhuma rede, desde antes desta issue. O
+  critério de aceite ("seed de credenciais Facebook exposta e mascarada") é satisfeito no que é
+  novo desta issue (a existência do seed + exposição via endpoint); o padrão de mascaramento em si
+  é comportamento pré-existente e consistente, não uma falha introduzida aqui. **PASS** (com nota).
+- **CA6 — Infra:** `docker-compose.yml` (branch `homolog`) confirma `postgres:16.14-alpine` e
+  `jc21/nginx-proxy-manager:2.15.1` pinados; `backend/.dockerignore`, `dashboard/.dockerignore`,
+  `website/.dockerignore` presentes. `deploy.sh` revisado: poll de até 30 tentativas × 2s por
+  `db`/`api` `healthy`, falha (`exit 1`) se algum ficar `unhealthy`/parado/ausente — lógica
+  consistente com o comportamento `healthy` observado nesta própria validação (containers `db`/
+  `api` reportaram `healthy` via `docker compose ps` no boot real desta sessão). **PASS.**
+- **CA7 — Dashboard nginx headers:** `dashboard/nginx.conf`, location `/api/`, confirma
+  `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;` e `proxy_set_header
+  X-Forwarded-Proto $scheme;` explícitos. Proxy funcional: `GET http://localhost:8081/api/
+  public/deals` → `200`. Rate-limit por IP real testado através do proxy do dashboard (não
+  diretamente na API): 11 requisições `POST /api/public/push/subscribe` via `localhost:8081` —
+  1–10 → `201`, **11ª → `429`**, confirmando que o IP real chega corretamente ao
+  `ForwardedHeadersMiddleware` do backend através do header agora setado explicitamente pelo nginx
+  do dashboard. **PASS.**
+
+**5. Limpeza:** produtos de teste removidos via `DELETE FROM products WHERE slug LIKE 'qa-%-133'
+OR slug LIKE 'qa-no-network%'`; `docker compose -p omuletachou-qa133 down -v` (containers, network,
+volumes `postgres_data`/`media_files` removidos); `.env` e `docker-compose.override.yml` locais
+removidos (`git status` limpo em `homolog` antes do checkout final). `repo_path` checked out em
+`desenv` ao final (`git checkout desenv && git pull origin desenv`, confirmado via `git branch
+--show-current`), working tree limpo.
+
+**Veredito: APROVADO.** 7/7 critérios de aceite validados end-to-end contra containers Docker reais
+a partir de `homolog` (commit `d96b5ec`), sem regressão nas suítes automatizadas (340 backend +
+104 dashboard). Nenhum achado bloqueante. Próxima etapa: Líder Técnico para PR de release
+(`homolog` → `main`) e Gate 2 (Gerente).
+
 ## Custo (ledger)
 
 | # | Etapa | Agente | Modelo | Tokens | Ferramentas | Tempo (s) |
@@ -339,9 +428,10 @@ permanece em Em Desenvolvimento; próxima etapa: QA.
 | 7 | Fix code-review (bypass SSRF IPv4-mapped-IPv6, PR #152) | Dev .NET | Sonnet | 53380 | 18 | 187s |
 | 8 | Merge PR #152 -> desenv (absorvido em #151) | LT | Sonnet | 50367 | 8 | 119s |
 | 9 | Code Review — validação final PR #151 (live, merge desenv->homolog) | code-review | Sonnet | 103850 | 65 | 712s |
+| 10 | QA — homolog (7/7 critérios validados) | qa | Sonnet | 76202 | 59 | 513s |
 
 **Total acumulado:** — tokens · — min proc. (merge pendente — consolidação na quiescência)
 
 ---
 _Criado: 2026-08-04 — Coordenador_
-_Atualizado: 2026-08-04 — Code Review (PR #151 aprovado e mergeado desenv→homolog, próximo: QA)_
+_Atualizado: 2026-08-04 — QA (homolog aprovado, 7/7 critérios validados, próximo: Líder Técnico para PR de release homolog→main)_
