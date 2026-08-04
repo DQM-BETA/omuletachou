@@ -215,6 +215,7 @@ PR de homologação criado: https://github.com/DQM-BETA/omuletachou/pull/151
 | 3 | Dev Sub-B (#146 — infra) | Dev .NET | Sonnet | 72240 | 56 | 515s |
 | 4 | Dev Sub-A (#145 — backend .NET) | Dev .NET | Sonnet | 150287 | 89 | 895s |
 | 5 | Dev Sub-C (#147 — frontend/dashboard) | Dev Angular | Sonnet | 90943 | 83 | 1276s |
+| 6 | Merge sequencial #148/#149/#150 + PR homologação #151 | LT | Sonnet | 50667 | 18 | 192s |
 
 **Total acumulado:** — tokens · — min proc. (merge pendente — consolidação na quiescência)
 
