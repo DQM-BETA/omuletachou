@@ -97,6 +97,57 @@ validado via `docker compose config` + resolução da tag no Docker Hub. Ambient
 PR: https://github.com/DQM-BETA/omuletachou/pull/148 (`fix/146-hardening-infra` → `desenv`, aberto,
 não mergeado).
 
+## Sub-A (#145) — backend .NET: rate-limit, timing-safe, SSRF, ProcessorJob, Facebook seed, Newtonsoft.Json
+
+Implementado em worktree isolado (`fix/145-hardening-backend`, base `desenv`). Escopo (7 itens,
+todos triados pelo LT como seguros/mecânicos — ver tabela "Fazer agora" acima):
+
+1. `PushController.Unsubscribe`: `[EnableRateLimiting(RateLimiterConfigurator.PublicWritePolicy)]`
+   (mesma policy de subscribe/vapid-public-key).
+2. `HangfireAuthFilter`: comparação de senha em tempo constante (SHA-256 dos dois valores +
+   `CryptographicOperations.FixedTimeEquals`, evita vazar tamanho/prefixo via timing) + lockout de
+   5 tentativas/5min por IP (`ConcurrentDictionary` estático, já que `/hangfire` é middleware de
+   Dashboard, não Controller — `[EnableRateLimiting]` não se aplica).
+3. `LocalMediaStorage`: allowlist SSRF antes do `GetAsync` — rejeita scheme != http/https e
+   qualquer IP resolvido em range privado/loopback/link-local (127.0.0.0/8, 10.0.0.0/8,
+   172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16 incluindo o metadata endpoint
+   169.254.169.254, além de IPv6 loopback/link-local/ULA `fc00::/7`). Resolução de DNS extraída
+   para um `Func<string, CancellationToken, Task<IPAddress[]>>` injetável (construtor `internal`,
+   `InternalsVisibleTo` adicionado ao `AfiliadoBot.Infrastructure.csproj`) para manter a suíte
+   hermética sem depender de resolução de rede real.
+4. Removidos os 3 `Class1.cs` de scaffolding (`Application`/`Domain`/`Infrastructure`).
+5. `ProcessorJob.CreatePublicationQueueEntriesAsync` passa a retornar `Task<int>` (contagem de
+   entradas efetivamente criadas); `ExecuteAsync` usa `product.MarkAsError(...)` quando zero
+   (reaproveita `ProductStatus.Error` existente), `MarkAsPublished()` só quando ≥1 rede qualificou.
+   Testes pré-existentes que não seedavam nenhuma rede (e ainda assim esperavam `Published`) foram
+   corrigidos para seedar Telegram — gate obrigatório (busca de testes que referenciam o módulo
+   modificado).
+6. Migration `SeedFacebookCredentials` (ids 49/50, `dotnet ef migrations add` + `InsertData`/
+   `DeleteData` manuais seguindo o padrão exato de `SeedInstagramCredentials`).
+7. `Newtonsoft.Json` fixado em `13.0.3` via `PackageReference` direto em `AfiliadoBot.Api.csproj`
+   (antes só vinha 11.0.1 via transitivo do `Hangfire.Core`).
+
+TDD para os itens 1/2/3/5 (testes novos + regressão dos existentes). `dotnet test`: 336/336
+passando (100%) — 1 teste de integração pré-existente (`InstagramPublisherTests.PublishAsync_
+PollingContinuaAteFinished_QuandoInProgress`) falhou isoladamente na 1ª rodada da suíte completa
+mas passou em isolamento e na 2ª rodada completa; flakiness de timing pré-existente, não
+relacionada às mudanças desta sub-issue.
+
+Validação real via boot Docker (`docker compose up -d --build db api`, `.env` local descartável
+gerado a partir de `.env.example`, removido ao final): API sobe sem exceção (boot do DI ok,
+migração `SeedFacebookCredentials` aplicada); 11ª requisição de `DELETE /unsubscribe` → 429;
+Hangfire aceita a senha correta antes do lockout, mas após 5 tentativas erradas do mesmo IP
+bloqueia inclusive a senha correta na 6ª tentativa; produto com `media_url=http://127.0.0.1/...`
+processado via `POST /api/jobs/processor/trigger` é bloqueado pela allowlist SSRF (log de warning
+dedicado, `media_local_path` permanece vazio) mas segue publicado normalmente via Telegram
+(rede qualificada); produto sem nenhuma rede habilitada/credenciada vai para
+`ProductStatus.Error` com a mensagem exata do critério de aceite; `GET /api/settings` expõe
+`facebook.access_token`/`facebook.page_id` mascarados. Ambiente Docker limpo
+(`docker compose down -v`) ao final.
+
+PR: https://github.com/DQM-BETA/omuletachou/pull/149 (`fix/145-hardening-backend` → `desenv`,
+aberto, não mergeado).
+
 ## Custo (ledger)
 
 | # | Etapa | Agente | Modelo | Tokens | Ferramentas | Tempo (s) |
@@ -104,6 +155,7 @@ não mergeado).
 | 1 | Preparação (Issue + estado.md) | Coordenador | Haiku | 25067 | 14 | 82s |
 | 2 | Refinamento (triagem + sub-issues + especificacao-tecnica.md) | Líder Técnico | Sonnet | 75154 | 38 | 303s |
 | 3 | Dev Sub-B (#146 — infra) | Dev .NET | Sonnet | 72240 | 56 | 515s |
+| 4 | Dev Sub-A (#145 — backend .NET) | Dev .NET | Sonnet | 150287 | 89 | 895s |
 
 **Total acumulado:** — tokens · — min proc. (merge pendente)
 
