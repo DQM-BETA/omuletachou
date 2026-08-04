@@ -1,6 +1,8 @@
 services:
   db:
-    image: postgres:16-alpine
+    # Pin de versão exata (patch) — upgrades de imagem passam a ser mudança explícita
+    # (bump de tag + teste), não silenciosos no próximo `docker compose pull`.
+    image: postgres:16.14-alpine
     container_name: afiliado_db
     restart: unless-stopped
     environment:
@@ -85,7 +87,9 @@ services:
     # nginx.conf embutido na imagem já faz proxy_pass /api/ -> http://api:8080/api/
 
   nginx-proxy-manager:
-    image: jc21/nginx-proxy-manager:latest
+    # Pin de versão exata (semver) — upgrades de imagem passam a ser mudança explícita
+    # (bump de tag + teste), não silenciosos no próximo `docker compose pull`.
+    image: jc21/nginx-proxy-manager:2.15.1
     container_name: afiliado_npm
     restart: unless-stopped
     ports:
