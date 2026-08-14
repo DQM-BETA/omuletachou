@@ -4,6 +4,7 @@ using System.Text.Json;
 using AfiliadoBot.Domain.Entities;
 using AfiliadoBot.Domain.Enums;
 using AfiliadoBot.Domain.Interfaces;
+using AfiliadoBot.Domain.Services;
 using AfiliadoBot.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -21,7 +22,6 @@ public class ShopeeCollector : IPlatformCollector
 {
     private const string GraphQlUrl = "https://open-api.affiliate.shopee.com.br/graphql";
     private const string Path = "/graphql";
-    private const string DefaultCategory = "Geral";
     private const int RateLimitDelayMs = 1000;
 
     private static readonly int[] RetryDelaysMs = { 2000, 4000, 8000 };
@@ -304,6 +304,7 @@ public class ShopeeCollector : IPlatformCollector
         }
 
         var slug = GenerateSlug(item.ProductName, item.ProductId);
+        var (category, subcategory) = CategoryDetector.Detect(item.ProductName);
 
         var product = new Product(
             title: item.ProductName,
@@ -313,11 +314,12 @@ public class ShopeeCollector : IPlatformCollector
             discountPct: item.DiscountPct,
             affiliateLink: item.OfferLink,
             slug: slug,
-            category: DefaultCategory,
+            category: category,
             platform: Platform.Shopee,
             externalId: item.ProductId,
             mediaUrl: item.MediaUrl,
-            mediaType: item.MediaType);
+            mediaType: item.MediaType,
+            subcategory: subcategory);
 
         _dbContext.Products.Add(product);
 

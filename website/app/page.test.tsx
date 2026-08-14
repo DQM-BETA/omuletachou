@@ -1,13 +1,21 @@
 import { render, screen } from '@testing-library/react';
 import Home from './page';
-import { fetchDeals } from '@/lib/api';
-import type { Deal, PagedResult } from '@/lib/types';
+import { fetchDeals, fetchCategories } from '@/lib/api';
+import type { CategoryTree, Deal, PagedResult } from '@/lib/types';
 
 jest.mock('@/lib/api', () => ({
   fetchDeals: jest.fn(),
+  fetchCategories: jest.fn(),
 }));
 
+jest.mock('@/components/FilterBar', () => {
+  return function MockFilterBar() {
+    return <div data-testid="filter-bar-mock" />;
+  };
+});
+
 const fetchDealsMock = fetchDeals as jest.MockedFunction<typeof fetchDeals>;
+const fetchCategoriesMock = fetchCategories as jest.MockedFunction<typeof fetchCategories>;
 
 function buildDeal(overrides: Partial<Deal> = {}): Deal {
   return {
@@ -21,7 +29,6 @@ function buildDeal(overrides: Partial<Deal> = {}): Deal {
     slug: 'fone-bluetooth-xyz',
     category: 'eletronicos',
     collectedAt: '2026-07-01T12:00:00Z',
-    platform: 'Amazon',
     ...overrides,
   };
 }
@@ -40,6 +47,8 @@ function pagedResult(items: Deal[], overrides: Partial<PagedResult<Deal>> = {}):
 describe('Home page', () => {
   beforeEach(() => {
     fetchDealsMock.mockReset();
+    fetchCategoriesMock.mockReset();
+    fetchCategoriesMock.mockResolvedValue([] as CategoryTree[]);
   });
 
   it('CA-A2: renderiza a grade de ofertas retornada por fetchDeals (HTML já com conteúdo)', async () => {
@@ -52,40 +61,69 @@ describe('Home page', () => {
     expect(screen.getAllByTestId('deal-card')).toHaveLength(2);
   });
 
-  it('CA-A6: pagina para a próxima página mantendo o filtro de plataforma', async () => {
-    fetchDealsMock.mockResolvedValueOnce(
-      pagedResult([buildDeal()], { page: 1, totalPages: 3 })
-    );
+  it('renderiza o FilterBar acima do grid', async () => {
+    fetchDealsMock.mockResolvedValueOnce(pagedResult([buildDeal()]));
 
-    const jsx = await Home({ searchParams: { page: '1', platform: 'Amazon' } });
+    const jsx = await Home({ searchParams: {} });
+    render(jsx);
+
+    expect(screen.getByTestId('filter-bar-mock')).toBeInTheDocument();
+  });
+
+  it('CA 7.1/7.2/7.3: repassa os filtros da URL (category/subcategory/preço/desconto/sort) para fetchDeals', async () => {
+    fetchDealsMock.mockResolvedValueOnce(pagedResult([buildDeal()]));
+
+    await Home({
+      searchParams: {
+        category: 'Eletrônicos',
+        subcategory: 'Celulares',
+        minPrice: '100',
+        maxPrice: '500',
+        minDiscount: '30',
+        sort: 'price_asc',
+      },
+    });
+
+    expect(fetchDealsMock).toHaveBeenCalledWith(1, 12, {
+      category: 'Eletrônicos',
+      subcategory: 'Celulares',
+      minPrice: 100,
+      maxPrice: 500,
+      minDiscount: 30,
+      sort: 'price_asc',
+    });
+  });
+
+  it('CA-A6: pagina mantendo os filtros ativos na querystring', async () => {
+    fetchDealsMock.mockResolvedValueOnce(pagedResult([buildDeal()], { page: 1, totalPages: 3 }));
+
+    const jsx = await Home({ searchParams: { page: '1', category: 'Eletrônicos' } });
     render(jsx);
 
     const nextLink = screen.getByRole('link', { name: /próxima/i });
-    expect(nextLink).toHaveAttribute('href', '/?page=2&platform=Amazon');
+    expect(nextLink).toHaveAttribute('href', '?category=Eletr%C3%B4nicos&page=2');
     expect(screen.queryByRole('link', { name: /anterior/i })).not.toBeInTheDocument();
   });
 
-  it('CA-A5: filtra a grade por plataforma selecionada', async () => {
-    fetchDealsMock.mockResolvedValueOnce(
-      pagedResult([
-        buildDeal({ slug: 'a', platform: 'Amazon' }),
-        buildDeal({ slug: 'b', platform: 'Shopee' }),
-      ])
-    );
-
-    const jsx = await Home({ searchParams: { platform: 'Amazon' } });
-    render(jsx);
-
-    expect(screen.getAllByTestId('deal-card')).toHaveLength(1);
-  });
-
-  it('exibe estado vazio quando não há ofertas', async () => {
+  it('exibe estado vazio genérico quando não há ofertas e nenhum filtro ativo', async () => {
     fetchDealsMock.mockResolvedValueOnce(pagedResult([]));
 
     const jsx = await Home({ searchParams: {} });
     render(jsx);
 
     expect(screen.getByTestId('deals-empty')).toBeInTheDocument();
+    expect(screen.getByText('Nenhuma oferta encontrada.')).toBeInTheDocument();
+  });
+
+  it('CA 7.5: exibe estado vazio orientado a filtro, com CTA "Ver todas as ofertas", quando há filtro ativo sem resultado', async () => {
+    fetchDealsMock.mockResolvedValueOnce(pagedResult([]));
+
+    const jsx = await Home({ searchParams: { minDiscount: '90' } });
+    render(jsx);
+
+    expect(screen.getByTestId('deals-empty')).toBeInTheDocument();
+    expect(screen.getByText(/nenhuma oferta encontrada com esses filtros/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /ver todas as ofertas/i })).toHaveAttribute('href', '/');
   });
 
   it('CA-T2: propaga erro de fetchDeals (não engole) para o Next.js tratar via cache/ISR', async () => {

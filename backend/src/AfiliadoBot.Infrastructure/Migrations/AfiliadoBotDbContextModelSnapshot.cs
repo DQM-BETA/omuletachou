@@ -334,6 +334,41 @@ namespace AfiliadoBot.Infrastructure.Migrations
                             Key = "api.public_base_url",
                             UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Value = ""
+                        },
+                        new
+                        {
+                            Id = 51,
+                            Key = "claude.monthly_budget_limit_brl",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "30"
+                        },
+                        new
+                        {
+                            Id = 52,
+                            Key = "claude.monthly_usage",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "{\"month\":\"\",\"spend_brl\":0}"
+                        },
+                        new
+                        {
+                            Id = 53,
+                            Key = "claude.price_input_usd_per_mtok",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "1"
+                        },
+                        new
+                        {
+                            Id = 54,
+                            Key = "claude.price_output_usd_per_mtok",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "5"
+                        },
+                        new
+                        {
+                            Id = 55,
+                            Key = "claude.usd_brl_rate",
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "5.5"
                         });
                 });
 
@@ -431,6 +466,11 @@ namespace AfiliadoBot.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("status");
 
+                    b.Property<string>("Subcategory")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("subcategory");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -449,6 +489,25 @@ namespace AfiliadoBot.Infrastructure.Migrations
                     b.HasIndex("Platform", "ExternalId")
                         .IsUnique()
                         .HasDatabaseName("IX_products_platform_external_id");
+
+                    b.HasIndex("Status", "AiScore")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("IX_products_status_aiscore");
+
+                    b.HasIndex("Status", "Category", "Subcategory", "AiScore")
+                        .IsDescending(false, false, false, true)
+                        .HasDatabaseName("IX_products_status_category_subcategory_aiscore");
+
+                    b.HasIndex("Status", "Category", "Subcategory", "CreatedAt")
+                        .IsDescending(false, false, false, true)
+                        .HasDatabaseName("IX_products_status_category_subcategory_createdat");
+
+                    b.HasIndex("Status", "Category", "Subcategory", "DiscountPct")
+                        .IsDescending(false, false, false, true)
+                        .HasDatabaseName("IX_products_status_category_subcategory_discountpct");
+
+                    b.HasIndex("Status", "Category", "Subcategory", "SalePrice")
+                        .HasDatabaseName("IX_products_status_category_subcategory_saleprice");
 
                     b.ToTable("products", (string)null);
                 });

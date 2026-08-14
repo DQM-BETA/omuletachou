@@ -4,12 +4,14 @@ using AfiliadoBot.Domain.DTOs;
 using AfiliadoBot.Domain.Entities;
 using AfiliadoBot.Domain.Enums;
 using AfiliadoBot.Domain.Interfaces;
+using AfiliadoBot.Domain.Services;
 
 namespace AfiliadoBot.Infrastructure.Services;
 
 public class ClaudeAiService : IAiService
 {
     private readonly IAnthropicClientWrapper _client;
+    private readonly IClaudeBudgetService _budgetService;
     private readonly int _minScore;
     private readonly int _minScoreFallback;
 
@@ -20,10 +22,12 @@ public class ClaudeAiService : IAiService
 
     public ClaudeAiService(
         IAnthropicClientWrapper client,
+        IClaudeBudgetService budgetService,
         int minScore = 6,
         int minScoreFallback = 5)
     {
         _client = client;
+        _budgetService = budgetService;
         _minScore = minScore;
         _minScoreFallback = minScoreFallback;
     }
@@ -63,7 +67,7 @@ public class ClaudeAiService : IAiService
                     """;
 
                 var response = await _client.CompleteAsync(systemPrompt, userMessage, ct);
-                var (score, reason) = ParseScoreResponse(response);
+                var (score, reason) = ParseScoreResponse(response.Text);
                 bool approve = score >= _minScore;
                 return new ProductScore(score, reason, approve);
             }
@@ -119,7 +123,8 @@ public class ClaudeAiService : IAiService
 
         try
         {
-            return await _client.CompleteAsync(systemPrompt, userMessage, ct);
+            var response = await _client.CompleteAsync(systemPrompt, userMessage, ct);
+            return response.Text;
         }
         catch (OperationCanceledException)
         {
@@ -128,6 +133,99 @@ public class ClaudeAiService : IAiService
         catch
         {
             return $"Achei essa oferta: {product.Title} por R$ {product.SalePrice:F2} ({product.DiscountPct:F0}% OFF) {product.AffiliateLink}";
+        }
+    }
+
+    /// <summary>
+    /// Fallback de categorizacao via IA (Issue #167 — Sub-B/#169, design.md §3.6,
+    /// especificacao-tecnica.md §7). Chamado pelo ProcessorJob so quando o dicionario
+    /// (CategoryDetector, na coleta) nao classificou o produto (Category == "Geral").
+    /// Retorna null (sem excecao) quando: orcamento do mes estourou (CA 4.3), a chamada Claude
+    /// falha/da timeout, ou a resposta nao pode ser parseada — em qualquer um desses casos o
+    /// produto permanece "Geral" e o orcamento so e debitado em caso de sucesso real (CA 4.2).
+    /// </summary>
+    public async Task<CategoryClassification?> ClassifyCategoryAsync(Product product, CancellationToken ct = default)
+    {
+        if (!await _budgetService.IsCategorizationBudgetAvailableAsync(ct))
+            return null;
+
+        var taxonomia = string.Join(
+            "\n",
+            CategoryDetector.Categorias.Select(kv => $"- {kv.Key}: {string.Join(", ", kv.Value)}"));
+
+        var systemPrompt = $$"""
+            Voce e um classificador de produtos de e-commerce afiliado. Classifique o produto em
+            UMA categoria e UMA subcategoria da lista fechada abaixo — nunca invente uma
+            categoria/subcategoria fora da lista. Se nenhuma categoria da lista se encaixar bem,
+            responda com categoria "Geral" e subcategoria null.
+
+            Categorias e subcategorias disponiveis:
+            {{taxonomia}}
+
+            Responda APENAS com JSON no formato: {"category": "<categoria>", "subcategory": "<subcategoria ou null>"}
+            Nao inclua nenhum texto adicional antes ou depois do JSON.
+            """;
+
+        var userMessage = $"""
+            Produto para classificar:
+            Titulo: {product.Title}
+            Descricao: {product.Description}
+            """;
+
+        ClaudeCompletionResult response;
+        try
+        {
+            response = await _client.CompleteAsync(systemPrompt, userMessage, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return null;
+        }
+
+        var classification = TryParseCategoryResponse(response.Text);
+        if (classification is null)
+            return null;
+
+        // So debita orcamento apos sucesso real (CA 4.2 — "chamada executada com sucesso").
+        await _budgetService.RecordUsageAsync(response.InputTokens, response.OutputTokens, ct);
+
+        return classification;
+    }
+
+    private static CategoryClassification? TryParseCategoryResponse(string response)
+    {
+        var match = Regex.Match(response, @"\{[^{}]*\}", RegexOptions.Singleline);
+        if (!match.Success)
+            return null;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(match.Value);
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("category", out var categoryProp))
+                return null;
+
+            var category = categoryProp.GetString();
+            if (string.IsNullOrWhiteSpace(category))
+                return null;
+
+            string? subcategory = null;
+            if (root.TryGetProperty("subcategory", out var subcategoryProp) &&
+                subcategoryProp.ValueKind == JsonValueKind.String)
+            {
+                subcategory = subcategoryProp.GetString();
+            }
+
+            return new CategoryClassification(category, subcategory);
+        }
+        catch (JsonException)
+        {
+            return null;
         }
     }
 

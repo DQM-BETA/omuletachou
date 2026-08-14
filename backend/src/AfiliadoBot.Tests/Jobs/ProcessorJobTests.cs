@@ -1,5 +1,6 @@
 using System.Net;
 using AfiliadoBot.Application.Jobs;
+using AfiliadoBot.Domain.DTOs;
 using AfiliadoBot.Domain.Entities;
 using AfiliadoBot.Domain.Enums;
 using AfiliadoBot.Domain.Interfaces;
@@ -199,8 +200,14 @@ public class ProcessorJobTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_DetectaCategoria_QuandoAindaGeral()
+    public async Task ExecuteAsync_NaoAlteraCategoria_QuandoFallbackIaNaoClassifica()
     {
+        // A categorizacao por dicionario (CategoryDetector) saiu do ProcessorJob e passou a
+        // rodar nos collectors, na criacao do Product (Issue #167, Sub-A/#168). O fallback via
+        // IA (Sub-B/#169) roda aqui, mas quando ClassifyCategoryAsync retorna null (orcamento
+        // estourado ou erro/timeout — CA 4.3, design.md §3.6) o produto permanece "Geral". O
+        // mock de IAiService (CreateAiServiceMock) nao configura ClassifyCategoryAsync, entao
+        // Moq devolve o default (Task<CategoryClassification?> completo com null).
         using var db = CreateInMemoryContext();
         var product = CriarProduto(title: "Fone de Ouvido Bluetooth", category: "Geral");
         db.Products.Add(product);
@@ -210,7 +217,82 @@ public class ProcessorJobTests
         await job.ExecuteAsync();
 
         var reloaded = await db.Products.FirstAsync();
+        reloaded.Category.Should().Be("Geral");
+        reloaded.Subcategory.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ChamaFallbackIa_QuandoCategoriaGeral_EAtualizaCategoria()
+    {
+        // CA 3.1: produto Queued + Category == "Geral" -> fallback IA acionado, e o resultado
+        // sobrescreve Category/Subcategory do produto.
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto(title: "Produto sem match no dicionario", category: "Geral");
+        db.Products.Add(product);
+        await SeedNetworkAsync(db, "telegram", true, ("telegram.bot_token", "abc"), ("telegram.channel_id", "123"));
+        await db.SaveChangesAsync();
+
+        var aiMock = CreateAiServiceMock();
+        aiMock.Setup(a => a.ClassifyCategoryAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CategoryClassification("Eletrônicos", "Celulares e Smartphones"));
+
+        var job = CreateJob(db, aiService: aiMock);
+        await job.ExecuteAsync();
+
+        var reloaded = await db.Products.FirstAsync();
         reloaded.Category.Should().Be("Eletrônicos");
+        reloaded.Subcategory.Should().Be("Celulares e Smartphones");
+        aiMock.Verify(a => a.ClassifyCategoryAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NaoChamaFallbackIa_QuandoDicionarioJaClassificou()
+    {
+        // CA 3.3: Category != "Geral" (dicionario ja classificou na coleta) -> fallback IA nunca
+        // e chamado, nenhum custo e gerado.
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto(category: "Eletrônicos");
+        db.Products.Add(product);
+        await SeedNetworkAsync(db, "telegram", true, ("telegram.bot_token", "abc"), ("telegram.channel_id", "123"));
+        await db.SaveChangesAsync();
+
+        var aiMock = CreateAiServiceMock();
+        var job = CreateJob(db, aiService: aiMock);
+        await job.ExecuteAsync();
+
+        aiMock.Verify(a => a.ClassifyCategoryAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        var reloaded = await db.Products.FirstAsync();
+        reloaded.Category.Should().Be("Eletrônicos");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ChamaFallbackIa_AntesDeGerarSlug()
+    {
+        // CA 3.1 / design.md §3.6: o fallback precisa rodar ANTES de EnsureSlug — verificado
+        // capturando o estado do Slug no momento exato em que ClassifyCategoryAsync e chamado.
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto(title: "Produto Sem Categoria E Sem Slug", category: "Geral", slug: "");
+        db.Products.Add(product);
+        await SeedNetworkAsync(db, "telegram", true, ("telegram.bot_token", "abc"), ("telegram.channel_id", "123"));
+        await db.SaveChangesAsync();
+
+        string? slugNoMomentoDoFallback = "valor-nao-capturado";
+        var aiMock = CreateAiServiceMock();
+        aiMock.Setup(a => a.ClassifyCategoryAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Product p, CancellationToken _) =>
+            {
+                slugNoMomentoDoFallback = p.Slug;
+                return new CategoryClassification("Eletrônicos", "Celulares e Smartphones");
+            });
+
+        var job = CreateJob(db, aiService: aiMock);
+        await job.ExecuteAsync();
+
+        slugNoMomentoDoFallback.Should().BeEmpty();
+
+        var reloaded = await db.Products.FirstAsync();
+        reloaded.Slug.Should().NotBeNullOrWhiteSpace();
     }
 
     [Fact]
@@ -448,17 +530,22 @@ public class ProcessorJobTests
     [Fact]
     public async Task ExecuteAsync_NaoProcessaProdutosRejected()
     {
+        // CA 3.2: produto Rejected (Status != Queued) nunca chega ao loop de ExecuteAsync (a
+        // query do topo ja filtra por Queued) — o fallback de categorizacao via IA nao pode ser
+        // chamado para ele, mesmo que a Category seja "Geral".
         using var db = CreateInMemoryContext();
-        var product = CriarProduto();
+        var product = CriarProduto(category: "Geral");
         product.UpdateAiResult(2, "Score baixo", ""); // Rejected
         db.Products.Add(product);
         await db.SaveChangesAsync();
 
-        var job = CreateJob(db);
+        var aiMock = CreateAiServiceMock();
+        var job = CreateJob(db, aiService: aiMock);
         await job.ExecuteAsync();
 
         var reloaded = await db.Products.FirstAsync();
         reloaded.Status.Should().Be(ProductStatus.Rejected);
+        aiMock.Verify(a => a.ClassifyCategoryAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

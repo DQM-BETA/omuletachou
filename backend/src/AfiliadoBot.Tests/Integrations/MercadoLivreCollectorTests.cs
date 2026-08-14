@@ -131,6 +131,30 @@ public class MercadoLivreCollectorTests
     }
 
     [Fact]
+    public async Task CollectAsync_DetectaCategoriaViaCategoryDetector_QuandoProdutoNovo()
+    {
+        // CA 2.1 (Issue #167): o dicionario roda em CollectAsync, sem depender de IA. Titulo
+        // "Smartphone XPTO" casa com a keyword "smartphone" (Eletronicos/Celulares e Smartphones).
+        using var db = CreateInMemoryContext();
+        await SeedCredentialsAsync(db);
+        await SeedTokenAsync(db, "token-valido", DateTime.UtcNow.AddHours(1));
+        var aiMock = CreateAiServiceMock();
+
+        var httpClient = CreateHttpClient(req =>
+            req.RequestUri!.ToString().Contains("/search")
+                ? JsonResponse(HttpStatusCode.OK, ValidSearchResponse)
+                : JsonResponse(HttpStatusCode.OK, TokenResponse));
+
+        var collector = new MercadoLivreCollector(httpClient, db, aiMock.Object, NullLogger<MercadoLivreCollector>.Instance);
+
+        var result = (await collector.CollectAsync()).ToList();
+
+        result.Should().HaveCount(1);
+        result[0].Category.Should().Be("Eletrônicos");
+        result[0].Subcategory.Should().Be("Celulares e Smartphones");
+    }
+
+    [Fact]
     public async Task CollectAsync_LancaException_QuandoCredenciaisAusentes()
     {
         using var db = CreateInMemoryContext();
@@ -248,6 +272,7 @@ public class MercadoLivreCollectorTests
         updated.Status.Should().Be(ProductStatus.Published); // preservado
         updated.AiScore.Should().Be(9); // preservado, nao re-scoreado
         updated.SourceUrl.Should().Be("https://produto.mercadolivre.com.br/MLB-123456-smartphone-xpto");
+        updated.Category.Should().Be("Geral"); // sem recategorizacao retroativa (Issue #167)
 
         aiMock.Verify(a => a.ScoreProductAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()), Times.Never);
     }

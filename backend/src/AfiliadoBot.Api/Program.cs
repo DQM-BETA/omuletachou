@@ -95,10 +95,13 @@ builder.Services.AddScoped<IAnthropicClientWrapper>(sp =>
     var model = builder.Configuration["Claude:Model"] ?? string.Empty;
     return new AnthropicClientWrapper(apiKey, model);
 });
+// Orcamento mensal do fallback de categorizacao via Claude (Issue #167 — Sub-B/#169).
+builder.Services.AddScoped<IClaudeBudgetService, ClaudeBudgetService>();
 builder.Services.AddScoped<IAiService>(sp =>
 {
     var wrapper = sp.GetRequiredService<IAnthropicClientWrapper>();
-    return new ClaudeAiService(wrapper);
+    var budgetService = sp.GetRequiredService<IClaudeBudgetService>();
+    return new ClaudeAiService(wrapper, budgetService);
 });
 
 // Collectors
