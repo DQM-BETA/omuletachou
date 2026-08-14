@@ -1,0 +1,57 @@
+:root {
+  /* Cor de marca — fixa, já em app/layout.tsx (theme-color) e manifest.json (Issue #117). NÃO alterar. */
+  --color-primary: #e63946;
+  --color-primary-dark: #c41e2c;    /* hover/active de CTA e chip ativo — L reduzida ~12% em HSL, mesma hue/sat */
+  --color-primary-darker: #a11723;  /* pressed/active state, uso pontual */
+  --color-primary-light: #fce4e6;   /* tint pálido — fundo sutil de destaque, NÃO usar como fundo de texto corrido */
+  --color-primary-contrast: #ffffff; /* texto sobre fundo --color-primary */
+
+  /* Neutros — leve tom quente (não cinza puro), harmoniza com o vermelho de marca */
+  --color-neutral-900: #1a1523;  /* texto principal (títulos, preço) */
+  --color-neutral-700: #4a4453;  /* texto secundário */
+  --color-neutral-600: #6b6473;  /* texto terciário/meta (categoria, legendas) */
+  --color-neutral-400: #a29aa8;  /* texto desabilitado, preço riscado */
+  --color-neutral-200: #e4e0e6;  /* bordas, divisores */
+  --color-neutral-100: #f5f3f6;  /* fundo sutil (chip inativo, placeholder de imagem) */
+  --color-neutral-50:  #fbfafc;  /* fundo de página */
+  --color-surface: #ffffff;      /* fundo de card/superfície elevada */
+  --color-border: var(--color-neutral-200);
+
+  /* Tipografia — família extraída do Figma (Work Sans); fallback de sistema garante mobile-first sem custo de rede se o Dev optar por não carregar a webfont */
+  --font-family-base: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-size-xs: 12px;    /* badges, legendas de paginação */
+  --font-size-sm: 14px;    /* texto secundário, preço riscado, chips, categoria */
+  --font-size-base: 16px;  /* corpo de texto padrão */
+  --font-size-lg: 18px;    /* preço em destaque no card, subtítulos */
+  --font-size-xl: 22px;    /* título do deal-detail (mobile) */
+  --font-size-2xl: 28px;   /* título do deal-detail (desktop) */
+  --font-size-3xl: 32px;   /* preço em destaque do deal-detail */
+  --line-height-tight: 1.2;
+  --line-height-base: 1.5;
+  --font-weight-regular: 400;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-black: 800;
+
+  /* Espaçamento — escala 8pt */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* Raio de borda */
+  --radius-sm: 6px;   /* badges, chips, botões de paginação */
+  --radius-md: 10px;  /* cards, CTA */
+  --radius-lg: 16px;  /* mídia de destaque do deal-detail */
+  --radius-full: 999px;
+
+  /* Elevação — sombra sutil, evitar exagero */
+  --shadow-sm: 0 1px 2px rgba(26, 21, 35, 0.06);
+  --shadow-md: 0 4px 12px rgba(26, 21, 35, 0.10);
+
+  /* Container */
+  --container-max-width: 1200px;
+}

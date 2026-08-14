@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { fetchDeal } from '@/lib/api';
 import { getRelatedDeals } from '@/lib/related-deals';
+import Header from '@/components/Header';
 import DealDetail from '@/components/DealDetail';
 import {
   buildDealCanonicalUrl,
@@ -58,6 +59,8 @@ export default async function OfertaPage({ params }: OfertaPageProps) {
 
   return (
     <main>
+      <Header />
+
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger

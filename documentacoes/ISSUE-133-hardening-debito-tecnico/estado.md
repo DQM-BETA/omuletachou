@@ -1,8 +1,8 @@
 ---
 issue: 133
 titulo: "chore: Hardening e débito técnico — auditoria completa 2026-08-03"
-etapa_atual: Code Review
-ultimo_agente: lt
+etapa_atual: Concluído
+ultimo_agente: coordenador
 status_comment_id: 5178622317
 openspec_change: ~
 tech_stacks:
@@ -21,13 +21,14 @@ sub_issues:
 desenv_tasks_merged: ["#145", "#146", "#147"]
 sub_issues_frontend: {}
 pr_homologacao: 151
-pr_release: ~
-code_review_homolog_pr: ~
-qa_status: ~
+pr_release: 153
+code_review_homolog_pr: 151
+qa_status: aprovado
 figma_url: ~
 blockers: nenhum
-createdAt: "2026-08-04"
-closedAt: ~
+createdAt: "2026-08-03T14:10:44Z"
+closedAt: "2026-08-04T14:13:58Z"
+merge_commit: "c8147039f1cd36e5ce7fa27d67ea150127339827"
 ---
 
 ## Descrição
@@ -249,20 +250,212 @@ para #148/#149/#150 e antes para #131/#132; nenhuma ação extra de merge necess
 `git pull origin desenv` confirma fast-forward local (`747ea97..e46c8e7`); repo_path checked out em
 `desenv`, limpo e atualizado ao final desta invocação.
 
+## Code Review — PR #151 (validação final)
+
+Camada 2 (Code Review agente — execução ao vivo, complementar ao `/code-review` estático já rodado
+2x no PR, cujo único achado — bypass SSRF IPv4-mapped-IPv6 — já havia sido corrigido no PR #152 e
+revalidado em comentário anterior: https://github.com/DQM-BETA/omuletachou/pull/151#issuecomment-5179262074).
+
+**1. Estado do branch:** `git fetch && git checkout desenv && git pull origin desenv` — HEAD em
+`d13332e` (mais recente que o `d13332e` esperado), com `e46c8e7` (fix SSRF) presente no histórico.
+
+**2. Build/boot Docker real:** `.env` local descartável gerado a partir de `.env.example`
+(credenciais dummy, `SEED_USER_EMAIL`/`SEED_USER_PASSWORD` para permitir login de teste).
+`docker compose up -d --build db api dashboard` — build dos 3 serviços sem erro; `docker compose ps`
+confirma `db` e `api` `healthy`, `dashboard` `Up` (sem healthcheck definido). Logs do `api` sem
+exceção de boot/DI; migrações aplicadas até `20260804120430_SeedFacebookCredentials` (confirmado
+via `__EFMigrationsHistory` e `SELECT` em `app_settings` — ids 49/50 `facebook.access_token`/
+`facebook.page_id` presentes com valor vazio, id 32 `hangfire.dashboard_password` presente vazio);
+seed do usuário operador (`cr-test@example.com`) executado com sucesso.
+
+**3. Suítes de teste:**
+- `dotnet test` (backend): **340/340 aprovados**, 0 falhas, ~25s.
+- `ng test --watch=false --browsers=ChromeHeadless` (dashboard): **104/104 aprovados**, 0 falhas.
+Sem regressão em relação ao esperado (340+/104+).
+
+**4. Validação funcional ao vivo dos pontos críticos:**
+- **Rate-limit `unsubscribe`**: 11 requisições `DELETE /api/public/push/unsubscribe?endpoint=...`
+  do mesmo IP (via `curl` de dentro do container `api`, endpoints distintos por request para não
+  colidir com dedupe de negócio) — requisições 1–10 → `204`, 11ª → `429`. Confirma
+  `PublicWritePolicy` (10 req/min/IP) aplicada corretamente ao endpoint.
+- **Hangfire lockout**: senha configurada em `app_settings` via SQL direto
+  (`CorrectHangfirePass123`). 5 tentativas com senha errada seguidas do mesmo IP → `401` cada uma;
+  6ª tentativa **com a senha correta** → ainda `401` (lockout ativo, janela de 5 min). Sanity check
+  adicional: reiniciado o container `api` (limpa o `ConcurrentDictionary` em memória) — senha
+  correta em estado "fresco" → `200`; senha errada isolada → `401`. Confirma tanto o
+  comportamento normal quanto o lockout timing-safe.
+- **SSRF allowlist**: dois produtos inseridos diretamente no banco com `status=Queued` (1) —
+  `media_url=http://127.0.0.1:8080/health` (loopback) e (2)
+  `media_url=http://[::ffff:169.254.169.254]/latest/meta-data/` (IPv4-mapped-IPv6 apontando para o
+  metadata endpoint — exatamente o bypass corrigido no PR #152). Login via `POST /api/auth/login`
+  para obter JWT, `POST /api/jobs/processor/trigger` disparado com o token. Logs do `api` confirmam
+  os dois warnings dedicados (`LocalMediaStorage: URL de midia bloqueada pela allowlist SSRF...`)
+  para ambas as URLs; `SELECT media_local_path FROM products` confirma que nenhum arquivo foi
+  baixado para nenhum dos dois produtos (campo vazio). Validação ao vivo do exato bypass
+  encontrado pelo `/code-review` — comprovadamente fechado no ambiente real, não só nos testes
+  unitários mockados.
+
+**5. Checklist de veto:**
+- Sem segredos commitados: `gh pr diff 151` inspecionado — únicas ocorrências de padrões
+  sensíveis (`amazon.secret_key`, `youtube.api_key`, `claude.api_key`) são chaves de configuração
+  seedadas com `Value = ""` (mesmo padrão de todas as outras migrations de seed já existentes),
+  não segredos reais.
+- Conformidade com `repos/omuletachou/CLAUDE.md`: stack, convenções de branch/commit e estratégia
+  de merge (squash feature→desenv, merge commit desenv→homolog) seguidas.
+- Integração real: toda a validação funcional (item 4) foi feita contra containers Docker reais
+  (Postgres real, API real, Hangfire real com storage Postgres real) — não há mock-only nos
+  caminhos críticos desta issue. Os testes automatizados (`dotnet test`/`ng test`) usam mocks onde
+  apropriado (unitários), mas a suíte inclui testes de integração reais (ex.
+  `PushSubscribeRateLimitIntegrationTests`, `HangfireAuthFilterTests`) e esta validação ao vivo
+  complementa com o boot real end-to-end.
+- Sem OWASP Top 10 introduzido: os 3 itens de segurança desta issue (rate-limit, timing-safe +
+  lockout, SSRF allowlist) são fixes de hardening, não introduzem superfície nova.
+- `.first()`/`.nth()`/`.last()` em specs E2E: `gh pr diff 151` não contém nenhum spec Playwright
+  (`.spec.ts` de E2E) — nenhum arquivo E2E tocado nesta PR. Item não aplicável.
+- Diff coerente com o escopo descrito (backend .NET #145, infra #146, frontend #147 + fix SSRF
+  #152 absorvido) — confirmado via `gh pr diff --json files`/lista de arquivos tocados.
+
+**6. Achados do `/code-review` (plugin, análise estática):** 1 achado real (bypass SSRF
+IPv4-mapped-IPv6), já corrigido no PR #152 e revalidado em comentário próprio no PR. Nenhum outro
+achado pendente.
+
+**7. Ambiente limpo:** `docker compose down -v` executado ao final (containers, network e volumes
+`postgres_data`/`media_files` removidos); `.env` local removido. `repo_path` checked out em
+`desenv` (confirmado via `git branch --show-current`), working tree limpo.
+
+**Veredito: APROVADO.** `gh pr merge 151 --repo DQM-BETA/omuletachou --merge` executado com
+sucesso (`mergeCommit: d96b5ec`, `mergedAt: 2026-08-04T12:54:47Z`, `state: MERGED`). Card
+permanece em Em Desenvolvimento; próxima etapa: QA.
+
+## QA — homolog
+
+Validação independente (não reaproveitou a evidência do Code Review documentada acima — nova
+sessão, novo boot Docker, novos testes ao vivo).
+
+**1. Sincronização de branch:** `git fetch origin && git checkout homolog && git pull origin
+homolog` — fast-forward `bfed8ea..d96b5ec`, commit `d96b5ec` (merge do PR #151) confirmado em
+`git log --oneline -8` como HEAD de `homolog`.
+
+**2. Testes sem regressão (a partir de `homolog`):**
+- `dotnet test` (backend): **340/340 aprovados**, 0 falhas, ~23s.
+- `ng test --watch=false --browsers=ChromeHeadless` (dashboard): **104/104 aprovados**, 0 falhas.
+
+**3. Gate visual / E2E Playwright:** `dashboard/package.json` e `website/package.json`
+inspecionados — nenhum dos dois define script `test:visual`. Registrado explicitamente:
+**E2E/screenshots: N/A (projeto sem script `test:visual` no package.json)**. Não é reprovação.
+
+**4. Boot Docker real e validação funcional dos 7 critérios de aceite** (`.env` local descartável
+a partir de `.env.example`, `docker-compose.override.yml` temporário só para expor `api:8080` e
+`dashboard:8081` no host — necessário pois nenhum dos dois serviços expõe `ports:` no compose
+original, só alcançáveis via rede interna/NPM; ambos removidos ao final, nunca commitados):
+`docker compose -p omuletachou-qa133 up -d --build db api dashboard` — `db` e `api` `healthy`,
+`dashboard` `Up`. Logs do `api` sem exceção de boot/DI; migração
+`20260804120430_SeedFacebookCredentials` aplicada; seed do usuário operador
+(`qa-test@example.com`) executado.
+
+- **CA1 — Rate-limit `unsubscribe`:** 11 requisições `DELETE /api/public/push/unsubscribe`
+  (endpoints distintos por request) do mesmo IP — requisições 1–10 → `204`, **11ª → `429`**.
+  Confirma `PublicWritePolicy` (10 req/min/IP) aplicada. **PASS.**
+- **CA2 — Hangfire timing-safe + lockout:** senha configurada via SQL direto
+  (`CorrectHangfirePass123`). 5 tentativas erradas seguidas do mesmo IP → `401` cada; **6ª
+  tentativa com a senha CORRETA → ainda `401`** (lockout ativo). Sanity adicional: reinício do
+  container `api` (limpa o `ConcurrentDictionary` em memória) — senha correta em estado fresco →
+  `200`, confirmando que o lockout é uma janela temporária, não uma quebra permanente de acesso.
+  **PASS.**
+- **CA3 — SSRF allowlist `LocalMediaStorage`:** 2 produtos inseridos via SQL — (1)
+  `media_url=http://127.0.0.1:8080/health` (loopback direto) e (2)
+  `media_url=http://[::ffff:169.254.169.254]/latest/meta-data/` (bypass IPv4-mapped-IPv6, exato
+  caso corrigido no PR #152). `POST /api/jobs/processor/trigger` (JWT do usuário seed) disparado.
+  Logs do `api` confirmam os 2 warnings dedicados (`LocalMediaStorage: URL de midia bloqueada pela
+  allowlist SSRF...`) para ambas as URLs; `SELECT media_local_path FROM products` confirma campo
+  vazio para os 2. Telegram habilitado + credenciais preenchidas via SQL (`telegram.bot_token`/
+  `telegram.channel_id`) para permitir qualificação de rede sem depender de API externa real —
+  ambos os produtos avançaram para `status=2` (`Published`) com entrada em `publication_queue`
+  (`social_network=0`/Telegram, `status=0`), confirmando que o bloqueio de mídia NÃO impede a
+  publicação pelas redes que não dependem dela. **PASS.**
+- **CA4 — `ProcessorJob` bug de falso "publicado":** com `networks.telegram.enabled=false`
+  (única rede antes credenciada) e as demais redes (Instagram/YouTube/TikTok/Facebook) sem
+  credenciais preenchidas, um produto novo processado via o mesmo trigger foi marcado
+  `status=5` (`ProductStatus.Error`), não mais `Published` incondicional. `networks.telegram.
+  enabled` restaurado para `true` logo em seguida. **PASS.**
+- **CA5 — Seed de credenciais Facebook:** `GET /api/settings` (JWT) expõe `facebook.access_token`
+  e `facebook.page_id` (antes ausentes da resposta). Com valores de teste preenchidos via SQL,
+  `facebook.access_token` retorna mascarado (`****************7890` — 16 asteriscos fixos + 4
+  últimos caracteres reais, conforme `SettingsMasker`). `facebook.page_id` retorna em claro — **não
+  é regressão desta issue**: confirmado por comparação direta que `instagram.page_id` (rede já
+  existente, fora do escopo desta issue) segue o mesmo comportamento — a regra de mascaramento em
+  `SettingsMasker.IsSensitive` é por sufixo de chave (`_key`/`_secret`/`_token`/`_password`), não
+  por rede; `page_id` nunca foi coberto pela regra, em nenhuma rede, desde antes desta issue. O
+  critério de aceite ("seed de credenciais Facebook exposta e mascarada") é satisfeito no que é
+  novo desta issue (a existência do seed + exposição via endpoint); o padrão de mascaramento em si
+  é comportamento pré-existente e consistente, não uma falha introduzida aqui. **PASS** (com nota).
+- **CA6 — Infra:** `docker-compose.yml` (branch `homolog`) confirma `postgres:16.14-alpine` e
+  `jc21/nginx-proxy-manager:2.15.1` pinados; `backend/.dockerignore`, `dashboard/.dockerignore`,
+  `website/.dockerignore` presentes. `deploy.sh` revisado: poll de até 30 tentativas × 2s por
+  `db`/`api` `healthy`, falha (`exit 1`) se algum ficar `unhealthy`/parado/ausente — lógica
+  consistente com o comportamento `healthy` observado nesta própria validação (containers `db`/
+  `api` reportaram `healthy` via `docker compose ps` no boot real desta sessão). **PASS.**
+- **CA7 — Dashboard nginx headers:** `dashboard/nginx.conf`, location `/api/`, confirma
+  `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;` e `proxy_set_header
+  X-Forwarded-Proto $scheme;` explícitos. Proxy funcional: `GET http://localhost:8081/api/
+  public/deals` → `200`. Rate-limit por IP real testado através do proxy do dashboard (não
+  diretamente na API): 11 requisições `POST /api/public/push/subscribe` via `localhost:8081` —
+  1–10 → `201`, **11ª → `429`**, confirmando que o IP real chega corretamente ao
+  `ForwardedHeadersMiddleware` do backend através do header agora setado explicitamente pelo nginx
+  do dashboard. **PASS.**
+
+**5. Limpeza:** produtos de teste removidos via `DELETE FROM products WHERE slug LIKE 'qa-%-133'
+OR slug LIKE 'qa-no-network%'`; `docker compose -p omuletachou-qa133 down -v` (containers, network,
+volumes `postgres_data`/`media_files` removidos); `.env` e `docker-compose.override.yml` locais
+removidos (`git status` limpo em `homolog` antes do checkout final). `repo_path` checked out em
+`desenv` ao final (`git checkout desenv && git pull origin desenv`, confirmado via `git branch
+--show-current`), working tree limpo.
+
+**Veredito: APROVADO.** 7/7 critérios de aceite validados end-to-end contra containers Docker reais
+a partir de `homolog` (commit `d96b5ec`), sem regressão nas suítes automatizadas (340 backend +
+104 dashboard). Nenhum achado bloqueante. Próxima etapa: Líder Técnico para PR de release
+(`homolog` → `main`) e Gate 2 (Gerente).
+
+## PR de release — homolog -> main (LT, 2026-08-04)
+
+Homolog confirmado limpo em `d96b5ec` (HEAD == commit do merge do PR #151, QA aprovado). Diff
+`main`...`homolog` cobre as 3 sub-issues (#145/#146/#147) mais o fix SSRF IPv4-mapped-IPv6 (#152)
+absorvido via #151 — 26 arquivos, sem alteracoes fora do escopo documentado.
+
+PR criado: https://github.com/DQM-BETA/omuletachou/pull/153 (`homolog` -> `main`, merge commit,
+MERGEADO em 2026-08-04T14:13:42Z com commit `c8147039f1cd36e5ce7fa27d67ea150127339827`).
+
+## Gate 2 — Merge final + Consolidação de custo (Coordenador, 2026-08-04)
+
+PR #153 (`homolog` → `main`) mergeado com sucesso via `gh pr merge 153 --repo DQM-BETA/omuletachou --merge` (merge commit, estratégia apropriada para promoção entre branches de longa vida). Merge commit SHA: `c8147039f1cd36e5ce7fa27d67ea150127339827`, timestamp: 2026-08-04T14:13:42Z.
+
+Issue #133 fechada com `reason: completed` (2026-08-04T14:13:58Z). Comentário 📍 Status atualizado marcando etapa final como concluída. Sub-issues (#145/#146/#147) já estavam fechadas.
+
+Consolidação de custo finalizada (quiescência — última etapa do pipeline):
+- Ledger do custo: 11 linhas de execução (Coordenador, PM, Dev×3, LT×3, code-review, QA) + 1 linha desta invocação (Gate 2 - Coordenador) = 12 linhas totais
+- Total acumulado: **754,283 tokens** · **82 min de processamento** (4.918 segundos)
+- Tempo decorrido (createdAt → closedAt): **24h 3m 14s** (86.594 segundos)
+- Campos do board atualizados: `Custo (tokens)` = 754.283 · `Tempo proc. (min)` = 82
+- Tabela `## 💰 Custo` postada como comentário na Issue #133 (com anotações de contexto)
+
 ## Custo (ledger)
 
 | # | Etapa | Agente | Modelo | Tokens | Ferramentas | Tempo (s) |
 |---|-------|--------|--------|--------|-------------|-----------|
-| 1 | Preparação (Issue + estado.md) | Coordenador | Haiku | 25067 | 14 | 82s |
-| 2 | Refinamento (triagem + sub-issues + especificacao-tecnica.md) | Líder Técnico | Sonnet | 75154 | 38 | 303s |
-| 3 | Dev Sub-B (#146 — infra) | Dev .NET | Sonnet | 72240 | 56 | 515s |
-| 4 | Dev Sub-A (#145 — backend .NET) | Dev .NET | Sonnet | 150287 | 89 | 895s |
-| 5 | Dev Sub-C (#147 — frontend/dashboard) | Dev Angular | Sonnet | 90943 | 83 | 1276s |
-| 6 | Merge sequencial #148/#149/#150 + PR homologação #151 | LT | Sonnet | 50667 | 18 | 192s |
-| 7 | Fix code-review (bypass SSRF IPv4-mapped-IPv6, PR #152) | Dev .NET | Sonnet | 53380 | 18 | 187s |
-
-**Total acumulado:** — tokens · — min proc. (merge pendente — consolidação na quiescência)
+| 1 | Preparação (Issue + estado.md) | Coordenador | Haiku | 25067 | 14 | 82 |
+| 2 | Refinamento (triagem + sub-issues + especificacao-tecnica.md) | Líder Técnico | Sonnet | 75154 | 38 | 303 |
+| 3 | Dev Sub-B (#146 — infra) | Dev .NET | Sonnet | 72240 | 56 | 515 |
+| 4 | Dev Sub-A (#145 — backend .NET) | Dev .NET | Sonnet | 150287 | 89 | 895 |
+| 5 | Dev Sub-C (#147 — frontend/dashboard) | Dev Angular | Sonnet | 90943 | 83 | 1276 |
+| 6 | Merge sequencial #148/#149/#150 + PR homologação #151 | LT | Sonnet | 50667 | 18 | 192 |
+| 7 | Fix code-review (bypass SSRF IPv4-mapped-IPv6, PR #152) | Dev .NET | Sonnet | 53380 | 18 | 187 |
+| 8 | Merge PR #152 -> desenv (absorvido em #151) | LT | Sonnet | 50367 | 8 | 119 |
+| 9 | Code Review — validação final PR #151 (live, merge desenv->homolog) | code-review | Sonnet | 103850 | 65 | 712 |
+| 10 | QA — homolog (7/7 critérios validados) | qa | Sonnet | 76202 | 59 | 513 |
+| 11 | LT — PR release homolog->main (#153) | LT | Sonnet | 51126 | 13 | 94 |
+| 12 | Gate 2 — Merge final + consolidação de custo | Coordenador | Haiku | 5000 | 8 | 30 |
+| | **Total acumulado** | | | **754,283** | | **4,918s (82 min)** |
 
 ---
 _Criado: 2026-08-04 — Coordenador_
-_Atualizado: 2026-08-04 — LT (merge PR #152 → desenv, absorvido automaticamente em #151)_
+_Atualizado: 2026-08-04 — Coordenador (Gate 2 — merge concluído, consolidação de custo finalizada)_
