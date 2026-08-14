@@ -1,7 +1,7 @@
 ---
 issue: 167
 titulo: feat: Categorização unificada de produtos + remoção de distinção de plataforma no site
-etapa_atual: Em Desenvolvimento — #168 e #170 mergeadas em desenv; aguardando merge de #169 (PR #174)
+etapa_atual: Em Desenvolvimento — #168, #169 e #170 mergeadas em desenv; falta apenas #171 (frontend-filtros)
 ultimo_agente: lt
 rota: normal
 openspec_change: repos/omuletachou/openspec/changes/issue-167-categorizacao-unificada
@@ -15,11 +15,12 @@ docs_path: repos/omuletachou/documentacoes/ISSUE-167-categorizacao-unificada
 openspec_path: repos/omuletachou/openspec/changes/issue-167-categorizacao-unificada
 sub_issues:
   - "#168 (backend-schema-collectors, stack:dotnet, task_id:Sub-A) — CONCLUÍDA, merged em desenv"
-  - "#169 (backend-ia-orcamento, stack:dotnet, task_id:Sub-B) — Dev concluído, PR #174 aberto, aguardando merge do LT"
+  - "#169 (backend-ia-orcamento, stack:dotnet, task_id:Sub-B) — CONCLUÍDA, merged em desenv"
   - "#170 (backend-api-filtros, stack:dotnet, task_id:Sub-C) — CONCLUÍDA, merged em desenv"
   - "#171 (frontend-filtros, stack:nodejs, task_id:Sub-D) — desbloqueada (#170 já em desenv); UX/UI concluído, spec disponível"
-desenv_tasks_merged: ["#168", "#170"]
+desenv_tasks_merged: ["#168", "#169", "#170"]
 sub_issue_168_pr: "#172 (feature/ISSUE-168-schema-collectors -> desenv, MERGED squash, commit fc083f3; branch remota deletada; sub-issue #168 fechada)"
+sub_issue_169_pr: "#174 (feature/ISSUE-169-ia-orcamento -> desenv, MERGED squash, commit 03cb40e; branch remota deletada; sub-issue #169 fechada)"
 sub_issue_170_pr: "#173 (feature/ISSUE-170-api-filtros -> desenv, MERGED squash, commit 03c7a05; branch remota deletada; sub-issue #170 fechada)"
 sub_issues_frontend: {}
 pr_homologacao: ~
@@ -157,12 +158,13 @@ sub-issue). Escopo:
   correta, ausência de `platform` confirmada em 100% do JSON). Ambiente removido ao final
   (`docker compose down -v` + imagem + `.env`/override locais apagados).
 
-## Dev #169 — backend-ia-orcamento (CONCLUÍDO — aguardando merge do LT)
+## Dev #169 — backend-ia-orcamento (CONCLUÍDO — merged em desenv)
 Branch `feature/ISSUE-169-ia-orcamento` (worktree, base `desenv` já com #168) → PR #174 para
-`desenv` (NÃO mergeado ainda). `dotnet test`: 402/402 passando, sem regressão (383 pré-existentes
-de #168 + 19 novos casos desta sub-issue: 6 em `ClaudeAiServiceTests` `ClassifyCategoryAsync`, 8
-unitários + 3 de integração real em `ClaudeBudgetServiceTests`/`ClaudeBudgetServiceIntegrationTests`,
-5 em `ProcessorJobTests`). Escopo:
+`desenv`, squash merge (commit `03cb40e`), branch remota deletada, sub-issue #169 fechada.
+`dotnet test`: 402/402 passando, sem regressão (383 pré-existentes de #168 + 19 novos casos desta
+sub-issue: 6 em `ClaudeAiServiceTests` `ClassifyCategoryAsync`, 8 unitários + 3 de integração real
+em `ClaudeBudgetServiceTests`/`ClaudeBudgetServiceIntegrationTests`, 5 em `ProcessorJobTests`).
+Escopo:
 - `IAnthropicClientWrapper.CompleteAsync`: passou de `Task<string>` para
   `Task<ClaudeCompletionResult>` (`Text`/`InputTokens`/`OutputTokens`, usando
   `MessageResponse.Usage` real do Anthropic.SDK, sem estimativa manual).
@@ -204,13 +206,21 @@ unitários + 3 de integração real em `ClaudeBudgetServiceTests`/`ClaudeBudgetS
   (permanece "Geral"), confirmando o caminho de orçamento estourado (CA 4.3). Ambiente removido
   ao final (`docker compose down -v` + imagem + `.env` local apagados).
 
+**Revisão do LT no merge**: diff do PR #174 conferido — contrato de tokens reais
+(`ClaudeCompletionResult`/`IAnthropicClientWrapper`), `IClaudeBudgetService` com UPDATE atômico,
+`ClassifyCategoryAsync` no `ClaudeAiService` e a reordenação em `ProcessorJob` batem com o escopo
+descrito no PR e no `tasks.md`. Sem achados de infra adicionais nesta sub-issue (Ids de
+`app_settings` já reservados por #168, sem colisão).
+
 ## Próximos passos
 1. ~~LT faz o merge de #168 (PR #172) em `desenv`.~~ **Concluído.**
 2. ~~Dev de #170 (backend-api-filtros).~~ **Concluído.**
 3. ~~LT faz o merge de #170 (PR #173) em `desenv`.~~ **Concluído.**
-4. ~~Dev de #169 (backend-ia-orcamento).~~ **Concluído — PR #174 aberto, aguardando merge do LT.**
-5. LT faz o merge de #169 (PR #174) em `desenv`.
-6. Após #170 já mergeada: Dev de #171 integra o `FilterBar` ao contrato final da API.
+4. ~~Dev de #169 (backend-ia-orcamento).~~ **Concluído.**
+5. ~~LT faz o merge de #169 (PR #174) em `desenv`.~~ **Concluído — commit `03cb40e`, sub-issue
+   #169 fechada.**
+6. As 3 sub-issues de backend (#168, #169, #170) estão mergeadas em `desenv`. Dev de #171
+   (frontend-filtros) integra o `FilterBar` ao contrato final da API — já desbloqueada.
 7. Quando as 4 sub-issues estiverem em `desenv_tasks_merged`, LT cria o PR `desenv→homolog`.
 
 ## Custo (ledger)
@@ -228,8 +238,9 @@ unitários + 3 de integração real em `ClaudeBudgetServiceTests`/`ClaudeBudgetS
 | 10 | Dev #170 (backend-api-filtros, GetDeals+categories, remove Platform/GetByCategory) | Dev .NET | Sonnet | 153125 | 77 | 790s |
 | 11 | Dev #169 (backend-ia-orcamento, ClaudeBudgetService + fallback IA + tokens reais) | Dev .NET | Sonnet | 234090 | 125 | 1158s |
 | 12 | Líder Técnico (merge PR #173 → desenv, fechamento #170) | Líder Técnico | Sonnet | 66817 | 14 | 139s |
+| 13 | Líder Técnico (merge PR #174 → desenv, fechamento #169) | Líder Técnico | Sonnet | 55626 | 12 | 163s |
 
-**Total acumulado:** 1.294.856 tokens · ~98 min proc.
+**Total acumulado:** 1.350.482 tokens · ~101 min proc.
 
 ---
 _Mantido pela sessão principal. Última atualização: 2026-08-14 (recuperação de conteúdo perdido —
