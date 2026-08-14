@@ -199,8 +199,12 @@ public class ProcessorJobTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_DetectaCategoria_QuandoAindaGeral()
+    public async Task ExecuteAsync_NaoAlteraCategoria_DicionarioSaiuDoProcessorJob()
     {
+        // A categorizacao por dicionario (CategoryDetector) saiu do ProcessorJob e passou a
+        // rodar nos collectors, na criacao do Product (Issue #167, Sub-A/#168). O fallback via
+        // IA para produtos que continuam "Geral" apos a coleta e escopo da Sub-B/#169 — nao
+        // implementado nesta sub-issue, entao a categoria permanece inalterada aqui.
         using var db = CreateInMemoryContext();
         var product = CriarProduto(title: "Fone de Ouvido Bluetooth", category: "Geral");
         db.Products.Add(product);
@@ -210,7 +214,7 @@ public class ProcessorJobTests
         await job.ExecuteAsync();
 
         var reloaded = await db.Products.FirstAsync();
-        reloaded.Category.Should().Be("Eletrônicos");
+        reloaded.Category.Should().Be("Geral");
     }
 
     [Fact]

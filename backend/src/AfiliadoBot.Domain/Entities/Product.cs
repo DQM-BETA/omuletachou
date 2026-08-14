@@ -21,6 +21,7 @@ public class Product
     public string? SourceUrl { get; private set; }
     public string Slug { get; private set; } = string.Empty;
     public string Category { get; private set; } = string.Empty;
+    public string? Subcategory { get; private set; }
     public Platform Platform { get; private set; }
     public string ExternalId { get; private set; } = string.Empty;
     public int? AiScore { get; private set; }
@@ -49,7 +50,8 @@ public class Product
         string externalId = "",
         string? mediaUrl = null,
         string? mediaType = null,
-        string? sourceUrl = null)
+        string? sourceUrl = null,
+        string? subcategory = null)
     {
         if (salePrice < 0)
             throw new ArgumentException("SalePrice nao pode ser negativo.", nameof(salePrice));
@@ -66,6 +68,7 @@ public class Product
         AffiliateLink = string.IsNullOrWhiteSpace(affiliateLink) ? null : affiliateLink;
         Slug = slug;
         Category = category;
+        Subcategory = string.IsNullOrWhiteSpace(subcategory) ? null : subcategory;
         Platform = platform;
         ImageUrl = imageUrl;
         ExternalId = externalId;
@@ -165,11 +168,13 @@ public class Product
     }
 
     /// <summary>
-    /// Atualiza a categoria detectada pelo CategoryDetector (ProcessorJob, Issue #6).
-    /// So substitui quando a categoria atual ainda for o fallback "Geral" — nao sobrescreve
-    /// categoria ja detectada/definida anteriormente com um valor mais especifico.
+    /// Atualiza categoria/subcategoria detectadas pelo CategoryDetector (Domain.Services,
+    /// Issue #167 — movido de Application). So substitui quando a categoria atual ainda for o
+    /// fallback "Geral" — nao sobrescreve categoria ja detectada/definida anteriormente com um
+    /// valor mais especifico. A guarda cobre tambem Subcategory (Issue #167): so e atualizada
+    /// junto de Category, na mesma condicao defensiva.
     /// </summary>
-    public void SetCategory(string category)
+    public void SetCategory(string category, string? subcategory = null)
     {
         if (string.IsNullOrWhiteSpace(category))
             return;
@@ -178,6 +183,7 @@ public class Product
             return;
 
         Category = category;
+        Subcategory = string.IsNullOrWhiteSpace(subcategory) ? null : subcategory;
         UpdatedAt = DateTime.UtcNow;
     }
 

@@ -80,6 +80,10 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .IsRequired()
             .HasMaxLength(100);
 
+        builder.Property(x => x.Subcategory)
+            .HasColumnName("subcategory")
+            .HasMaxLength(100); // nullable — sem .IsRequired() (CA 1.1/1.2, Issue #167)
+
         builder.Property(x => x.Platform)
             .HasColumnName("platform")
             .HasConversion<int>()
@@ -94,6 +98,29 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.HasIndex(x => new { x.Platform, x.ExternalId })
             .IsUnique()
             .HasDatabaseName("IX_products_platform_external_id");
+
+        // Indices compostos para os filtros publicos (Issue #167, design.md secao 4.2). "status"
+        // sempre lidera (todo filtro publico comeca com Status == Published); a coluna de
+        // ordenacao fica por ultimo em cada variante para o Postgres poder usar o indice tanto
+        // para filtrar quanto para ja entregar os resultados ordenados.
+        builder.HasIndex(x => new { x.Status, x.AiScore })
+            .HasDatabaseName("IX_products_status_aiscore")
+            .IsDescending(false, true);
+
+        builder.HasIndex(x => new { x.Status, x.Category, x.Subcategory, x.AiScore })
+            .HasDatabaseName("IX_products_status_category_subcategory_aiscore")
+            .IsDescending(false, false, false, true);
+
+        builder.HasIndex(x => new { x.Status, x.Category, x.Subcategory, x.SalePrice })
+            .HasDatabaseName("IX_products_status_category_subcategory_saleprice");
+
+        builder.HasIndex(x => new { x.Status, x.Category, x.Subcategory, x.DiscountPct })
+            .HasDatabaseName("IX_products_status_category_subcategory_discountpct")
+            .IsDescending(false, false, false, true);
+
+        builder.HasIndex(x => new { x.Status, x.Category, x.Subcategory, x.CreatedAt })
+            .HasDatabaseName("IX_products_status_category_subcategory_createdat")
+            .IsDescending(false, false, false, true);
 
         builder.Property(x => x.AiScore)
             .HasColumnName("ai_score");

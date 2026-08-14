@@ -5,6 +5,7 @@ using System.Text.Json;
 using AfiliadoBot.Domain.Entities;
 using AfiliadoBot.Domain.Enums;
 using AfiliadoBot.Domain.Interfaces;
+using AfiliadoBot.Domain.Services;
 using AfiliadoBot.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -21,7 +22,6 @@ public class MercadoLivreCollector : IPlatformCollector
 {
     private const string OAuthUrl = "https://api.mercadolibre.com/oauth/token";
     private const string SearchUrl = "https://api.mercadolibre.com/sites/MLB/search?sort=best_seller&limit=20";
-    private const string DefaultCategory = "Geral";
     private const int RateLimitDelayMs = 150;
     private static readonly TimeSpan TokenExpiryMargin = TimeSpan.FromMinutes(5);
 
@@ -355,6 +355,7 @@ public class MercadoLivreCollector : IPlatformCollector
         }
 
         var slug = GenerateSlug(item.Title, item.Id);
+        var (category, subcategory) = CategoryDetector.Detect(item.Title);
 
         var product = new Product(
             title: item.Title,
@@ -364,12 +365,13 @@ public class MercadoLivreCollector : IPlatformCollector
             discountPct: item.DiscountPct,
             affiliateLink: null,
             slug: slug,
-            category: DefaultCategory,
+            category: category,
             platform: Platform.MercadoLivre,
             externalId: item.Id,
             mediaUrl: item.Thumbnail,
             mediaType: item.Thumbnail is not null ? "image" : null,
-            sourceUrl: item.Permalink);
+            sourceUrl: item.Permalink,
+            subcategory: subcategory);
 
         _dbContext.Products.Add(product);
 
