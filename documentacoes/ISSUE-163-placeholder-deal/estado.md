@@ -1,9 +1,9 @@
 ---
 issue: 163
 titulo: "chore: Substituir placeholder-deal.png (1x1px) por placeholder visual real"
-etapa_atual: Dev concluído — PR feature→desenv aberto
+etapa_atual: Code Review + QA (PR desenv→homolog aberto)
 rota: rapido
-ultimo_agente: dev-nodejs
+ultimo_agente: lider-tecnico
 openspec_change: ~
 tech_stacks:
   - nodejs
@@ -15,7 +15,7 @@ openspec_path: ~
 sub_issues: []
 desenv_tasks_merged: []
 sub_issues_frontend: {}
-pr_homologacao: ~
+pr_homologacao: 165
 pr_release: ~
 code_review_homolog_pr: ~
 qa_status: ~
@@ -42,13 +42,22 @@ Solução escolhida: SVG (markup, sem ferramentas de raster; leve, nítido em qu
 - Docker: stack `db+api+website` subida em worktree isolado (container_names/portas dedicados via override local, para não colidir com stack pré-existente `afiliado_*` do repo principal — parada e restaurada ao estado original ao final). Produto inserido via SQL direto (`media_url`/`media_local_path` NULL); API confirmou `mediaUrl: null`; Home e `/oferta/{slug}` servem `<img src="/placeholder-deal.svg">` (200, `image/svg+xml`); renderização confirmada como ícone visual (não bloco preto). `docker compose down -v` ao final — ambiente limpo, sem containers/volumes/networks residuais do teste.
 - Worktree removido; `repo_path` em `desenv`.
 
-PR: https://github.com/DQM-BETA/omuletachou/pull/164 (`chore/ISSUE-163-placeholder-real` → `desenv`)
+PR: https://github.com/DQM-BETA/omuletachou/pull/164 (`chore/ISSUE-163-placeholder-real` → `desenv`) — MERGED (squash) por LT.
+
+## Merge (Líder Técnico)
+- Diff do PR #164 revisado: escopo confere (novo `.svg`, remoção do `.png` 1x1px, `lib/format.ts` e `DealCard.test.tsx` atualizados, sem mudança de lógica de negócio).
+- `gh pr merge 164 --squash --delete-branch`: merge confirmado (`mergedAt: 2026-08-14T17:32:51Z`), branch remota `chore/ISSUE-163-placeholder-real` deletada.
+- PR de homologação criado: https://github.com/DQM-BETA/omuletachou/pull/165 (`desenv` → `homolog`, merge commit).
+- `repo_path` checked out em `desenv`, atualizado (fast-forward).
 
 ## Próximos passos
-- Líder Técnico: merge feature→desenv
+- Sessão principal: `/code-review` no PR #165 + spawn Code Review
+- QA
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo(s) |
 |---|---|---|---|---|---|---|
 | 1 | Preparação (Issue + estado.md) | Coordenador | Haiku | 18991 | 6 | 45s |
 | 2 | Dev (SVG placeholder, PR #164) | Dev Node.js | Sonnet | 79709 | 64 | 1221s |
+| 3 | LT — merge PR #164 + PR homologação #165 | Líder Técnico | Sonnet | 32843 | 9 | 50s |
+
