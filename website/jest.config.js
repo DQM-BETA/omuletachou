@@ -12,6 +12,9 @@ const customJestConfig = {
     '^@/(.*)$': '<rootDir>/$1',
   },
   modulePathIgnorePatterns: ['<rootDir>/.next/'],
+  // e2e/ é a suíte do Playwright (test:visual) — runner e sintaxe (@playwright/test)
+  // diferentes de Jest; sem isso o Jest tenta carregar visual.spec.ts e quebra.
+  testPathIgnorePatterns: ['<rootDir>/node_modules/', '[\\\\/]e2e[\\\\/]'],
   coverageThreshold: {
     global: {
       branches: 80,
