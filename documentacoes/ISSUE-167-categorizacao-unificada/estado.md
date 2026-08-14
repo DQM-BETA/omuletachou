@@ -19,6 +19,7 @@ sub_issues:
   - "#170 (backend-api-filtros, stack:dotnet, task_id:Sub-C) — depende de #168 mergeada em desenv; paralelo a #169"
   - "#171 (frontend-filtros, stack:nodejs, task_id:Sub-D) — depende de #170 para contrato final; UX/UI concluído, spec disponível; pode iniciar api.ts/types.ts/Header.tsx em paralelo"
 desenv_tasks_merged: []
+sub_issue_168_pr: "#172 (feature/ISSUE-168-schema-collectors -> desenv, aberto, aguardando merge do LT)"
 sub_issues_frontend: {}
 pr_homologacao: ~
 pr_release: ~
@@ -100,11 +101,36 @@ Work Sans, grid 8pt, raios, sombras), sem paleta nova. Decisões principais:
   invocação)**: spec visual completa do `FilterBar` (layout desktop/mobile, classes BEM, tokens,
   estados, heurísticas de Nielsen, fluxo de navegação).
 
+## Dev #168 — backend-schema-collectors (concluído, PR #172 aberto)
+Branch `feature/ISSUE-168-schema-collectors` (worktree, já removido) → PR #172 para `desenv`
+(NÃO mergeado — aguarda LT). `dotnet test`: 383/383 passando. Stack Docker validada (build+boot
+limpo, migration aplicada contra Postgres real, ambiente removido ao final).
+
+**Achado de infra durante a implementação** (não bloqueante, contornado nesta sub-issue, mas vale
+registrar em `.claude/melhorias/` para próximas issues que semeiam `app_settings`): os Ids 41-50
+já estão ocupados no banco real por 3 migrations anteriores (`SeedTikTokCredentials`,
+`SeedPushVapidKeys`, `SeedFacebookCredentials`) que inseriram dados via `InsertData` direto na
+migration, sem atualizar o `HasData` declarativo de `AppSettingConfiguration.cs` nem o
+`ModelSnapshot.cs` — por isso o `dotnet ef migrations add` (que só enxerga o modelo declarativo)
+ofereceu Id 41 como "livre", e só rodando a migration contra um Postgres real o conflito
+(`duplicate key`) apareceu. Corrigido usando Ids 51-55 (conferidos varrendo todas as migrations,
+não só o `HasData` atual). Os próprios seeds desta sub-issue (`claude.monthly_budget_limit_brl` e
+demais) seguem o mesmo padrão "órfão" (`InsertData` direto, sem `HasData` correspondente em
+`AppSettingConfiguration.cs`) — decisão consciente para não regenerar/reconciliar todo o histórico
+de seeds fora do escopo desta sub-issue, mas o padrão do repo tende a divergir ainda mais se
+repetido. Próxima sub-issue que semear `app_settings` (`claude.price_*`/`claude.usd_brl_rate` já
+cobertos aqui) deve repetir a checagem "rodar a migration contra Postgres real", não só ler o
+`HasData` do model.
+
+**Também fora de escopo (observação, sem ação necessária)**: `YoutubePublisher.CategoryMap`
+(`backend/src/AfiliadoBot.Infrastructure/Integrations/Social/YoutubePublisher.cs`) mapeia
+`Product.Category` para IDs de categoria do YouTube, mas só conhece as 5 categorias antigas —
+as 4 novas (Eletrodomésticos, Climatização, Ferramentas, e a subdivisão de Beleza) caem no
+fallback `DefaultCategoryId = "22"`. Comportamento gracioso (sem erro), não coberto pelos CA
+desta issue; mencionar ao LT/PM se a granularidade do vídeo do YouTube importar no futuro.
+
 ## Próximos passos
-1. Sessão principal spawna o **Dev de #168** (backend-schema-collectors — sem dependências, pode
-   começar imediatamente) e, quando pronto, o **Dev de #171** (frontend-filtros — spec de UX/UI já
-   disponível, pode iniciar `api.ts`/`types.ts`/`Header.tsx`/`FilterBar` em paralelo, contra mocks
-   se #170 ainda não estiver pronta).
+1. LT faz o merge de #168 (PR #172) em `desenv`.
 2. Após #168 mergeada em `desenv`: Dev(s) de #169 e #170 em paralelo.
 3. Após #170 mergeada: Dev de #171 integra o `FilterBar` ao contrato final da API.
 4. LT faz o merge de cada sub-issue conforme os Devs concluem (uma invocação por merge, sequencial).
@@ -120,5 +146,6 @@ Work Sans, grid 8pt, raios, sombras), sem paleta nova. Decisões principais:
 | 5 | Líder Técnico (especificação técnica consolidada) | Líder Técnico | Sonnet | 100393 | 32 | 288s |
 | 6 | Líder Técnico (task breakdown + 4 sub-issues, retomada rota normal) | Líder Técnico | Sonnet | 80395 | 23 | 220s |
 | 7 | UX/UI (spec visual FilterBar, Sub-D) | UX/UI | Sonnet | 96003 | 10 | 279s |
+| 8 | Dev #168 (backend-schema-collectors, migration + CategoryDetector + 3 collectors) | Dev .NET | Sonnet | 234329 | 134 | 1326s |
 
-**Total acumulado (planejamento, antes dos devs):** 549.166 tokens · ~39 min proc.
+**Total acumulado:** 783.495 tokens · ~61 min proc.
