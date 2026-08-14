@@ -70,3 +70,6 @@ componente existente. Recomenda-se UX/UI (mockup do `FilterBar`) antes da sub-is
 | 2 | PM Fase 1 (validação técnica + levantamento, Gate 1) | PM | Sonnet | 60461 | 28 | 240s |
 | 3 | PM Fase 2 (PRD + critérios de aceite) | PM | Sonnet | 51527 | 16 | 225s |
 | 4 | Arquiteto (3 decisões técnicas + achado de dependência circular) | Arquiteto | Sonnet | 110481 | 49 | 673s |
+| 5 | Líder Técnico (especificação técnica consolidada) | Líder Técnico | Sonnet | 100393 | 32 | 288s |
+
+**Total acumulado (backlog, sem dev):** 372.768 tokens · ~24 min proc.
