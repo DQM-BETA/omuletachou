@@ -1,8 +1,8 @@
 ---
 issue: 167
 titulo: feat: Categorização unificada de produtos + remoção de distinção de plataforma no site
-etapa_atual: QA aprovado — aguardando LT criar PR homolog->main (Gate 2: Gerente)
-ultimo_agente: qa
+etapa_atual: Aguardando Aprovação — Gate 2 (PR de release #177 homolog->main criado)
+ultimo_agente: lt
 rota: normal
 openspec_change: repos/omuletachou/openspec/changes/issue-167-categorizacao-unificada
 tech_stacks:
@@ -25,7 +25,7 @@ sub_issue_170_pr: "#173 (feature/ISSUE-170-api-filtros -> desenv, MERGED squash,
 sub_issue_171_pr: "#175 (feature/ISSUE-171-frontend-filtros -> desenv, MERGED squash, commit 0142d86; branch remota deletada; sub-issue #171 fechada)"
 sub_issues_frontend: {}
 pr_homologacao: "#176 (desenv -> homolog, merge commit 9cd7154, MERGED)"
-pr_release: ~
+pr_release: "#177 (homolog -> main, merge commit, aberto — aguardando Gate 2 do Gerente)"
 code_review_homolog_pr: 176
 qa_status: aprovado (27/27 criterios) — ver relatorio-qa.md
 figma_url: ~
@@ -391,6 +391,14 @@ artefato de validação, mesma convenção das rodadas anteriores).
   Docker Desktop (não requer ação de código, não bloqueia o merge).
 - `repo_path` deixado em `desenv` ao final (não `homolog`), sem nenhum commit criado pelo QA.
 
+## PR de release (LT)
+PR #177 (`homolog`→`main`, merge commit, **NÃO mergeado — aguardando Gate 2**) criado cobrindo a
+Issue #167 completa (4 sub-issues), com o resumo de categorização unificada, fallback IA orçado,
+remoção de `Platform` do contrato público e novo `FilterBar`. Corpo do PR referencia
+`criterios-aceite.md` (27 cenários) e resume o pipeline completo (PM/Arquiteto/LT/UX/UI/Devs/Code
+Review/QA). `repo_path` deixado em `desenv` ao final, sem nenhum commit criado pelo LT nesta
+invocação.
+
 ## Próximos passos
 1. ~~LT faz o merge de #168 (PR #172) em `desenv`.~~ **Concluído.**
 2. ~~Dev de #170 (backend-api-filtros).~~ **Concluído.**
@@ -407,7 +415,11 @@ artefato de validação, mesma convenção das rodadas anteriores).
    **Concluído — aprovado, merge desenv->homolog (commit `9cd7154`).**
 9. ~~Sessão principal spawna QA.~~ **Concluído — QA aprovado (27/27 critérios), ver
    `relatorio-qa.md`.**
-10. Líder Técnico cria o PR `homolog→main` (merge commit, NUNCA squash) → **GATE 2: Gerente**.
+10. ~~Líder Técnico cria o PR `homolog→main` (merge commit, NUNCA squash).~~ **Concluído — PR #177
+    criado, aguardando Gate 2.**
+11. **Gate 2 (Gerente)** — aprovação manual do merge `homolog→main`. Após aprovado, Coordenador
+    faz o merge (merge commit) e fecha a Issue #167; o Gerente arrasta o card para
+    ✅ Concluído.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -427,13 +439,13 @@ artefato de validação, mesma convenção das rodadas anteriores).
 | 13 | Líder Técnico (merge PR #174 → desenv, fechamento #169) | Líder Técnico | Sonnet | 55626 | 12 | 163s |
 | 14 | Dev #171 (frontend-filtros, FilterBar + migração api.ts/types.ts/Header.tsx, PR #175) | Dev Node.js | Sonnet | 298601 | 184 | 2417s |
 | 15 | Líder Técnico (merge PR #175 → desenv, fechamento #171; PR homologação #176 desenv→homolog) | Líder Técnico | Sonnet | 57148 | 22 | 177s |
-
 | 16 | Code Review (validação ao vivo PR #176: build+boot+testes+Docker+Playwright, merge desenv->homolog) | Code Review | Sonnet | 128280 | 75 | 963s |
-
 | 17 | QA (validação independente homolog: 27/27 criterios, Gate Visual, Docker real, orcamento IA) | QA | Sonnet | 205463 | 124 | 2126s |
+| 18 | Líder Técnico (PR release homolog->main #177) | Líder Técnico | Sonnet | 127584 | 35 | 543s |
 
-**Total acumulado:** 2.039.974 tokens · ~195 min proc.
+**Total acumulado:** 2.167.558 tokens · ~204 min proc.
 
 ---
-_Mantido pela sessão principal. Última atualização: 2026-08-14 (QA aprovado — 27/27 critérios,
-ver `relatorio-qa.md`; seção anterior preservada integralmente)._
+_Mantido pela sessão principal. Última atualização: 2026-08-14 — LT criou o PR de release #177
+(`homolog→main`), registrando Code Review/QA aprovados em `homolog` (commit `9cd7154`, PR #176,
+ver `relatorio-qa.md`) e aguardando Gate 2 do Gerente._
