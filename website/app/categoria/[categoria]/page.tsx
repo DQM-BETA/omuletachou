@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import DealCard from '@/components/DealCard';
-import { fetchByCategory } from '@/lib/api';
+import { fetchDeals } from '@/lib/api';
 
 export const revalidate = 300;
 
@@ -41,7 +41,9 @@ export default async function CategoriaPage({ params, searchParams }: CategoriaP
   const categoriaLabel = formatCategoriaLabel(params.categoria);
 
   // CA-C4: categoria inexistente/sem ofertas NUNCA chama notFound() — renderiza estado vazio.
-  const result = await fetchByCategory(params.categoria, page, PAGE_SIZE);
+  // Issue #167: `fetchByCategory` foi removida — reusa `fetchDeals` com o filtro `category`
+  // (mesma querystring de `GetDeals`, decodificada como veio na URL pública).
+  const result = await fetchDeals(page, PAGE_SIZE, { category: decodeURIComponent(params.categoria) });
   const deals = result.items;
 
   const hasPrevious = page > 1;

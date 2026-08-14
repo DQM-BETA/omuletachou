@@ -1,4 +1,4 @@
-import type { Deal, PagedResult } from './types';
+import type { CategoryTree, Deal, PagedResult } from './types';
 
 // Server-only: nunca usar NEXT_PUBLIC_* aqui — API_INTERNAL_URL não deve ser exposta
 // ao bundle do browser. Todas as funções abaixo só devem ser chamadas a partir de
@@ -18,17 +18,45 @@ async function handleResponse<T>(response: Response, url: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+/**
+ * Filtros combináveis de `GET /api/public/deals` (Issue #167, CA 6.1-6.6). Todos opcionais —
+ * espelham exatamente os `[FromQuery]` de `PublicController.GetDeals`.
+ */
+export interface DealFilters {
+  category?: string;
+  subcategory?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minDiscount?: number;
+  sort?: string;
+}
+
 export async function fetchDeals(
   page = 1,
   pageSize = 12,
-  category?: string
+  filters?: DealFilters
 ): Promise<PagedResult<Deal>> {
   const params = new URLSearchParams({
     page: String(page),
     pageSize: String(pageSize),
   });
-  if (category) {
-    params.set('category', category);
+  if (filters?.category) {
+    params.set('category', filters.category);
+  }
+  if (filters?.subcategory) {
+    params.set('subcategory', filters.subcategory);
+  }
+  if (filters?.minPrice !== undefined) {
+    params.set('minPrice', String(filters.minPrice));
+  }
+  if (filters?.maxPrice !== undefined) {
+    params.set('maxPrice', String(filters.maxPrice));
+  }
+  if (filters?.minDiscount !== undefined) {
+    params.set('minDiscount', String(filters.minDiscount));
+  }
+  if (filters?.sort) {
+    params.set('sort', filters.sort);
   }
   const url = `${API_BASE_URL}/api/public/deals?${params.toString()}`;
   const response = await fetch(url, { next: { revalidate: REVALIDATE_SECONDS } });
@@ -46,18 +74,12 @@ export async function fetchDeal(slug: string): Promise<Deal | null> {
   return handleResponse<Deal>(response, url);
 }
 
-export async function fetchByCategory(
-  categoria: string,
-  page = 1,
-  pageSize = 12
-): Promise<PagedResult<Deal>> {
-  const params = new URLSearchParams({
-    page: String(page),
-    pageSize: String(pageSize),
-  });
-  const url = `${API_BASE_URL}/api/public/deals/category/${encodeURIComponent(
-    categoria
-  )}?${params.toString()}`;
+/**
+ * Árvore de categorias/subcategorias com contagem de produtos ativos (Issue #167, CA 6.7),
+ * usada para popular os dropdowns dependentes do `FilterBar`.
+ */
+export async function fetchCategories(): Promise<CategoryTree[]> {
+  const url = `${API_BASE_URL}/api/public/categories`;
   const response = await fetch(url, { next: { revalidate: REVALIDATE_SECONDS } });
-  return handleResponse<PagedResult<Deal>>(response, url);
+  return handleResponse<CategoryTree[]>(response, url);
 }

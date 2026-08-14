@@ -1,13 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import CategoriaPage, { generateMetadata } from './page';
-import { fetchByCategory } from '@/lib/api';
+import { fetchDeals } from '@/lib/api';
 import type { Deal, PagedResult } from '@/lib/types';
 
 jest.mock('@/lib/api', () => ({
-  fetchByCategory: jest.fn(),
+  fetchDeals: jest.fn(),
 }));
 
-const fetchByCategoryMock = fetchByCategory as jest.MockedFunction<typeof fetchByCategory>;
+const fetchDealsMock = fetchDeals as jest.MockedFunction<typeof fetchDeals>;
 
 function buildDeal(overrides: Partial<Deal> = {}): Deal {
   return {
@@ -21,7 +21,6 @@ function buildDeal(overrides: Partial<Deal> = {}): Deal {
     slug: 'fone-bluetooth-xyz',
     category: 'eletronicos',
     collectedAt: '2026-07-01T12:00:00Z',
-    platform: 'Amazon',
     ...overrides,
   };
 }
@@ -39,11 +38,11 @@ function pagedResult(items: Deal[], overrides: Partial<PagedResult<Deal>> = {}):
 
 describe('CategoriaPage', () => {
   beforeEach(() => {
-    fetchByCategoryMock.mockReset();
+    fetchDealsMock.mockReset();
   });
 
-  it('CA-C2: renderiza a grade de ofertas da categoria via fetchByCategory (HTML já com conteúdo)', async () => {
-    fetchByCategoryMock.mockResolvedValueOnce(
+  it('CA-C2: renderiza a grade de ofertas da categoria via fetchDeals (HTML já com conteúdo)', async () => {
+    fetchDealsMock.mockResolvedValueOnce(
       pagedResult([buildDeal(), buildDeal({ slug: 'outro-produto', title: 'Outro produto' })])
     );
 
@@ -52,11 +51,11 @@ describe('CategoriaPage', () => {
 
     expect(screen.getByTestId('deals-grid')).toBeInTheDocument();
     expect(screen.getAllByTestId('deal-card')).toHaveLength(2);
-    expect(fetchByCategoryMock).toHaveBeenCalledWith('eletronicos', 1, 12);
+    expect(fetchDealsMock).toHaveBeenCalledWith(1, 12, { category: 'eletronicos' });
   });
 
   it('CA-C2 (paginação): navega para a próxima página mantendo a categoria', async () => {
-    fetchByCategoryMock.mockResolvedValueOnce(pagedResult([buildDeal()], { page: 1, totalPages: 3 }));
+    fetchDealsMock.mockResolvedValueOnce(pagedResult([buildDeal()], { page: 1, totalPages: 3 }));
 
     const jsx = await CategoriaPage({
       params: { categoria: 'eletronicos' },
@@ -70,7 +69,7 @@ describe('CategoriaPage', () => {
   });
 
   it('CA-C4: categoria sem ofertas exibe estado vazio, sem notFound()', async () => {
-    fetchByCategoryMock.mockResolvedValueOnce(pagedResult([]));
+    fetchDealsMock.mockResolvedValueOnce(pagedResult([]));
 
     const jsx = await CategoriaPage({ params: { categoria: 'brinquedos' }, searchParams: {} });
     render(jsx);
@@ -80,8 +79,8 @@ describe('CategoriaPage', () => {
     expect(screen.getByRole('link', { name: /ver todas as ofertas/i })).toHaveAttribute('href', '/');
   });
 
-  it('CA-T2: propaga erro de fetchByCategory (não engole) para o Next.js tratar via cache/ISR', async () => {
-    fetchByCategoryMock.mockRejectedValueOnce(new Error('API indisponível'));
+  it('CA-T2: propaga erro de fetchDeals (não engole) para o Next.js tratar via cache/ISR', async () => {
+    fetchDealsMock.mockRejectedValueOnce(new Error('API indisponível'));
 
     await expect(
       CategoriaPage({ params: { categoria: 'eletronicos' }, searchParams: {} })

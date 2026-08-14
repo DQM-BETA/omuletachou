@@ -1,12 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import OfertaPage, { generateMetadata } from './page';
-import { fetchDeal, fetchByCategory } from '@/lib/api';
+import { fetchDeal, fetchDeals } from '@/lib/api';
 import { notFound } from 'next/navigation';
 import type { Deal, PagedResult } from '@/lib/types';
 
 jest.mock('@/lib/api', () => ({
   fetchDeal: jest.fn(),
-  fetchByCategory: jest.fn(),
+  fetchDeals: jest.fn(),
 }));
 
 jest.mock('next/navigation', () => ({
@@ -16,7 +16,7 @@ jest.mock('next/navigation', () => ({
 }));
 
 const fetchDealMock = fetchDeal as jest.MockedFunction<typeof fetchDeal>;
-const fetchByCategoryMock = fetchByCategory as jest.MockedFunction<typeof fetchByCategory>;
+const fetchDealsMock = fetchDeals as jest.MockedFunction<typeof fetchDeals>;
 const notFoundMock = notFound as jest.MockedFunction<typeof notFound>;
 
 function buildDeal(overrides: Partial<Deal> = {}): Deal {
@@ -31,7 +31,6 @@ function buildDeal(overrides: Partial<Deal> = {}): Deal {
     slug: 'fone-bluetooth-xyz',
     category: 'eletronicos',
     collectedAt: '2026-07-01T12:00:00Z',
-    platform: 'Amazon',
     ...overrides,
   };
 }
@@ -43,13 +42,13 @@ function pagedResult(items: Deal[]): PagedResult<Deal> {
 describe('OfertaPage', () => {
   beforeEach(() => {
     fetchDealMock.mockReset();
-    fetchByCategoryMock.mockReset();
+    fetchDealsMock.mockReset();
     notFoundMock.mockClear();
   });
 
   it('CA-B2: renderiza o conteúdo do produto (HTML já com conteúdo, sem depender de JS)', async () => {
     fetchDealMock.mockResolvedValueOnce(buildDeal());
-    fetchByCategoryMock.mockResolvedValueOnce(pagedResult([]));
+    fetchDealsMock.mockResolvedValueOnce(pagedResult([]));
 
     const jsx = await OfertaPage({ params: { slug: 'fone-bluetooth-xyz' } });
     render(jsx);
@@ -59,7 +58,7 @@ describe('OfertaPage', () => {
 
   it('CA-1/CA-8 (regressão #156): renderiza o <Header /> exatamente 1x na página de detalhe', async () => {
     fetchDealMock.mockResolvedValueOnce(buildDeal());
-    fetchByCategoryMock.mockResolvedValueOnce(pagedResult([]));
+    fetchDealsMock.mockResolvedValueOnce(pagedResult([]));
 
     const jsx = await OfertaPage({ params: { slug: 'fone-bluetooth-xyz' } });
     const { container } = render(jsx);
@@ -79,7 +78,7 @@ describe('OfertaPage', () => {
 
   it('CA-B9: injeta script JSON-LD do tipo Product', async () => {
     fetchDealMock.mockResolvedValueOnce(buildDeal());
-    fetchByCategoryMock.mockResolvedValueOnce(pagedResult([]));
+    fetchDealsMock.mockResolvedValueOnce(pagedResult([]));
 
     const jsx = await OfertaPage({ params: { slug: 'fone-bluetooth-xyz' } });
     const { container } = render(jsx);
@@ -94,7 +93,7 @@ describe('OfertaPage', () => {
   it('CA-SEC1: título malicioso com </script> não escapa da tag JSON-LD (regressão XSS)', async () => {
     const maliciousTitle = '</script><script>alert(1)</script>';
     fetchDealMock.mockResolvedValueOnce(buildDeal({ title: maliciousTitle }));
-    fetchByCategoryMock.mockResolvedValueOnce(pagedResult([]));
+    fetchDealsMock.mockResolvedValueOnce(pagedResult([]));
 
     const jsx = await OfertaPage({ params: { slug: 'fone-bluetooth-xyz' } });
     const { container } = render(jsx);

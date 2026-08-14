@@ -1,12 +1,12 @@
 import { getRelatedDeals } from './related-deals';
-import { fetchByCategory } from './api';
+import { fetchDeals } from './api';
 import type { Deal, PagedResult } from './types';
 
 jest.mock('./api', () => ({
-  fetchByCategory: jest.fn(),
+  fetchDeals: jest.fn(),
 }));
 
-const fetchByCategoryMock = fetchByCategory as jest.MockedFunction<typeof fetchByCategory>;
+const fetchDealsMock = fetchDeals as jest.MockedFunction<typeof fetchDeals>;
 
 function buildDeal(overrides: Partial<Deal> = {}): Deal {
   return {
@@ -20,7 +20,6 @@ function buildDeal(overrides: Partial<Deal> = {}): Deal {
     slug: 'fone-bluetooth-xyz',
     category: 'eletronicos',
     collectedAt: '2026-07-01T12:00:00Z',
-    platform: 'Amazon',
     ...overrides,
   };
 }
@@ -31,11 +30,11 @@ function pagedResult(items: Deal[]): PagedResult<Deal> {
 
 describe('lib/related-deals', () => {
   beforeEach(() => {
-    fetchByCategoryMock.mockReset();
+    fetchDealsMock.mockReset();
   });
 
   it('CA-B4: busca até 4 relacionados da mesma categoria, excluindo o produto atual', async () => {
-    fetchByCategoryMock.mockResolvedValueOnce(
+    fetchDealsMock.mockResolvedValueOnce(
       pagedResult([
         buildDeal({ slug: 'fone-bluetooth-xyz' }),
         buildDeal({ slug: 'related-1' }),
@@ -49,11 +48,11 @@ describe('lib/related-deals', () => {
 
     expect(related).toHaveLength(4);
     expect(related.every((item) => item.slug !== 'fone-bluetooth-xyz')).toBe(true);
-    expect(fetchByCategoryMock).toHaveBeenCalledWith('eletronicos', 1, 5);
+    expect(fetchDealsMock).toHaveBeenCalledWith(1, 5, { category: 'eletronicos' });
   });
 
   it('retorna lista vazia quando não há relacionados suficientes', async () => {
-    fetchByCategoryMock.mockResolvedValueOnce(pagedResult([buildDeal()]));
+    fetchDealsMock.mockResolvedValueOnce(pagedResult([buildDeal()]));
 
     const related = await getRelatedDeals(buildDeal());
 
