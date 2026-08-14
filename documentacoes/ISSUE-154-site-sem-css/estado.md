@@ -1,8 +1,8 @@
 ---
 issue: 154
 titulo: "bug: Site público (website) sem nenhum estilo CSS implementado — apenas HTML puro"
-etapa_atual: "PR #158 mergeado (desenv→homolog) — Code Review aprovado, aguardando QA"
-ultimo_agente: code-review
+etapa_atual: "QA reprovou (homolog, commit 6e65564) — header ausente em /oferta/{slug}, ver relatorio-qa.md — aguardando Líder Técnico mapear falha e acionar Dev"
+ultimo_agente: qa
 rota: normal
 openspec_change: repos/omuletachou/openspec/changes/issue-154-site-sem-css
 tech_stacks: [nodejs]
@@ -19,7 +19,7 @@ sub_issues_frontend: {}
 pr_homologacao: "#158 (desenv -> homolog, merge commit 6e65564d8e4172c5d437af2bb99e00245ee26424)"
 pr_release: ~
 code_review_homolog_pr: 158
-qa_status: ~
+qa_status: reprovado
 figma_url: https://www.figma.com/design/yi6YkNAy9HfHus2oiPi3G7/Diego-Mulet-s-team-library
 blockers: nenhum
 createdAt: "2026-08-14T00:00:00Z"
@@ -144,6 +144,27 @@ Segunda camada de gate (validação ao vivo, execução real — não análise e
 
 Observação para o QA: o Gate Visual passa a ser aplicável de fato pela primeira vez neste projeto (antes sempre N/A por falta do script `test:visual`) — reforçar inspeção visual real (não só suíte verde), como feito aqui.
 
+## QA — homolog
+
+**Status: REPROVADO** (relatório completo em `relatorio-qa.md`).
+
+Branch sincronizada (`git fetch && git checkout homolog && git pull origin homolog`), commit `6e65564d8e4172c5d437af2bb99e00245ee26424` (PR #158) confirmado em `git log`.
+
+Nota de sincronismo: o `estado.md` encontrado em `homolog` no momento da checagem ainda dizia "aguardando /code-review" (desatualizado) — o `estado.md` de `desenv` já tinha a seção "Code Review — PR #158" (aprovado, merge feito). Validação prosseguiu normalmente pois o código/commit já estava confirmado em `homolog` (`git log`); a defasagem era só de bookkeeping do `estado.md` entre branches, não do código.
+
+- `npm test` (website/): **79/79 passando**, sem regressão.
+- `npm run build` (via docker build): sem erros de TypeScript — CA-T1 OK.
+- **Validação integrada (d3)**: stack Docker real subida a partir de `homolog` (`db`+`api`+`website`), `.env`/`docker-compose.override.yml` locais descartáveis (portas 8080/3000 expostas para teste), catálogo vazio seedado via SQL direto (5 produtos, casos com/sem desconto, com/sem `affiliate_link`, categorias distintas). Confirmado via `curl` que o HTML carrega com `<link rel="stylesheet">` e o CSS compilado contém os tokens da marca (`--color-primary:#e63946`).
+- **Gate Visual obrigatório (d2) — primeira execução real para `website`**: `STAGING_URL=http://localhost:3000 SCREENSHOTS_DIR=documentacoes/ISSUE-154-site-sem-css/screenshots-qa npm run test:visual` → **3/3 passed**. Screenshots inspecionados visualmente (Home, Categoria, `deal-detail` + 1 ad-hoc de categoria vazia para CA-7).
+  - Home e Categoria: header (`site-header`) visível exatamente 1x, sem duplicação, layout condizente com `ux-ui-spec.md`. **OK.**
+  - **`deal-detail`: header COMPLETAMENTE AUSENTE (0x)** — confirmado por inspeção visual do PNG e por `curl .../oferta/{slug} | grep -c site-header` → 0 ocorrências. Causa raiz: `website/app/oferta/[slug]/page.tsx` nunca importou/renderizou `<Header />` (diferente de `app/page.tsx` e `app/categoria/[categoria]/page.tsx`) — bug **pré-existente desde a Issue #95** (`git log` confirma o arquivo não foi tocado pelo PR #157/#158 desta issue), só agora capturado porque é a primeira vez que o Gate Visual do QA de fato dispara (CA-15). O Code Review anterior também não pegou esse achado (sua inspeção visual não cobriu ausência total de elemento).
+  - Resto da tela `deal-detail` (mídia, preço, badge, CTA, "Mais ofertas") está corretamente estilizado.
+- **Critérios reprovados: CA-1 e CA-8** (mesma causa raiz — header ausente em `deal-detail`). Demais 13 CAs + 3 transversais (T1-T3): PASS. Ver tabela completa em `relatorio-qa.md`.
+- Ambiente Docker removido ao final (`docker compose down -v`), `.env`/`docker-compose.override.yml` apagados — sem resíduo.
+- `repo_path` deixado em `desenv` ao final.
+
+**Encaminhamento**: issue funcional (não inconsistência de negócio) — Líder Técnico mapeia a falha (fix pequeno: importar/renderizar `<Header />` em `app/oferta/[slug]/page.tsx`, reaproveitando componente e CSS já estilizados nesta mesma issue) e aciona Dev.
+
 ## Ledger de Custo
 
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -156,6 +177,7 @@ Observação para o QA: o Gate Visual passa a ser aplicável de fato pela primei
 | 6 | Dev (CSS + test:visual, sub-issue #156, PR #157) | Dev Node.js | Sonnet | 150219 | 112 | 962s |
 | 7 | Merge PR #157 + PR homologação #158 + issue técnica #159 | Líder Técnico | Sonnet | 53241 | 18 | 141s |
 | 8 | Code Review — validação PR #158 (build/boot/testes/visual, merge desenv→homolog) | Code Review | Sonnet | 93406 | 56 | 546s |
+| 9 | QA (homolog) — reprovado, header ausente em deal-detail | QA | Sonnet | 132122 | 87 | 783s |
 
 ---
 
