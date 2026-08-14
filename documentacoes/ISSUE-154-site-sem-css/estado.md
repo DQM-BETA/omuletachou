@@ -1,8 +1,8 @@
 ---
 issue: 154
 titulo: "bug: Site público (website) sem nenhum estilo CSS implementado — apenas HTML puro"
-etapa_atual: "Code Review aprovou PR #161 (validação final, header ausente em deal-detail corrigido) — merge desenv->homolog concluído — aguardando QA"
-ultimo_agente: code-review
+etapa_atual: "QA aprovou (homolog, rodada 2, pós-fix PR #161) — aguardando Líder Técnico (PR homolog->main) e Gate 2 do Gerente"
+ultimo_agente: qa
 rota: normal
 openspec_change: repos/omuletachou/openspec/changes/issue-154-site-sem-css
 tech_stacks: [nodejs]
@@ -19,7 +19,7 @@ sub_issues_frontend: {}
 pr_homologacao: "#161 (desenv -> homolog, merge commit, MERGEADO) — cobriu o fix de #156 (PR #160); PR anterior #158 já mesclado/fechado em ciclo anterior"
 pr_release: ~
 code_review_homolog_pr: 161
-qa_status: ~
+qa_status: aprovado
 figma_url: https://www.figma.com/design/yi6YkNAy9HfHus2oiPi3G7/Diego-Mulet-s-team-library
 blockers: nenhum
 createdAt: "2026-08-14T00:00:00Z"
@@ -81,7 +81,8 @@ Não há ambiguidade arquitetural real: não é decisão de arquitetura de siste
 10. Dev: fix pontual (`<Header />` em `app/oferta/[slug]/page.tsx`) — **feito** (PR #160)
 11. Líder Técnico: merge PR #160 → desenv + novo PR de homologação #161 (desenv→homolog) — **feito**
 12. Sessão principal: `/code-review` + Code Review — **feito, aprovado (PR #161 merge desenv→homolog concluído)**
-13. QA (nova rodada) → Gate 2 (Gerente) → merge main — **próximo**
+13. QA (rodada 2, pós-fix) — **feito, aprovado**
+14. Líder Técnico: PR homolog→main → Gate 2 (Gerente) → merge main — **próximo**
 
 ## UX/UI — Spec visual — concluído
 
@@ -148,9 +149,9 @@ Segunda camada de gate (validação ao vivo, execução real — não análise e
 
 Observação para o QA: o Gate Visual passa a ser aplicável de fato pela primeira vez neste projeto (antes sempre N/A por falta do script `test:visual`) — reforçar inspeção visual real (não só suíte verde), como feito aqui.
 
-## QA — homolog
+## QA — homolog (rodada 1)
 
-**Status: REPROVADO** (relatório completo em `relatorio-qa.md`).
+**Status: REPROVADO** (relatório da rodada 1 preservado no histórico de `relatorio-qa.md`).
 
 Branch sincronizada (`git fetch && git checkout homolog && git pull origin homolog`), commit `6e65564d8e4172c5d437af2bb99e00245ee26424` (PR #158) confirmado em `git log`.
 
@@ -163,7 +164,7 @@ Nota de sincronismo: o `estado.md` encontrado em `homolog` no momento da checage
   - Home e Categoria: header (`site-header`) visível exatamente 1x, sem duplicação, layout condizente com `ux-ui-spec.md`. **OK.**
   - **`deal-detail`: header COMPLETAMENTE AUSENTE (0x)** — confirmado por inspeção visual do PNG e por `curl .../oferta/{slug} | grep -c site-header` → 0 ocorrências. Causa raiz: `website/app/oferta/[slug]/page.tsx` nunca importou/renderizou `<Header />` (diferente de `app/page.tsx` e `app/categoria/[categoria]/page.tsx`) — bug **pré-existente desde a Issue #95** (`git log` confirma o arquivo não foi tocado pelo PR #157/#158 desta issue), só agora capturado porque é a primeira vez que o Gate Visual do QA de fato dispara (CA-15). O Code Review anterior também não pegou esse achado (sua inspeção visual não cobriu ausência total de elemento).
   - Resto da tela `deal-detail` (mídia, preço, badge, CTA, "Mais ofertas") está corretamente estilizado.
-- **Critérios reprovados: CA-1 e CA-8** (mesma causa raiz — header ausente em `deal-detail`). Demais 13 CAs + 3 transversais (T1-T3): PASS. Ver tabela completa em `relatorio-qa.md`.
+- **Critérios reprovados: CA-1 e CA-8** (mesma causa raiz — header ausente em `deal-detail`). Demais 13 CAs + 3 transversais (T1-T3): PASS.
 - Ambiente Docker removido ao final (`docker compose down -v`), `.env`/`docker-compose.override.yml` apagados — sem resíduo.
 - `repo_path` deixado em `desenv` ao final.
 
@@ -237,6 +238,52 @@ Segunda camada de gate para o fix pontual pós-QA (achado trivial e contido — 
 
 Achado original do QA (`relatorio-qa.md`: CA-1/CA-8, header ausente em `/oferta/{slug}`) confirmado resolvido ao vivo — bug de duplicação/ausência estrutural não é mais reproduzível.
 
+## QA — homolog (rodada 2, pós-fix)
+
+**Status: APROVADO** (relatório completo, sobrescrito com o veredito final desta rodada, em `relatorio-qa.md`).
+
+Branch sincronizada: `git fetch origin && git checkout homolog && git pull origin homolog` — fast-forward de `6e65564` para `e418d08` (PR #161). Commit `e418d089e3bde005590afd11a5c59cb84ccafab6` confirmado em `git log --oneline -5`.
+
+- `npm test` (`website/`): **80/80 passando** (14 test suites), sem regressão — inclui o novo teste de regressão do fix (`CA-1/CA-8 (regressão #156)`).
+- Código confirmado: `website/app/oferta/[slug]/page.tsx` importa `Header` (linha 5) e renderiza `<Header />` dentro de `<main>` (linha 62), antes do JSON-LD/`<DealDetail />` — igual ao padrão de `app/page.tsx`/`app/categoria/[categoria]/page.tsx`.
+- **Validação integrada (d3)**: stack Docker real subida a partir de `homolog` (`docker compose up -d --build db api website`), `.env`/`docker-compose.override.yml` locais descartáveis (portas 5432/8080/3000 expostas), todos os containers `healthy`. Catálogo vazio → **5 produtos seedados via SQL direto** (2 "Eletronicos" com desconto, 1 sem desconto, 1 "Casa" sem `affiliate_link`/CTA desabilitado, 1 "Casa" com desconto — categorias de 1 palavra só, evitando o bug conhecido #159 fora de escopo). `curl http://localhost:8080/api/public/deals` confirmou os 5 produtos servidos pela API real.
+- **Reprodução exata do comando que reprovou na rodada 1**: `curl http://localhost:3000/oferta/fone-bluetooth-xpto-pro | grep -c site-header` → **1** (era 0 antes do fix). Confirmado também Home (`/`) → 1 e categoria (`/categoria/Eletronicos`) → 1 — sem duplicação em nenhuma tela.
+- **Gate Visual obrigatório (d2)**: `STAGING_URL=http://localhost:3000 SCREENSHOTS_DIR=documentacoes/ISSUE-154-site-sem-css/screenshots-qa-r2 npm run test:visual` → **3/3 passed** (Home, Categoria, `deal-detail`). Screenshots inspecionados visualmente:
+  - **`deal-detail.png`**: header ("O Mulet Achou" + chips "Todas"/"Amazon"/"Me...") visível **exatamente 1x** no topo — achado da rodada 1 confirmado resolvido. Mídia em destaque, preço R$ 149,90/R$ 299,90 riscado, badge `-50%`, CTA "Comprar agora →" proeminente, seção "Mais ofertas" em grid reaproveitando `.deal-card` (incl. card "Indisponível" para produto sem `affiliate_link`). Layout coerente com `ux-ui-spec.md`.
+  - **`home.png`**: header 1x, sem duplicação. Grid de cards estilizado (1 coluna mobile), badges `%OFF` vermelhos, preço riscado/atual, CTA vermelho "Ver oferta →", CTA desabilitado cinza "Indisponível", paginação "Página 1 de 1". Sem regressão.
+  - **`categoria.png`**: header 1x, sem duplicação, mesmo grid/card da Home, título "Eletronicos". Sem regressão.
+  - Estado vazio de categoria (ad-hoc, `/categoria/CategoriaInexistenteXYZ`): `curl | grep -c deals-empty` → 1, `grep -c site-header` → 1 — CA-7 confirmado, sem regressão.
+- Ambiente Docker removido ao final (`docker compose down -v`), imagens locais (`omuletachou-api`, `omuletachou-website`) removidas, `.env`/`docker-compose.override.yml` apagados — sem resíduo (`git status --short` limpo, exceto o diretório novo de screenshots desta rodada).
+
+### Revalidação completa dos 15 critérios de aceite (+ 3 transversais)
+
+| Critério | Resultado | Evidência (rodada 2) |
+|---|---|---|
+| CA-1 — cor de marca consistente nas 3 telas | **PASS** (era FALHA) | `deal-detail.png` agora tem header com chip ativo vermelho; badge/CTA vermelhos nas 3 telas |
+| CA-2 — paleta/tipografia alinhadas ao design system | PASS | Work Sans + tokens confirmados no CSS servido, inalterado desde rodada 1 |
+| CA-3 — 100% das classes BEM com regra CSS | PASS | Sem mudança de CSS nesta correção; verificação da rodada 1 permanece válida |
+| CA-4 — CSS importado/aplicado no build | PASS | `curl http://localhost:3000/` → `<link rel="stylesheet" href="/_next/static/css/...">` presente |
+| CA-5 — Home estilizada | PASS | `home.png` |
+| CA-6 — Categoria reaproveita estilo da Home | PASS | `categoria.png` |
+| CA-7 — Estado vazio de categoria estilizado | PASS | `curl` ad-hoc categoria inexistente: `deals-empty` 1x + header 1x |
+| CA-8 — `deal-detail` estilizada | **PASS** (era FALHA) | `deal-detail.png` — header presente 1x + mídia/preço/badge/CTA/relacionados OK |
+| CA-9 — sem overflow horizontal (mobile 375px) | PASS | Assert automatizado em `e2e/visual.spec.ts`, 3/3 passed |
+| CA-10 — grid responsivo mobile-first | PASS | 1 coluna mobile confirmada nos 3 PNGs; CSS inalterado desde rodada 1 |
+| CA-11 — área de toque adequada | PASS | CTAs/chips com dimensões visíveis adequadas nos screenshots |
+| CA-12 — sem conflito de cor com manifest PWA | PASS | Única cor de marca `#e63946` e derivações, nas 3 telas incl. `deal-detail` |
+| CA-13 — `test:visual` existe e roda sem erro de config | PASS | `npm run test:visual` executou, 3/3 passed |
+| CA-14 — cobertura mínima de 3 telas em screenshot | PASS | `home.png`, `categoria.png`, `deal-detail.png` gerados em `screenshots-qa-r2/` |
+| CA-15 — Gate Visual do QA deixa de resolver N/A | PASS | Gate executou de verdade nas duas rodadas — funcionando conforme esperado |
+| CA-T1 — build sem erros de TS | PASS | Build Docker: "✓ Compiled successfully", type check OK |
+| CA-T2 — nenhuma mudança de dados/rotas/API | PASS | `git show fec0bb6 --stat`: apenas `page.tsx` (+3) e `page.test.tsx` (+11) |
+| CA-T3 — nenhuma config de deploy alterada | PASS | Nenhum arquivo de produção alterado; `.env`/override locais, não commitados |
+
+**Resultado: 18/18 critérios PASS (15/15 CA-1..CA-15 + 3/3 transversais T1-T3). QA APROVADO.**
+
+**Encaminhamento**: Líder Técnico abre PR `homolog` → `main` para o Gate 2 do Gerente.
+
+`repo_path` deixado checked out em `desenv` ao final.
+
 ## Ledger de Custo
 
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -259,6 +306,7 @@ Achado original do QA (`relatorio-qa.md`: CA-1/CA-8, header ausente em `/oferta/
 | 11 | Dev — fix Header ausente em deal-detail, PR #160 | Dev Node.js | Sonnet | 82317 | 58 | 473s |
 | 12 | LT — merge PR #160 + novo PR homologação #161 | Líder Técnico | Sonnet | 59026 | 11 | 170s |
 | 13 | Code Review — validação final PR #161 (build/boot/testes/visual, merge desenv→homolog) | Code Review | Sonnet | 106308 | 52 | 492s |
+| 14 | QA (homolog, rodada 2, pós-fix) — aprovado, 18/18 critérios | QA | Sonnet | 111515 | 39 | 483s |
 
 ---
 
