@@ -86,7 +86,6 @@ As sub-issues de backend (#168, #169, #170) não dependem do UX/UI — **podem c
 | 3 | PM Fase 2 (PRD + critérios de aceite) | PM | Sonnet | 51527 | 16 | 225s |
 | 4 | Arquiteto (3 decisões técnicas + achado de dependência circular) | Arquiteto | Sonnet | 110481 | 49 | 673s |
 | 5 | Líder Técnico (especificação técnica consolidada) | Líder Técnico | Sonnet | 100393 | 32 | 288s |
-| 6 | Líder Técnico (task breakdown + 4 sub-issues, retomada rota normal) | Líder Técnico | Sonnet | TBD | TBD | TBD |
+| 6 | Líder Técnico (task breakdown + 4 sub-issues, retomada rota normal) | Líder Técnico | Sonnet | 80395 | 23 | 220s |
 
-**Total acumulado (backlog, sem dev):** 372.768 tokens · ~24 min proc. (linha 6 a ser preenchida pela
-sessão principal com o `<usage>` deste HANDOFF).
+**Total acumulado (planejamento, antes dos devs):** 453.163 tokens · ~34 min proc.
