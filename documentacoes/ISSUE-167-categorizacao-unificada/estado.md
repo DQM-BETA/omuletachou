@@ -1,7 +1,7 @@
 ---
 issue: 167
 titulo: feat: Categorização unificada de produtos + remoção de distinção de plataforma no site
-etapa_atual: Em Desenvolvimento — #168 mergeada em desenv; aguardando Dev #169 e Dev #170 em paralelo
+etapa_atual: Em Desenvolvimento — #168 mergeada em desenv; Dev #170 concluído (PR #173 aberto, aguardando merge do LT); Dev #169 em paralelo
 ultimo_agente: lt
 rota: normal
 openspec_change: repos/omuletachou/openspec/changes/issue-167-categorizacao-unificada
@@ -136,13 +136,35 @@ as 4 novas (Eletrodomésticos, Climatização, Ferramentas, e a subdivisão de B
 fallback `DefaultCategoryId = "22"`. Comportamento gracioso (sem erro), não coberto pelos CA
 desta issue; mencionar ao LT/PM se a granularidade do vídeo do YouTube importar no futuro.
 
+## Dev #170 — backend-api-filtros (CONCLUÍDO — aguardando merge do LT)
+Branch `feature/ISSUE-170-api-filtros` (worktree, base `desenv` atualizada com #168) → PR #173
+para `desenv` (NÃO mergeado por este Dev). `dotnet test`: 395/395 passando, sem regressão (380
+pré-existentes + 15 novos casos desta sub-issue). Escopo:
+- `PublicDealDto`: `Platform` removido (CA 5.1); `Subcategory` adicionado. DTO interno/dashboard
+  (`ProductDtos.cs`) não tocado (CA 5.2/5.3 confirmados por teste, incluindo o de `GetBySlug`).
+- `PublicController.GetDeals`: filtros `category`/`subcategory`/`minPrice`/`maxPrice`/
+  `minDiscount`/`sort` (`price_asc`/`discount_desc`/`recent`, default `AiScore desc`), todos
+  opcionais/combináveis (CA 6.1-6.6), seguindo a ordem dos 5 índices compostos de #168.
+- Novo `GET /api/public/categories`: árvore `Category > [Subcategory]` com contagem (CA 6.7).
+- `GetByCategory` (`/deals/category/{categoria}`) **removida nesta sub-issue** (decisão final do
+  Dev, documentada no PR #173: segue design.md §5.2 sem reabrir a decisão — a remoção só afeta
+  `desenv`, e o release `homolog→main` já está condicionado a esperar a Sub-D/#171 também pronta
+  por `tasks.md`, então não há janela de produção quebrada).
+- Validação Docker: stack subida (build+boot limpo, `/health` 200, sem exceção), produtos reais
+  populados via SQL, endpoints exercitados via `curl` (filtros combinados, `minDiscount`+sort,
+  categoria inexistente → 200 vazio, rota antiga → 404, árvore de categorias com contagem
+  correta, ausência de `platform` confirmada em 100% do JSON). Ambiente removido ao final
+  (`docker compose down -v` + imagem + `.env`/override locais apagados).
+
 ## Próximos passos
 1. ~~LT faz o merge de #168 (PR #172) em `desenv`.~~ **Concluído.**
-2. Dev de #169 (backend-ia-orcamento) e Dev de #170 (backend-api-filtros) **em paralelo agora**
-   (ambos desbloqueados — base #168 já em `desenv`).
-3. Após #170 mergeada: Dev de #171 integra o `FilterBar` ao contrato final da API.
-4. LT faz o merge de cada sub-issue conforme os Devs concluem (uma invocação por merge, sequencial).
-   Quando as 4 estiverem em `desenv_tasks_merged`, LT cria o PR `desenv→homolog`.
+2. ~~Dev de #170 (backend-api-filtros).~~ **Concluído — PR #173 aberto, aguardando merge do LT.**
+3. Dev de #169 (backend-ia-orcamento) **em andamento em paralelo** (branch
+   `feature/ISSUE-169-ia-orcamento` já existe como worktree).
+4. LT faz o merge de #170 (PR #173) em `desenv` (uma invocação por merge, sequencial — não
+   simultâneo ao merge de #169 se ambos chegarem prontos ao mesmo tempo).
+5. Após #170 mergeada: Dev de #171 integra o `FilterBar` ao contrato final da API.
+6. Quando as 4 sub-issues estiverem em `desenv_tasks_merged`, LT cria o PR `desenv→homolog`.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -156,6 +178,7 @@ desta issue; mencionar ao LT/PM se a granularidade do vídeo do YouTube importar
 | 7 | UX/UI (spec visual FilterBar, Sub-D) | UX/UI | Sonnet | 96003 | 10 | 279s |
 | 8 | Dev #168 (backend-schema-collectors, migration + CategoryDetector + 3 collectors) | Dev .NET | Sonnet | 234329 | 134 | 1326s |
 | 9 | Líder Técnico (merge PR #172 → desenv, fechamento #168) | Líder Técnico | Sonnet | 57329 | 17 | 138s |
+| 10 | Dev #170 (backend-api-filtros, GetDeals+categories, remove Platform/GetByCategory) | Dev .NET | Sonnet | 153125 | 77 | 790s |
 
-**Total acumulado:** 840.824 tokens · ~63 min proc.
+**Total acumulado:** 993.949 tokens · ~76 min proc.
 
