@@ -77,6 +77,17 @@ public static class CategoryDetector
         // "Geral" nao entra no dicionario — e o fallback quando nenhuma keyword casa.
     };
 
+    /// <summary>
+    /// Taxonomia fixa (Categoria -> lista de Subcategorias), exposta para reuso por quem monta o
+    /// prompt do fallback de categorizacao via IA (ClaudeAiService.ClassifyCategoryAsync, Issue
+    /// #167 — Sub-B/#169) — evita duplicar a lista de categorias/subcategorias em dois lugares
+    /// (especificacao-tecnica.md §7 exige reaproveitar esta mesma lista).
+    /// </summary>
+    public static IReadOnlyDictionary<string, IReadOnlyList<string>> Categorias { get; } =
+        Taxonomia.ToDictionary(
+            kv => kv.Key,
+            kv => (IReadOnlyList<string>)kv.Value.Keys.ToList());
+
     public static (string Category, string? Subcategory) Detect(string title)
     {
         if (string.IsNullOrWhiteSpace(title))

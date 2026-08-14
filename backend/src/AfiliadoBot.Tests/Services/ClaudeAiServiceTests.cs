@@ -1,3 +1,4 @@
+using AfiliadoBot.Domain.DTOs;
 using AfiliadoBot.Domain.Entities;
 using AfiliadoBot.Domain.Enums;
 using AfiliadoBot.Infrastructure.Services;
@@ -19,6 +20,14 @@ public class ClaudeAiServiceTests
         category: "Eletronicos",
         platform: Platform.Amazon);
 
+    private static Mock<IClaudeBudgetService> CreateBudgetServiceMock(bool available = true)
+    {
+        var mock = new Mock<IClaudeBudgetService>();
+        mock.Setup(b => b.IsCategorizationBudgetAvailableAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(available);
+        return mock;
+    }
+
     [Fact]
     public async Task ScoreProductAsync_RetornaApprove_QuandoScoreAcimaDoThreshold()
     {
@@ -26,9 +35,9 @@ public class ClaudeAiServiceTests
         var mockWrapper = new Mock<IAnthropicClientWrapper>();
         mockWrapper
             .Setup(w => w.CompleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync("{\"score\": 8, \"reason\": \"Otimo desconto\"}");
+            .ReturnsAsync(new ClaudeCompletionResult("{\"score\": 8, \"reason\": \"Otimo desconto\"}", 100, 20));
 
-        var service = new ClaudeAiService(mockWrapper.Object, minScore: 6, minScoreFallback: 5);
+        var service = new ClaudeAiService(mockWrapper.Object, CreateBudgetServiceMock().Object, minScore: 6, minScoreFallback: 5);
 
         // Act
         var result = await service.ScoreProductAsync(CreateProduct());
@@ -45,9 +54,9 @@ public class ClaudeAiServiceTests
         var mockWrapper = new Mock<IAnthropicClientWrapper>();
         mockWrapper
             .Setup(w => w.CompleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync("{\"score\": 4, \"reason\": \"Desconto baixo\"}");
+            .ReturnsAsync(new ClaudeCompletionResult("{\"score\": 4, \"reason\": \"Desconto baixo\"}", 100, 20));
 
-        var service = new ClaudeAiService(mockWrapper.Object, minScore: 6, minScoreFallback: 5);
+        var service = new ClaudeAiService(mockWrapper.Object, CreateBudgetServiceMock().Object, minScore: 6, minScoreFallback: 5);
 
         // Act
         var result = await service.ScoreProductAsync(CreateProduct());
@@ -64,9 +73,9 @@ public class ClaudeAiServiceTests
         var mockWrapper = new Mock<IAnthropicClientWrapper>();
         mockWrapper
             .Setup(w => w.CompleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Claro! {\"score\":8,\"reason\":\"otimo\"}");
+            .ReturnsAsync(new ClaudeCompletionResult("Claro! {\"score\":8,\"reason\":\"otimo\"}", 100, 20));
 
-        var service = new ClaudeAiService(mockWrapper.Object, minScore: 6, minScoreFallback: 5);
+        var service = new ClaudeAiService(mockWrapper.Object, CreateBudgetServiceMock().Object, minScore: 6, minScoreFallback: 5);
 
         // Act
         var result = await service.ScoreProductAsync(CreateProduct());
@@ -85,7 +94,7 @@ public class ClaudeAiServiceTests
             .Setup(w => w.CompleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("API indisponivel"));
 
-        var service = new ClaudeAiService(mockWrapper.Object, minScore: 6, minScoreFallback: 5);
+        var service = new ClaudeAiService(mockWrapper.Object, CreateBudgetServiceMock().Object, minScore: 6, minScoreFallback: 5);
 
         // Act
         var result = await service.ScoreProductAsync(CreateProduct());
@@ -104,9 +113,9 @@ public class ClaudeAiServiceTests
         var mockWrapper = new Mock<IAnthropicClientWrapper>();
         mockWrapper
             .Setup(w => w.CompleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedCaption);
+            .ReturnsAsync(new ClaudeCompletionResult(expectedCaption, 100, 20));
 
-        var service = new ClaudeAiService(mockWrapper.Object);
+        var service = new ClaudeAiService(mockWrapper.Object, CreateBudgetServiceMock().Object);
 
         // Act
         var result = await service.GenerateCaptionAsync(CreateProduct(), SocialNetwork.Telegram);
@@ -125,7 +134,7 @@ public class ClaudeAiServiceTests
             .Setup(w => w.CompleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("API indisponivel"));
 
-        var service = new ClaudeAiService(mockWrapper.Object);
+        var service = new ClaudeAiService(mockWrapper.Object, CreateBudgetServiceMock().Object);
         var product = CreateProduct();
 
         // Act
@@ -148,9 +157,9 @@ public class ClaudeAiServiceTests
         var mockWrapper = new Mock<IAnthropicClientWrapper>();
         mockWrapper
             .Setup(w => w.CompleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Legenda gerada com sucesso!");
+            .ReturnsAsync(new ClaudeCompletionResult("Legenda gerada com sucesso!", 100, 20));
 
-        var service = new ClaudeAiService(mockWrapper.Object);
+        var service = new ClaudeAiService(mockWrapper.Object, CreateBudgetServiceMock().Object);
 
         // Act
         var act = async () => await service.GenerateCaptionAsync(CreateProduct(), network);
@@ -167,14 +176,116 @@ public class ClaudeAiServiceTests
         var mockWrapper = new Mock<IAnthropicClientWrapper>();
         mockWrapper
             .Setup(w => w.CompleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(captionWithHashtagsAndEmoji);
+            .ReturnsAsync(new ClaudeCompletionResult(captionWithHashtagsAndEmoji, 100, 20));
 
-        var service = new ClaudeAiService(mockWrapper.Object);
+        var service = new ClaudeAiService(mockWrapper.Object, CreateBudgetServiceMock().Object);
 
         // Act
         var result = await service.GenerateCaptionAsync(CreateProduct(), SocialNetwork.Instagram);
 
         // Assert
         result.Should().Contain("#");
+    }
+
+    // ---- ClassifyCategoryAsync (Issue #167 — Sub-B/#169) ----
+
+    [Fact]
+    public async Task ClassifyCategoryAsync_RetornaNull_SemChamarApi_QuandoOrcamentoIndisponivel()
+    {
+        // CA 4.3: orcamento estourado -> nenhuma nova chamada de categorizacao e feita.
+        var mockWrapper = new Mock<IAnthropicClientWrapper>();
+        var budgetMock = CreateBudgetServiceMock(available: false);
+
+        var service = new ClaudeAiService(mockWrapper.Object, budgetMock.Object);
+
+        var result = await service.ClassifyCategoryAsync(CreateProduct());
+
+        result.Should().BeNull();
+        mockWrapper.Verify(
+            w => w.CompleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        budgetMock.Verify(
+            b => b.RecordUsageAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ClassifyCategoryAsync_RetornaClassificacao_ERegistraUso_QuandoSucesso()
+    {
+        // CA 3.1/4.2: chamada bem-sucedida -> classificacao retornada e uso debitado com os
+        // tokens reais reportados pela API (nao um valor estimado).
+        var mockWrapper = new Mock<IAnthropicClientWrapper>();
+        mockWrapper
+            .Setup(w => w.CompleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ClaudeCompletionResult(
+                "{\"category\": \"Eletrônicos\", \"subcategory\": \"Celulares e Smartphones\"}", 250, 40));
+        var budgetMock = CreateBudgetServiceMock(available: true);
+
+        var service = new ClaudeAiService(mockWrapper.Object, budgetMock.Object);
+
+        var result = await service.ClassifyCategoryAsync(CreateProduct());
+
+        result.Should().NotBeNull();
+        result!.Category.Should().Be("Eletrônicos");
+        result.Subcategory.Should().Be("Celulares e Smartphones");
+        budgetMock.Verify(b => b.RecordUsageAsync(250, 40, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ClassifyCategoryAsync_RetornaNull_SemDebitarOrcamento_QuandoApiFalha()
+    {
+        // design.md §3.6: erro/timeout -> null, sem debitar orcamento (so chamadas
+        // bem-sucedidas contam — CA 4.2).
+        var mockWrapper = new Mock<IAnthropicClientWrapper>();
+        mockWrapper
+            .Setup(w => w.CompleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("API indisponivel"));
+        var budgetMock = CreateBudgetServiceMock(available: true);
+
+        var service = new ClaudeAiService(mockWrapper.Object, budgetMock.Object);
+
+        var result = await service.ClassifyCategoryAsync(CreateProduct());
+
+        result.Should().BeNull();
+        budgetMock.Verify(
+            b => b.RecordUsageAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ClassifyCategoryAsync_RetornaNull_SemDebitarOrcamento_QuandoRespostaNaoParseavel()
+    {
+        var mockWrapper = new Mock<IAnthropicClientWrapper>();
+        mockWrapper
+            .Setup(w => w.CompleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ClaudeCompletionResult("Isso nao e JSON nenhum.", 100, 20));
+        var budgetMock = CreateBudgetServiceMock(available: true);
+
+        var service = new ClaudeAiService(mockWrapper.Object, budgetMock.Object);
+
+        var result = await service.ClassifyCategoryAsync(CreateProduct());
+
+        result.Should().BeNull();
+        budgetMock.Verify(
+            b => b.RecordUsageAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ClassifyCategoryAsync_AceitaSubcategoryNulo_QuandoRespostaEGeral()
+    {
+        var mockWrapper = new Mock<IAnthropicClientWrapper>();
+        mockWrapper
+            .Setup(w => w.CompleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ClaudeCompletionResult("{\"category\": \"Geral\", \"subcategory\": null}", 100, 20));
+        var budgetMock = CreateBudgetServiceMock(available: true);
+
+        var service = new ClaudeAiService(mockWrapper.Object, budgetMock.Object);
+
+        var result = await service.ClassifyCategoryAsync(CreateProduct());
+
+        result.Should().NotBeNull();
+        result!.Category.Should().Be("Geral");
+        result.Subcategory.Should().BeNull();
     }
 }

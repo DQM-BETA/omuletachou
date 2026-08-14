@@ -76,12 +76,14 @@ public class ProcessorJob
 
             await DownloadMediaAsync(product, ct);
 
-            EnsureSlug(product);
-
             // Categorizacao por dicionario (CategoryDetector) saiu deste job e passou a rodar
             // nos collectors, na criacao do Product (Issue #167, Sub-A/#168). O fallback via IA
-            // para produtos que ainda ficam "Geral" pos-coleta e escopo da Sub-B/#169
-            // (EnsureCategoryFallbackAsync, nao implementado nesta sub-issue).
+            // roda aqui, ANTES do slug (Issue #167 — Sub-B/#169, CA 3.1, design.md §3.6): so
+            // produtos ainda "Geral" pos-coleta (dicionario nao achou match) e ja aprovados
+            // (Status == Queued, garantido pela query do topo deste metodo) sao elegiveis.
+            await EnsureCategoryFallbackAsync(product, ct);
+
+            EnsureSlug(product);
 
             var linkOk = await EnsureAffiliateLinkAsync(product, ct);
             if (!linkOk)
@@ -120,6 +122,41 @@ public class ProcessorJob
         {
             _logger.LogWarning(
                 "ProcessorJob: falha ao baixar midia do produto {ProductId}. Produto segue sem midia local.",
+                product.Id);
+        }
+    }
+
+    /// <summary>
+    /// Fallback de categorizacao via IA (Issue #167 — Sub-B/#169, CA 3.1-3.3). So aciona
+    /// ClassifyCategoryAsync quando o dicionario (CategoryDetector, na coleta) ainda nao
+    /// classificou o produto (Category == "Geral") — CA 3.3. O filtro Status == Queued (CA 3.2)
+    /// ja e garantido pela query do topo de ExecuteAsync (produtos rejeitados nunca chegam neste
+    /// ponto do loop), entao nao repete a checagem aqui (design.md §3.6).
+    /// Classification null (orcamento estourado — CA 4.3 — ou erro/timeout da chamada) mantem o
+    /// produto em "Geral", sem excecao, sem bloquear o restante do loop (mesma postura ja usada
+    /// para GenerateCaptionAsync/ScoreProductAsync).
+    /// </summary>
+    private async Task EnsureCategoryFallbackAsync(Product product, CancellationToken ct)
+    {
+        if (!string.Equals(product.Category, "Geral", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        _logger.LogInformation(
+            "ProcessorJob: acionando fallback de categorizacao via IA para o produto {ProductId}.",
+            product.Id);
+
+        var classification = await _aiService.ClassifyCategoryAsync(product, ct);
+        if (classification is not null)
+        {
+            product.SetCategory(classification.Category, classification.Subcategory);
+            _logger.LogInformation(
+                "ProcessorJob: fallback classificou o produto {ProductId} como {Category}/{Subcategory}.",
+                product.Id, classification.Category, classification.Subcategory);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "ProcessorJob: fallback nao classificou o produto {ProductId} (orcamento indisponivel ou falha na chamada) — categoria permanece Geral.",
                 product.Id);
         }
     }
