@@ -1,8 +1,8 @@
 ---
 issue: 154
 titulo: "bug: Site público (website) sem nenhum estilo CSS implementado — apenas HTML puro"
-etapa_atual: "PR #158 desenv→homolog aberto — aguardando /code-review (sessão principal) + Code Review"
-ultimo_agente: lider-tecnico
+etapa_atual: "PR #158 mergeado (desenv→homolog) — Code Review aprovado, aguardando QA"
+ultimo_agente: code-review
 rota: normal
 openspec_change: repos/omuletachou/openspec/changes/issue-154-site-sem-css
 tech_stacks: [nodejs]
@@ -16,9 +16,9 @@ sub_issues: ["#156 (stack:nodejs, task_id:T-01) — merged via PR #157"]
 desenv_tasks_merged: ["#156"]
 pr_feature: "#157 (fix/156-css-website -> desenv, squash merged)"
 sub_issues_frontend: {}
-pr_homologacao: "#158 (desenv -> homolog)"
+pr_homologacao: "#158 (desenv -> homolog, merge commit 6e65564d8e4172c5d437af2bb99e00245ee26424)"
 pr_release: ~
-code_review_homolog_pr: ~
+code_review_homolog_pr: 158
 qa_status: ~
 figma_url: https://www.figma.com/design/yi6YkNAy9HfHus2oiPi3G7/Diego-Mulet-s-team-library
 blockers: nenhum
@@ -76,7 +76,7 @@ Não há ambiguidade arquitetural real: não é decisão de arquitetura de siste
 5. UX/UI: spec visual a partir do design system do Figma — **feito**
 6. Dev: implementação (CSS + `test:visual`) na sub-issue #156 — **feito**
 7. Líder Técnico: merge PR #157 → desenv + PR homologação #158 (desenv→homolog) — **feito**
-8. Code Review + QA: validação visual (novo checkpoint — Gate Visual passa a funcionar de fato) — **próximo**
+8. Code Review + QA: validação visual (novo checkpoint — Gate Visual passa a funcionar de fato) — **Code Review feito (aprovado, merge #158), próximo: QA**
 9. Gate 2 (Gerente) → merge main
 
 ## UX/UI — Spec visual — concluído
@@ -120,6 +120,30 @@ PR aberto: **#157** (`fix/156-css-website` → `desenv`), aguardando merge do L�
 - **Issue técnica separada aberta para o bug pré-existente** (categorias com espaço no nome, mismatch de encoding `formatCategoriaLabel`/`fetchByCategory`): **#159**, label `bug`, rota `backlog` (documentar/planejar; não trabalhar agora), referenciando #154/#157 como origem do achado.
 - `repo_path` deixado em `desenv`, atualizado com o merge (`git pull origin desenv` — fast-forward, PR #157 incorporado).
 
+## Code Review — PR #158 (validação final)
+
+Segunda camada de gate (validação ao vivo, execução real — não análise estática). `/code-review` (plugin Anthropic) já havia rodado sem achados bloqueantes (comentário do PR: "No issues found. Checked for bugs and CLAUDE.md compliance." — única nota sub-bar, não bloqueante: naming de branch `fix/156-...` em vez de `feature/ISSUE-156-...`, mas consistente com o padrão já estabelecido no repo).
+
+**Execução realizada:**
+
+1. `git fetch && git checkout desenv && git pull origin desenv` — HEAD confirmado em `26cfa2c` (inclui commits dos PRs #157/#158 antes do merge).
+2. `npm test` (Jest, `website/`): **79/79 passando**, sem regressão.
+3. `npm run build` (`website/`): **primeira tentativa falhou** — `Cannot find module '@playwright/test'` (type error no `playwright.config.ts` durante o type-check do build). Causa: `node_modules` local desatualizado em relação ao `package-lock.json` do PR (ambiente do CR, não bug do PR). Rodado `npm install` para sincronizar → build limpo na segunda tentativa (5 rotas geradas, sem erros de tipo).
+4. `STAGING_URL=http://localhost:3000 SCREENSHOTS_DIR=... npx playwright test` (`website/`, contra o container Docker real, não o `webServer` local): **3/3 passando** (Home, categoria, `deal-detail`).
+5. **Validação visual real** (o ponto central da issue): `docker compose up -d --build db api website` com `.env` local descartável (a partir de `.env.example`) + `docker-compose.override.yml` local descartável só para expor portas ao host (nenhum dos dois commitado — `.env` já coberto por `.gitignore`; override removido manualmente ao final). Seed de 4 produtos `Published` via `INSERT INTO products ...` direto no Postgres (catálogo vazio no ambiente). `curl http://localhost:3000/` confirmou `<link rel="stylesheet">` real (~11KB de CSS compilado, não vazio) e o HTML das classes BEM (`deals-grid`, `deal-card`, `deal-card__badge` etc.). **Screenshots inspecionados visualmente** (Home, categoria, `deal-detail`, gerados pelo próprio `test:visual` contra o container): grid de cards estilizado (1 coluna em mobile 375px), cor de marca `#e63946` nos badges de desconto/CTA/chip ativo do header, tipografia aplicada, preço atual/riscado, botão "Ver oferta"/"Comprar agora" com border-radius e cor de marca. Confirma de fato a correção do bug raiz (site antes renderizava só texto corrido) — não apenas suíte verde.
+6. Checklist de veto:
+   - Sem segredos commitados: `.env` (gitignored) e `docker-compose.override.yml` (temporário) usados só localmente, removidos ao final (`git status --short` limpo após limpeza).
+   - Conformidade com `repos/omuletachou/CLAUDE.md`: convenções de branch/commit/merge respeitadas pelo LT (squash feature→desenv, merge commit desenv→homolog).
+   - Integração real: build+boot via Docker real (não mock), API real (`ProductsController`/`PublicController`), Postgres real, teste visual contra o container real via `STAGING_URL` (não o fallback `webServer` local isolado).
+   - Sem teste-lixo: os 3 specs de `visual.spec.ts` fazem asserts reais (overflow horizontal, visibilidade de elementos, screenshot) além do óbvio.
+   - `.first()`/`.nth()`/`.last()`: nenhuma ocorrência em `e2e/visual.spec.ts` ou `e2e/helpers.ts` (confirmado via diff do PR) — sem veto aplicável.
+   - Diff do PR (`gh pr diff 158`) confere com a descrição: CSS global real em `website/app/styles/` (5 partials), fix do bug raiz (`import './globals.css'` em `app/layout.tsx`), remoção de `page.module.css` órfão, setup completo do Playwright (`playwright.config.ts`, `e2e/helpers.ts`, `e2e/visual.spec.ts`, scripts em `package.json`). Sem segredos no diff (grep por password/secret/token sem resultado).
+7. Ambiente Docker removido (`docker compose down -v`) e `.env`/`docker-compose.override.yml` apagados ao final — `git status --short` limpo.
+
+**Veredito: aprovado.** Merge executado: `gh pr merge 158 --repo DQM-BETA/omuletachou --merge` (merge commit `6e65564d8e4172c5d437af2bb99e00245ee26424`, `desenv` → `homolog`). `repo_path` deixado checked out em `desenv`.
+
+Observação para o QA: o Gate Visual passa a ser aplicável de fato pela primeira vez neste projeto (antes sempre N/A por falta do script `test:visual`) — reforçar inspeção visual real (não só suíte verde), como feito aqui.
+
 ## Ledger de Custo
 
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -131,6 +155,7 @@ PR aberto: **#157** (`fix/156-css-website` → `desenv`), aguardando merge do L�
 | 5 | UX/UI (spec visual, tokens Figma) | UX/UI | Sonnet | 89850 | 9 | 330s |
 | 6 | Dev (CSS + test:visual, sub-issue #156, PR #157) | Dev Node.js | Sonnet | 150219 | 112 | 962s |
 | 7 | Merge PR #157 + PR homologação #158 + issue técnica #159 | Líder Técnico | Sonnet | 53241 | 18 | 141s |
+| 8 | Code Review — validação PR #158 (build/boot/testes/visual, merge desenv→homolog) | Code Review | Sonnet | 93406 | 56 | 546s |
 
 ---
 
