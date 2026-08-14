@@ -1,7 +1,7 @@
 ---
 issue: 167
 titulo: feat: Categorização unificada de produtos + remoção de distinção de plataforma no site
-etapa_atual: Em Desenvolvimento — #168, #169 e #170 mergeadas em desenv; falta apenas #171 (frontend-filtros)
+etapa_atual: Code Review — 4 sub-issues mergeadas em desenv; PR de homologação #176 (desenv->homolog) criado
 ultimo_agente: lt
 rota: normal
 openspec_change: repos/omuletachou/openspec/changes/issue-167-categorizacao-unificada
@@ -17,13 +17,14 @@ sub_issues:
   - "#168 (backend-schema-collectors, stack:dotnet, task_id:Sub-A) — CONCLUÍDA, merged em desenv"
   - "#169 (backend-ia-orcamento, stack:dotnet, task_id:Sub-B) — CONCLUÍDA, merged em desenv"
   - "#170 (backend-api-filtros, stack:dotnet, task_id:Sub-C) — CONCLUÍDA, merged em desenv"
-  - "#171 (frontend-filtros, stack:nodejs, task_id:Sub-D) — desbloqueada (#170 já em desenv); UX/UI concluído, spec disponível"
-desenv_tasks_merged: ["#168", "#169", "#170"]
+  - "#171 (frontend-filtros, stack:nodejs, task_id:Sub-D) — CONCLUÍDA, merged em desenv"
+desenv_tasks_merged: ["#168", "#169", "#170", "#171"]
 sub_issue_168_pr: "#172 (feature/ISSUE-168-schema-collectors -> desenv, MERGED squash, commit fc083f3; branch remota deletada; sub-issue #168 fechada)"
 sub_issue_169_pr: "#174 (feature/ISSUE-169-ia-orcamento -> desenv, MERGED squash, commit 03cb40e; branch remota deletada; sub-issue #169 fechada)"
 sub_issue_170_pr: "#173 (feature/ISSUE-170-api-filtros -> desenv, MERGED squash, commit 03c7a05; branch remota deletada; sub-issue #170 fechada)"
+sub_issue_171_pr: "#175 (feature/ISSUE-171-frontend-filtros -> desenv, MERGED squash, commit 0142d86; branch remota deletada; sub-issue #171 fechada)"
 sub_issues_frontend: {}
-pr_homologacao: ~
+pr_homologacao: "#176 (desenv -> homolog, merge commit, aberto)"
 pr_release: ~
 code_review_homolog_pr: ~
 qa_status: ~
@@ -212,9 +213,10 @@ Escopo:
 descrito no PR e no `tasks.md`. Sem achados de infra adicionais nesta sub-issue (Ids de
 `app_settings` já reservados por #168, sem colisão).
 
-## Dev #171 — frontend-filtros (PR aberto, aguardando merge do LT)
+## Dev #171 — frontend-filtros (CONCLUÍDO — merged em desenv)
 Branch `feature/ISSUE-171-frontend-filtros` (worktree, base `desenv` já com #168/#169/#170) → PR
-#175 para `desenv` (NÃO mergeado por este Dev). `npm test`: 102/102 passando (100%), cobertura
+#175 para `desenv`, squash merge (commit `0142d86`), branch remota deletada, sub-issue #171 fechada.
+`npm test`: 102/102 passando (100%), cobertura
 statements 94%/branches 90.4%/functions 90.1%/lines 96.6% (≥80% em todos os eixos). `npm run
 build`: sem erros/warnings. Escopo:
 - `website/lib/api.ts`: `fetchDeals` migrado para aceitar `filters?: DealFilters`
@@ -281,11 +283,12 @@ build`: sem erros/warnings. Escopo:
 4. ~~Dev de #169 (backend-ia-orcamento).~~ **Concluído.**
 5. ~~LT faz o merge de #169 (PR #174) em `desenv`.~~ **Concluído — commit `03cb40e`, sub-issue
    #169 fechada.**
-6. ~~Dev de #171 (frontend-filtros).~~ **Concluído — PR #175 aberto para `desenv`, aguardando
-   merge do LT.**
-7. LT faz o merge de #171 (PR #175) em `desenv`. Com as 4 sub-issues em `desenv_tasks_merged`, LT
-   cria o PR `desenv→homolog` (design.md §5.2 exige #170+#171 no mesmo deploy — já satisfeito,
-   ambas prontas juntas).
+6. ~~Dev de #171 (frontend-filtros).~~ **Concluído — PR #175 mergeado em `desenv`.**
+7. ~~LT faz o merge de #171 (PR #175) em `desenv`. Com as 4 sub-issues em `desenv_tasks_merged`, LT
+   cria o PR `desenv→homolog`.~~ **Concluído — commit `0142d86`, sub-issue #171 fechada. PR de
+   homologação #176 (`desenv→homolog`, merge commit) criado, satisfazendo design.md §5.2
+   (#170+#171 no mesmo deploy).**
+8. Sessão principal roda `/code-review` no PR #176 + spawna o agente Code Review.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -304,8 +307,9 @@ build`: sem erros/warnings. Escopo:
 | 12 | Líder Técnico (merge PR #173 → desenv, fechamento #170) | Líder Técnico | Sonnet | 66817 | 14 | 139s |
 | 13 | Líder Técnico (merge PR #174 → desenv, fechamento #169) | Líder Técnico | Sonnet | 55626 | 12 | 163s |
 | 14 | Dev #171 (frontend-filtros, FilterBar + migração api.ts/types.ts/Header.tsx, PR #175) | Dev Node.js | Sonnet | 298601 | 184 | 2417s |
+| 15 | Líder Técnico (merge PR #175 → desenv, fechamento #171; PR homologação #176 desenv→homolog) | Líder Técnico | Sonnet | 57148 | 22 | 177s |
 
-**Total acumulado:** 1.649.083 tokens · ~141 min proc.
+**Total acumulado:** 1.706.231 tokens · ~144 min proc.
 
 ---
 _Mantido pela sessão principal. Última atualização: 2026-08-14 (recuperação de conteúdo perdido —
