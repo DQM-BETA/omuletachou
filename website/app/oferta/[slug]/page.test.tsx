@@ -57,6 +57,17 @@ describe('OfertaPage', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Fone Bluetooth XYZ' })).toBeInTheDocument();
   });
 
+  it('CA-1/CA-8 (regressão #156): renderiza o <Header /> exatamente 1x na página de detalhe', async () => {
+    fetchDealMock.mockResolvedValueOnce(buildDeal());
+    fetchByCategoryMock.mockResolvedValueOnce(pagedResult([]));
+
+    const jsx = await OfertaPage({ params: { slug: 'fone-bluetooth-xyz' } });
+    const { container } = render(jsx);
+
+    expect(container.querySelectorAll('.site-header').length).toBe(1);
+    expect(screen.getByRole('link', { name: 'O Mulet Achou' })).toBeInTheDocument();
+  });
+
   it('CA-B3: slug inexistente chama notFound() do Next.js', async () => {
     fetchDealMock.mockResolvedValueOnce(null);
 
