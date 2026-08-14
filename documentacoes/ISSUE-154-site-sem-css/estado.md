@@ -1,8 +1,8 @@
 ---
 issue: 154
 titulo: "bug: Site público (website) sem nenhum estilo CSS implementado — apenas HTML puro"
-etapa_atual: "Novo PR de homologação criado (#161, desenv->homolog) cobrindo fix pós-QA de #156 — aguardando /code-review + Code Review"
-ultimo_agente: lt
+etapa_atual: "Code Review aprovou PR #161 (validação final, header ausente em deal-detail corrigido) — merge desenv->homolog concluído — aguardando QA"
+ultimo_agente: code-review
 rota: normal
 openspec_change: repos/omuletachou/openspec/changes/issue-154-site-sem-css
 tech_stacks: [nodejs]
@@ -16,7 +16,7 @@ sub_issues: ["#156 (stack:nodejs, task_id:T-01) — fechada novamente (fix heade
 desenv_tasks_merged: ["#156"]
 pr_feature: "#160 (feature/ISSUE-156-header-deal-detail -> desenv, squash merged, delete-branch) — fix pontual do achado de QA (PR #157 é histórico do ciclo anterior)"
 sub_issues_frontend: {}
-pr_homologacao: "#161 (desenv -> homolog, merge commit) — novo PR cobrindo o fix de #156 (PR #160); PR anterior #158 já mesclado/fechado em ciclo anterior"
+pr_homologacao: "#161 (desenv -> homolog, merge commit, MERGEADO) — cobriu o fix de #156 (PR #160); PR anterior #158 já mesclado/fechado em ciclo anterior"
 pr_release: ~
 code_review_homolog_pr: 161
 qa_status: ~
@@ -80,8 +80,8 @@ Não há ambiguidade arquitetural real: não é decisão de arquitetura de siste
 9. Líder Técnico: mapear falha do QA → reabrir sub-issue #156 — **feito**
 10. Dev: fix pontual (`<Header />` em `app/oferta/[slug]/page.tsx`) — **feito** (PR #160)
 11. Líder Técnico: merge PR #160 → desenv + novo PR de homologação #161 (desenv→homolog) — **feito**
-12. Sessão principal: `/code-review` + Code Review — **pendente**
-13. QA (nova rodada) → Gate 2 (Gerente) → merge main — **pendente**
+12. Sessão principal: `/code-review` + Code Review — **feito, aprovado (PR #161 merge desenv→homolog concluído)**
+13. QA (nova rodada) → Gate 2 (Gerente) → merge main — **próximo**
 
 ## UX/UI — Spec visual — concluído
 
@@ -207,6 +207,36 @@ Diferente do ciclo anterior: o PR de homologação anterior (#158, `desenv`→`h
 - **Novo PR de homologação criado**: **#161** (`desenv` → `homolog`, merge commit — nunca squash), referenciando no corpo que corrige o achado de QA do ciclo anterior (PR #158 / `relatorio-qa.md`), já que o PR #158 anterior já estava mesclado e fechado.
 - `repo_path` deixado checked out em `desenv`.
 
+## Code Review — PR #161 (validação final)
+
+Segunda camada de gate para o fix pontual pós-QA (achado trivial e contido — sessão principal já havia feito uma revalidação de escopo do diff, comentário [#161](https://github.com/DQM-BETA/omuletachou/pull/161#issuecomment-5294886574), sem necessidade de rodar `/code-review` completo novamente; único comentário de `/code-review` no PR foi a revalidação da própria sessão principal, sem achados bloqueantes).
+
+**Execução realizada:**
+
+1. `git fetch && git checkout desenv && git pull origin desenv` — já em `desenv`, `d2722ce` (up to date, inclui commit `fec0bb6` do fix `<Header />` + `1f2461b`/`d2722ce` do ledger).
+2. Confirmado no código (`git show desenv:website/app/oferta/[slug]/page.tsx`): `import Header from '@/components/Header'` (linha 5) + `<Header />` renderizado dentro de `<main>` (linha 62), antes do JSON-LD/`<DealDetail />`.
+3. `npm test` (Jest, `website/`): **80/80 passando** (14 test suites), sem regressão — confirma a contagem esperada (79 pré-existentes + 1 novo de regressão CA-1/CA-8).
+4. `npm run build` (`website/`): `✓ Compiled successfully`, `Linting and checking validity of types...` sem erros, 5 rotas geradas (incl. `/oferta/[slug]`).
+5. **Stack Docker real**: `.env` local descartável (a partir de `.env.example`, valores dummy — `DB_PASSWORD`/`JWT_SIGNING_KEY` gerados localmente, nunca reais) + `docker-compose.override.yml` local descartável (expõe 5432/8080/3000 ao host — serviços não têm `ports:` por padrão). `docker compose up -d --build db api website`: build completo (API .NET + Website Next.js standalone), todos os containers `healthy`/`Up`. Catálogo vazio no ambiente local → **2 produtos seedados via SQL direto** (`INSERT INTO products ...`, schema conferido via `\d products`; `status=2` = `Published`, `platform` 0/1 = Amazon/MercadoLivre) — "Fone Bluetooth XPTO Pro" (`slug=fone-bluetooth-xpto-pro`, com desconto/CTA habilitado) e "Mouse Gamer RGB" (`slug=mouse-gamer-rgb`). `curl http://localhost:8080/api/public/deals` confirmou os 2 produtos retornados pela API real.
+6. **Reprodução exata do comando que o QA usou para reprovar**: `curl http://localhost:3000/oferta/fone-bluetooth-xpto-pro | grep -c site-header` → **1** (era 0 antes do fix, no ciclo anterior/PR #158). Confirmado também para `/oferta/mouse-gamer-rgb` → **1**, e ausência de duplicação em `/` (Home) → **1** e `/categoria/Eletronicos` → **1**. Fix comprovado ao vivo, não apenas por leitura de diff.
+7. **Gate Visual**: `SCREENSHOTS_DIR=.../screenshots-cr npm run test:visual` (`STAGING_URL=http://localhost:3000`, contra o container Docker real, não o `webServer` local): **3/3 passed** (Home, Categoria, `deal-detail`). Screenshots **inspecionados visualmente**:
+   - `deal-detail.png`: header ("O Mulet Achou" + chips de plataforma "Todas"/"Amazon"/"Me...") visível **exatamente 1x** no topo, sem duplicação, seguido de mídia do produto, título, categoria, preço atual/riscado, CTA "Comprar agora →" e seção "Mais ofertas" reaproveitando `.deal-card`. Layout completo e coerente com `ux-ui-spec.md`.
+   - `home.png`: header 1x, sem duplicação, grid de cards com badge `%OFF`, preço, CTA "Ver oferta →", paginação "Página 1 de 1". Sem regressão.
+   - `categoria.png`: header 1x, sem duplicação, mesmo grid/card da Home, título "Eletronicos". Sem regressão.
+   - Nenhuma quebra em Home/Categoria — o fix é estritamente aditivo à página de detalhe.
+8. Checklist de veto:
+   - **Sem segredos commitados**: `.env`/`docker-compose.override.yml` locais descartáveis (gitignored/nunca adicionados ao stage), removidos ao final; `git status --short` sem resíduo relacionado. Grep no diff do PR por `password|secret|api[_-]?key|token` só retorna ocorrências em texto de documentação (`estado.md`/`relatorio-qa.md`), não em código/config.
+   - **Conformidade com `repos/omuletachou/CLAUDE.md`**: branch `feature/ISSUE-156-header-deal-detail` (padrão correto `feature/ISSUE-NNN-descricao`), squash feature→desenv, merge commit desenv→homolog (nunca squash) — respeitado pelo LT.
+   - **Integração real**: build+boot via Docker real (não mock) — API .NET real, Postgres real, teste de regressão em `page.test.tsx` renderiza o Server Component `OfertaPage` de verdade (`render(jsx)` do React Testing Library sobre o componente async real, não um mock de `<Header>`), reprodução do bug via `curl` contra o container real.
+   - **Sem teste-lixo**: teste de regressão novo (`page.test.tsx`) faz asserts reais e específicos (`container.querySelectorAll('.site-header').length` === 1 + presença do link "O Mulet Achou"), não trivial/vazio.
+   - **`.first()`/`.nth()`/`.last()`**: nenhuma ocorrência no diff do PR #161 (`gh pr diff 161` grepado) — sem veto aplicável.
+   - **Diff mínimo e contido** (`gh pr diff 161`): apenas `import Header` + `<Header />` em `page.tsx` (2 linhas) + 1 teste novo em `page.test.tsx` (11 linhas) + atualização de `estado.md`. Nenhuma mudança de CSS/dados/rotas/API/config de deploy.
+9. Ambiente Docker removido (`docker compose down -v`), imagens locais buildadas removidas (`docker rmi omuletachou-website omuletachou-api`), `.env`/`docker-compose.override.yml` apagados, `screenshots-cr/` (evidência temporária deste CR, não commitada) removido ao final — `git status --short` limpo (exceto artefatos pré-existentes não relacionados a este PR em `documentacoes/ISSUE-154-site-sem-css/screenshots/*.png`, já modificados no worktree antes desta validação, não tocados por este Code Review).
+
+**Veredito: aprovado.** Merge executado: `gh pr merge 161 --repo DQM-BETA/omuletachou --merge` (merge commit `e418d089e3bde005590afd11a5c59cb84ccafab6`, `desenv` → `homolog`). `repo_path` deixado checked out em `desenv`.
+
+Achado original do QA (`relatorio-qa.md`: CA-1/CA-8, header ausente em `/oferta/{slug}`) confirmado resolvido ao vivo — bug de duplicação/ausência estrutural não é mais reproduzível.
+
 ## Ledger de Custo
 
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -228,6 +258,7 @@ Diferente do ciclo anterior: o PR de homologação anterior (#158, `desenv`→`h
 | 10 | LT — mapeamento da falha, reabertura #156 | Líder Técnico | Sonnet | 64083 | 15 | 190s |
 | 11 | Dev — fix Header ausente em deal-detail, PR #160 | Dev Node.js | Sonnet | 82317 | 58 | 473s |
 | 12 | LT — merge PR #160 + novo PR homologação #161 | Líder Técnico | Sonnet | 59026 | 11 | 170s |
+| 13 | Code Review — validação final PR #161 (build/boot/testes/visual, merge desenv→homolog) | Code Review | Sonnet | 106308 | 52 | 492s |
 
 ---
 
