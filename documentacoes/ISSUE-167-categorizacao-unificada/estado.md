@@ -1,8 +1,8 @@
 ---
 issue: 167
 titulo: feat: Categorização unificada de produtos + remoção de distinção de plataforma no site
-etapa_atual: QA — Code Review aprovado, merge desenv->homolog concluído (PR #176)
-ultimo_agente: lt
+etapa_atual: QA aprovado — aguardando LT criar PR homolog->main (Gate 2: Gerente)
+ultimo_agente: qa
 rota: normal
 openspec_change: repos/omuletachou/openspec/changes/issue-167-categorizacao-unificada
 tech_stacks:
@@ -27,7 +27,7 @@ sub_issues_frontend: {}
 pr_homologacao: "#176 (desenv -> homolog, merge commit 9cd7154, MERGED)"
 pr_release: ~
 code_review_homolog_pr: 176
-qa_status: ~
+qa_status: aprovado (27/27 criterios) — ver relatorio-qa.md
 figma_url: ~
 blockers: nenhum
 status_comment_id: IC_kwDOTMlfyM8AAAABO7lC2w
@@ -329,6 +329,68 @@ nenhum bloqueante (2 notas não-bloqueantes: slider de preço sem clamp min/max,
 - **Merge realizado**: `desenv` → `homolog` via merge commit `9cd7154` (PR #176), conforme
   CLAUDE.md (nunca squash entre branches de longa vida).
 
+## QA — homolog (validação independente, evidência própria — não reaproveita o Code Review)
+**APROVADO — 27/27 critérios de `criterios-aceite.md`.** Relatório completo com tabela linha a
+linha: `documentacoes/ISSUE-167-categorizacao-unificada/relatorio-qa.md`. Screenshots do Gate
+Visual em `documentacoes/ISSUE-167-categorizacao-unificada/screenshots/` (não commitados —
+artefato de validação, mesma convenção das rodadas anteriores).
+
+`git fetch && git checkout homolog && git pull origin homolog` confirmou `9cd7154` em
+`git log --oneline -5` (fast-forward, sem divergência).
+
+- `dotnet test`: 414/414 passando. `npm test`: 102/102 passando. `ClaudeBudgetServiceIntegrationTests`
+  reexecutado isoladamente (3/3, Testcontainers.PostgreSql real). `tsc --noEmit`: erros
+  pré-existentes de `@testing-library/jest-dom` (tsconfig.json não tocado pelo diff #176 —
+  não é regressão desta PR, registrado como observação não-bloqueante).
+- **Gate Visual**: `npm run test:visual` (5/5) com `SCREENSHOTS_DIR` apontando para
+  `docs_path/screenshots`; todos os 6 PNGs inspecionados individualmente (home, categoria,
+  deal-detail, filter-bar desktop/mobile-summary/mobile-drawer). Header 1x em cada tela
+  (confirmado também no código — um único `<header className="site-header">` em `Header.tsx`;
+  o `<h1>O Mulet Achou</h1>` da Home é um hero de página, elemento distinto, não duplicação
+  estrutural). Nenhum componente duplicado. Footer e dark mode: **N/A** — não existem no site
+  (pré-existente, fora do escopo desta issue). Layout condiz com `ux-ui-spec-filterbar.md`.
+- **Validação integrada real**: stack subida via `docker compose up -d --build db api` (Postgres
+  16 + API .NET 8 reais, migration aplicada automaticamente no boot), 14 produtos semeados via SQL
+  cobrindo as 9 categorias/13 subcategorias do dicionário + 2 "Geral" (sem match) + 1 não-publicado.
+  `website` local (`npm run dev`) apontando para a API real via `API_INTERNAL_URL`. Endpoints
+  exercitados via `curl`: filtros combinados (CA 6.1-6.6), árvore de categorias com contagem
+  correta (CA 6.7 — mojibake inicial no console Windows confirmado como artefato do terminal via
+  decodificação UTF-8 explícita, não bug da API), ausência de `platform` em 100% do JSON público
+  (CA 5.1, verificado programaticamente pelas chaves do JSON), `Platform` preservado no DTO
+  interno via leitura de código (CA 5.2), `AffiliateLink`/`EnsureAffiliateLinkAsync` inalterado
+  (CA 5.3), rota antiga `/deals/category/{categoria}` → 404 (removida). HTML SSR real da Home/
+  categoria com querystrings de filtro/sort refletindo corretamente (CA 7.1-7.3), estados vazios
+  sem erro (CA 7.5), ausência de menção a Amazon/MercadoLivre/Shopee em qualquer página pública
+  (CA 7.4).
+- **Orçamento de IA (CA 4.1-4.5)**: `claude.monthly_budget_limit_brl` default R$30 confirmado.
+  Estouro simulado ao vivo via `UPDATE app_settings` (spend R$999,99 > limite R$30) — query
+  equivalente à lógica de `IsCategorizationBudgetAvailableAsync` retornou `false`. Incremento
+  atômico simulado (`UPDATE...CASE` idêntico ao `RecordUsageAsync`): 2× R$2,50 somaram R$5,00
+  corretamente. Reset mensal simulado: mês anterior com R$999 não contaminou o mês corrente após
+  nova chamada (reinicializou para R$3,00). Código confirmado por leitura +
+  `ClaudeBudgetServiceIntegrationTests` (reexecutado): `ScoreProductAsync`/`GenerateCaptionAsync`
+  não referenciam `IClaudeBudgetService` (CA 4.4 — scoring/legenda não afetados pelo teto).
+- **Migration/schema (CA 1.1/1.2)**: INSERT ao vivo com categoria/subcategoria arbitrárias
+  (`CategoriaTotalmenteNova123`/`SubcategoriaInventada456`) persistiu sem erro de constraint —
+  confirma VARCHAR livre, sem enum/check.
+- **Dicionário/collectors (CA 2.1-2.3)**: `grep` confirma `CategoryDetector.Detect()` chamado nos
+  3 collectors (Amazon/MercadoLivre/Shopee), sem nenhuma chamada a `IAiService` para categorização
+  nesse ponto (só `ScoreProductAsync`, scoring pré-existente). `CategoryDetectorTests.cs` com 33
+  `InlineData` + 6 métodos cobrindo as 9 categorias.
+- **Fallback IA (CA 3.1-3.4)**: código confirma ordem/guardas (`Category=="Geral"`,
+  `Status==Queued` via query do topo, antes de `EnsureSlug`); `ProductScore` sem campos de
+  categoria.
+- **Infra — nota não-bloqueante**: Docker Desktop crashou durante a etapa de limpeza final
+  (`docker compose down -v`), erro `dockerInference: The file cannot be accessed by the system` —
+  mesmo problema de reparse-points órfãos já diagnosticado em
+  `.claude/melhorias/2026-07-30-devops-docker-desktop-reparse-points-orphaned.md` (requer reboot
+  completo do host; fora da alçada do QA). **Ocorreu DEPOIS de toda a validação funcional/
+  integrada/visual já concluída com sucesso** — não afeta o veredito. `.env` e
+  `docker-compose.override.yml` locais removidos manualmente (não dependem do daemon); limpeza
+  completa de containers via `docker compose down -v` fica pendente até o próximo restart do
+  Docker Desktop (não requer ação de código, não bloqueia o merge).
+- `repo_path` deixado em `desenv` ao final (não `homolog`), sem nenhum commit criado pelo QA.
+
 ## Próximos passos
 1. ~~LT faz o merge de #168 (PR #172) em `desenv`.~~ **Concluído.**
 2. ~~Dev de #170 (backend-api-filtros).~~ **Concluído.**
@@ -343,7 +405,9 @@ nenhum bloqueante (2 notas não-bloqueantes: slider de preço sem clamp min/max,
    (#170+#171 no mesmo deploy).**
 8. ~~Sessão principal roda `/code-review` no PR #176 + spawna o agente Code Review.~~
    **Concluído — aprovado, merge desenv->homolog (commit `9cd7154`).**
-9. Sessão principal spawna QA.
+9. ~~Sessão principal spawna QA.~~ **Concluído — QA aprovado (27/27 critérios), ver
+   `relatorio-qa.md`.**
+10. Líder Técnico cria o PR `homolog→main` (merge commit, NUNCA squash) → **GATE 2: Gerente**.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -366,9 +430,10 @@ nenhum bloqueante (2 notas não-bloqueantes: slider de preço sem clamp min/max,
 
 | 16 | Code Review (validação ao vivo PR #176: build+boot+testes+Docker+Playwright, merge desenv->homolog) | Code Review | Sonnet | 128280 | 75 | 963s |
 
-**Total acumulado:** 1.834.511 tokens · ~160 min proc.
+| 17 | QA (validação independente homolog: 27/27 criterios, Gate Visual, Docker real, orcamento IA) | QA | Sonnet | 205463 | 124 | 2126s |
+
+**Total acumulado:** 2.039.974 tokens · ~195 min proc.
 
 ---
-_Mantido pela sessão principal. Última atualização: 2026-08-14 (recuperação de conteúdo perdido —
-o LT sobrescreveu o arquivo inteiro na invocação de merge de #170; reconstruído a partir do commit
-`1cc3003` + a atualização real feita pelo LT)._
+_Mantido pela sessão principal. Última atualização: 2026-08-14 (QA aprovado — 27/27 critérios,
+ver `relatorio-qa.md`; seção anterior preservada integralmente)._
