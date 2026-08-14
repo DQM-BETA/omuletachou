@@ -175,6 +175,24 @@ Nota de sincronismo: o `estado.md` encontrado em `homolog` no momento da checage
 - `estado.md`: `desenv_tasks_merged` esvaziado (remove #156, que volta a ficar pendente até novo merge); `sub_issues` atualizado para refletir a reabertura; `etapa_atual` aponta para Dev.
 - Próxima branch esperada do Dev: `feature/ISSUE-156-header-deal-detail` a partir de `desenv` atualizada (já inclui o merge do PR #157/#158).
 
+## Dev (nodejs) — Fix pós-QA (#156, Header ausente em deal-detail) — concluído
+
+Worktree `.worktrees/feature-ISSUE-156-header-deal-detail`, branch `feature/ISSUE-156-header-deal-detail` (base `desenv`, já inclui merge dos PRs #157/#158).
+
+- **TDD (RED→GREEN)**: adicionado teste de regressão em `website/app/oferta/[slug]/page.test.tsx` (`CA-1/CA-8 (regressão #156): renderiza o <Header /> exatamente 1x`) — confirmado RED (0 ocorrências de `.site-header`) antes do fix.
+- **Fix**: `website/app/oferta/[slug]/page.tsx` — adicionado `import Header from '@/components/Header'` e `<Header />` dentro de `<main>`, antes do script JSON-LD/`<DealDetail />`, seguindo exatamente o padrão de `app/categoria/[categoria]/page.tsx`. Nenhuma mudança de CSS/dados/rotas/API.
+- **Gate obrigatório (busca de testes que referenciam o módulo)**: `Grep` por `Header`/`OfertaPage`/`DealDetail` em `*.test.*` — apenas `page.test.tsx` (atualizado) e `Header.test.tsx` (sem relação com esta página); nenhum teste com assertiva contradizendo o fix.
+
+### Validação executada
+
+- `npm test`: **80/80 passando** (79 pré-existentes + 1 novo), sem regressão.
+- `npm run build`: sem erros de TypeScript.
+- `SCREENSHOTS_DIR=documentacoes/ISSUE-154-site-sem-css/screenshots npm run test:visual` (contra stack Docker real, `STAGING_URL=http://localhost:3000`): **3/3 passando**. PNGs sobrescritos e **inspecionados visualmente**: `deal-detail.png` agora mostra o header (`O Mulet Achou` + chips de plataforma) exatamente 1x no topo, sem duplicação; `home.png`/`categoria.png` sem regressão (header 1x, mesmo layout de antes).
+- Stack Docker real (`docker compose up -d --build db api website`, `.env`/`docker-compose.override.yml` locais descartáveis no worktree — não commitados) com 1 produto seedado via SQL direto (`status=Published`). `curl http://localhost:3000/oferta/{slug} | grep -c site-header` → **1** (era 0 antes do fix, confirmado por reprodução do comando do QA).
+- Ambiente Docker removido ao final (`docker compose down -v` + `docker rmi` das imagens locais buildadas), `.env`/`docker-compose.override.yml` apagados — sem resíduo (`git status --short` limpo no worktree).
+
+PR aberto: **#160** (`feature/ISSUE-156-header-deal-detail` → `desenv`), aguardando merge do Líder Técnico. Worktree removido (`git worktree remove`). `repo_path` deixado checked out em `desenv`.
+
 ## Ledger de Custo
 
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -194,6 +212,7 @@ Nota de sincronismo: o `estado.md` encontrado em `homolog` no momento da checage
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|-------|--------|--------|--------|-------|-----------|
 | 10 | LT — mapeamento da falha, reabertura #156 | Líder Técnico | Sonnet | 64083 | 15 | 190s |
+| 11 | Dev — fix Header ausente em deal-detail, PR #160 | Dev Node.js | Sonnet | 82317 | 58 | 473s |
 
 ---
 
