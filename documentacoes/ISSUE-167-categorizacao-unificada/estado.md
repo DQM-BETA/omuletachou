@@ -15,7 +15,7 @@ docs_path: repos/omuletachou/documentacoes/ISSUE-167-categorizacao-unificada
 openspec_path: repos/omuletachou/openspec/changes/issue-167-categorizacao-unificada
 sub_issues:
   - "#168 (backend-schema-collectors, stack:dotnet, task_id:Sub-A) — CONCLUÍDA, merged em desenv"
-  - "#169 (backend-ia-orcamento, stack:dotnet, task_id:Sub-B) — desbloqueada (#168 já em desenv)"
+  - "#169 (backend-ia-orcamento, stack:dotnet, task_id:Sub-B) — Dev concluído, PR #174 aberto, aguardando merge do LT"
   - "#170 (backend-api-filtros, stack:dotnet, task_id:Sub-C) — desbloqueada (#168 já em desenv); paralelo a #169"
   - "#171 (frontend-filtros, stack:nodejs, task_id:Sub-D) — depende de #170 para contrato final; UX/UI concluído, spec disponível; pode iniciar api.ts/types.ts/Header.tsx em paralelo"
 desenv_tasks_merged: ["#168"]
@@ -156,13 +156,59 @@ pré-existentes + 15 novos casos desta sub-issue). Escopo:
   correta, ausência de `platform` confirmada em 100% do JSON). Ambiente removido ao final
   (`docker compose down -v` + imagem + `.env`/override locais apagados).
 
+## Dev #169 — backend-ia-orcamento (CONCLUÍDO — aguardando merge do LT)
+Branch `feature/ISSUE-169-ia-orcamento` (worktree, base `desenv` já com #168) → PR #174 para
+`desenv` (NÃO mergeado por este Dev). `dotnet test`: 402/402 passando, sem regressão (383
+pré-existentes de #168 + 19 novos casos desta sub-issue: 6 em `ClaudeAiServiceTests`
+`ClassifyCategoryAsync`, 8 unitários + 3 de integração real em `ClaudeBudgetServiceTests`/
+`ClaudeBudgetServiceIntegrationTests`, 5 em `ProcessorJobTests`). Escopo:
+- `IAnthropicClientWrapper.CompleteAsync`: passou de `Task<string>` para
+  `Task<ClaudeCompletionResult>` (`Text`/`InputTokens`/`OutputTokens`, usando
+  `MessageResponse.Usage` real do Anthropic.SDK, sem estimativa manual).
+  `ClaudeAiService.ScoreProductAsync`/`GenerateCaptionAsync` só trocaram `response` por
+  `response.Text` (CA 3.4 — nenhuma lógica de orçamento nova nesses dois métodos).
+- `IClaudeBudgetService`/`ClaudeBudgetService` (novo, Infrastructure):
+  `IsCategorizationBudgetAvailableAsync` (leitura simples, reset lazy mensal — CA 4.5) +
+  `RecordUsageAsync` (só debita após sucesso — CA 4.2). Escrita real (Postgres/Npgsql) via
+  `UPDATE app_settings SET value = CASE ... END` atômico (`ExecuteSqlInterpolatedAsync`, fora
+  do change tracker do EF — design.md §3.5); caminho de fallback não-atômico só para o provider
+  InMemory dos testes unitários (nunca exercitado em produção). Chaves confirmadas na migration
+  já mergeada por #168: `claude.monthly_usage`, `claude.monthly_budget_limit_brl` (default 30),
+  `claude.price_input_usd_per_mtok`/`claude.price_output_usd_per_mtok`/`claude.usd_brl_rate`
+  (defaults 1/5/5.5, "soft guard" — Gerente/DevOps confirma valores reais antes do deploy).
+- `IAiService.ClassifyCategoryAsync` (novo) + `ClaudeAiService.ClassifyCategoryAsync`: checa
+  orçamento primeiro (CA 4.3 — sem chamar a API se estourado), monta prompt reaproveitando
+  `CategoryDetector.Categorias` (nova propriedade pública exposta em Domain, evita duplicar a
+  taxonomia), parseia `{category, subcategory}` da resposta, debita orçamento só em sucesso.
+  Erro/timeout/resposta não-parseável → `null`, sem debitar (CA 4.2).
+- `ProcessorJob.EnsureCategoryFallbackAsync` (novo): só chama `ClassifyCategoryAsync` quando
+  `Category == "Geral"` (CA 3.3); `Status == Queued` já garantido pela query do topo (CA 3.2).
+  Reordenado para rodar **antes** de `EnsureSlug` (CA 3.1). Logging adicionado (`ILogger` já
+  injetado no job) para observabilidade do fallback disparando/resultado.
+- `Program.cs`: registra `IClaudeBudgetService` e passa para `ClaudeAiService` via DI.
+- Testes de integração real (Testcontainers.PostgreSql, novo pacote em `AfiliadoBot.Tests`):
+  `ClaudeBudgetServiceIntegrationTests` sobe Postgres real, roda as migrations reais do projeto e
+  valida (a) 20 chamadas concorrentes de `RecordUsageAsync` somam exatamente o esperado (prova
+  que o `UPDATE...CASE` é atômico, sem lost-update), (b) reset lazy contra Postgres real, (c)
+  `IsCategorizationBudgetAvailableAsync` retorna `false` após ultrapassar o limite.
+- Validação Docker (`docker compose up db api`, sem website/dashboard — fora do escopo desta
+  sub-issue): app sobe sem exceção (DI do novo `IClaudeBudgetService`/`ClaudeAiService`
+  resolvida OK); produto `Queued`/`Geral` inserido via SQL + processor disparado via
+  `/api/jobs/processor/trigger` (login via usuário seedado) → log confirma
+  "acionando fallback de categorização via IA" e "fallback não classificou ... permanece Geral"
+  (esperado — sem `Claude:ApiKey` real neste ambiente, a chamada HTTP falha e é capturada,
+  mesma postura de erro do scoring/legenda); `claude.monthly_usage` permaneceu em 0 (confirma
+  que só chamada bem-sucedida debita). Segundo cenário: `claude.monthly_usage` sobrescrito via
+  SQL para acima do limite (999 > 30) + novo produto `Queued`/`Geral` → mesmo resultado
+  (permanece "Geral"), confirmando o caminho de orçamento estourado (CA 4.3). Ambiente removido
+  ao final (`docker compose down -v` + imagem + `.env` local apagados).
+
 ## Próximos passos
 1. ~~LT faz o merge de #168 (PR #172) em `desenv`.~~ **Concluído.**
 2. ~~Dev de #170 (backend-api-filtros).~~ **Concluído — PR #173 aberto, aguardando merge do LT.**
-3. Dev de #169 (backend-ia-orcamento) **em andamento em paralelo** (branch
-   `feature/ISSUE-169-ia-orcamento` já existe como worktree).
-4. LT faz o merge de #170 (PR #173) em `desenv` (uma invocação por merge, sequencial — não
-   simultâneo ao merge de #169 se ambos chegarem prontos ao mesmo tempo).
+3. ~~Dev de #169 (backend-ia-orcamento).~~ **Concluído — PR aberto, aguardando merge do LT.**
+4. LT faz o merge de #169 e #170 em `desenv` (uma invocação por merge, sequencial — nunca
+   simultâneo).
 5. Após #170 mergeada: Dev de #171 integra o `FilterBar` ao contrato final da API.
 6. Quando as 4 sub-issues estiverem em `desenv_tasks_merged`, LT cria o PR `desenv→homolog`.
 
@@ -179,6 +225,7 @@ pré-existentes + 15 novos casos desta sub-issue). Escopo:
 | 8 | Dev #168 (backend-schema-collectors, migration + CategoryDetector + 3 collectors) | Dev .NET | Sonnet | 234329 | 134 | 1326s |
 | 9 | Líder Técnico (merge PR #172 → desenv, fechamento #168) | Líder Técnico | Sonnet | 57329 | 17 | 138s |
 | 10 | Dev #170 (backend-api-filtros, GetDeals+categories, remove Platform/GetByCategory) | Dev .NET | Sonnet | 153125 | 77 | 790s |
+| 11 | Dev #169 (backend-ia-orcamento, ClaudeBudgetService + fallback IA + tokens reais) | Dev .NET | Sonnet | 234090 | 125 | 1158s |
 
-**Total acumulado:** 993.949 tokens · ~76 min proc.
+**Total acumulado:** 1.228.039 tokens · ~95 min proc.
 
