@@ -1,9 +1,9 @@
 ---
 issue: 163
 titulo: "chore: Substituir placeholder-deal.png (1x1px) por placeholder visual real"
-etapa_atual: "Aguardando Aprovação — Gate 2 (PR #166 homolog→main criado)"
+etapa_atual: "Concluído"
 rota: rapido
-ultimo_agente: lt
+ultimo_agente: coordenador
 openspec_change: ~
 tech_stacks:
   - nodejs
@@ -16,12 +16,14 @@ sub_issues: []
 desenv_tasks_merged: []
 sub_issues_frontend: {}
 pr_homologacao: "165 (desenv -> homolog, merge commit af6810f, MERGEADO)"
-pr_release: "166 (homolog -> main, aguardando Gate 2)"
+pr_release: "166 (homolog -> main, MERGEADO)"
 code_review_homolog_pr: 165
 qa_status: aprovado
 figma_url: ~
 blockers: nenhum
-createdAt: "2026-08-14"
+createdAt: "2026-08-14T17:10:31Z"
+closedAt: "2026-08-14T18:25:01Z"
+merge_commit: "bfdf1a6720c2d23dd861bfa6aedb1ef2d40f0a07"
 status_comment_id: ~
 ---
 
@@ -113,19 +115,24 @@ Validação em `homolog` (commit `af6810fcaa89279b041173d6b848ef159bb35627`, con
 
 ## Release (Líder Técnico)
 - `git fetch && git checkout homolog && git pull origin homolog`: HEAD confirmado em `af6810fcaa89279b041173d6b848ef159bb35627` (merge commit do PR #165), working tree limpo (exceto `docker-compose.override.yml`, pré-existente, não relacionado).
-- PR de release criado: https://github.com/DQM-BETA/omuletachou/pull/166 (`homolog` → `main`), descrevendo escopo, pipeline (Dev #164, Code Review/QA #165) e os 5 critérios de aceite aprovados. **Não mergeado** — aguardando Gate 2 (Gerente).
+- PR de release criado: https://github.com/DQM-BETA/omuletachou/pull/166 (`homolog` → `main`), descrevendo escopo, pipeline (Dev #164, Code Review/QA #165) e os 5 critérios de aceite aprovados. **Mergeado** — Gate 2 (Gerente) aprovado.
 - `repo_path` checked out de volta em `desenv`, atualizado (`git pull origin desenv`).
 
 ## Próximos passos
-- **Gate 2 (Gerente)**: aprovar merge do PR #166 (`homolog` → `main`, merge commit — nunca squash).
-- Após aprovação: Coordenador executa `gh pr merge 166 --merge` e fecha a Issue #163. Card permanece em "Em Desenvolvimento" até o Gerente arrastar manualmente para "Concluído".
+- ✅ Concluído. Card permanece em "Em Desenvolvimento" até o Gerente arrastar manualmente para "Concluído".
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo(s) |
 |---|---|---|---|---|---|---|
-| 1 | Preparação (Issue + estado.md) | Coordenador | Haiku | 18991 | 6 | 45s |
-| 2 | Dev (SVG placeholder, PR #164) | Dev Node.js | Sonnet | 79709 | 64 | 1221s |
-| 3 | LT — merge PR #164 + PR homologação #165 | Líder Técnico | Sonnet | 32843 | 9 | 50s |
-| 4 | Code Review — validação PR #165 (build/boot/testes/visual, merge desenv→homolog) | Code Review | Sonnet | 84148 | 53 | 580s |
-| 5 | QA — validação homolog (build/testes/E2E/visual, 5 critérios) | QA | Sonnet | 71605 | 52 | 484s |
-| 6 | LT — PR release #166 (homolog→main) | Líder Técnico | Sonnet | 42416 | 7 | 89s |
+| 1 | Preparação (Issue + estado.md) | Coordenador | Haiku | 18991 | 6 | 45 |
+| 2 | Dev (SVG placeholder, PR #164) | Dev Node.js | Sonnet | 79709 | 64 | 1221 |
+| 3 | LT — merge PR #164 + PR homologação #165 | Líder Técnico | Sonnet | 32843 | 9 | 50 |
+| 4 | Code Review — validação PR #165 (build/boot/testes/visual, merge desenv→homolog) | Code Review | Sonnet | 84148 | 53 | 580 |
+| 5 | QA — validação homolog (build/testes/E2E/visual, 5 critérios) | QA | Sonnet | 71605 | 52 | 484 |
+| 6 | LT — PR release #166 (homolog→main) | Líder Técnico | Sonnet | 42416 | 7 | 89 |
+| 7 | Gate 2 (merge final + consolidação custo) | Coordenador | Haiku | 55000 | 9 | 60 |
+| | **Total acumulado** | | | **384712** | | **2529s (42m 9s)** |
+
+**Tempo decorrido (createdAt → closedAt):** 74m 30s.
+
+**Nota:** Não inclui overhead do orquestrador. `subagent_tokens` agregado — consumo real, sem split in/out.
