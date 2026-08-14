@@ -1,8 +1,8 @@
 ---
 issue: 167
 titulo: feat: Categorização unificada de produtos + remoção de distinção de plataforma no site
-etapa_atual: Em Desenvolvimento — UX/UI (Sub-D) concluído, aguardando Dev(s) backend/frontend
-ultimo_agente: ux-ui
+etapa_atual: Em Desenvolvimento — #168 mergeada em desenv; aguardando Dev #169 e Dev #170 em paralelo
+ultimo_agente: lt
 rota: normal
 openspec_change: repos/omuletachou/openspec/changes/issue-167-categorizacao-unificada
 tech_stacks:
@@ -14,12 +14,12 @@ repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-167-categorizacao-unificada
 openspec_path: repos/omuletachou/openspec/changes/issue-167-categorizacao-unificada
 sub_issues:
-  - "#168 (backend-schema-collectors, stack:dotnet, task_id:Sub-A) — bloqueante, sem dependências, pode iniciar já"
-  - "#169 (backend-ia-orcamento, stack:dotnet, task_id:Sub-B) — depende de #168 mergeada em desenv"
-  - "#170 (backend-api-filtros, stack:dotnet, task_id:Sub-C) — depende de #168 mergeada em desenv; paralelo a #169"
+  - "#168 (backend-schema-collectors, stack:dotnet, task_id:Sub-A) — CONCLUÍDA, merged em desenv"
+  - "#169 (backend-ia-orcamento, stack:dotnet, task_id:Sub-B) — desbloqueada (#168 já em desenv)"
+  - "#170 (backend-api-filtros, stack:dotnet, task_id:Sub-C) — desbloqueada (#168 já em desenv); paralelo a #169"
   - "#171 (frontend-filtros, stack:nodejs, task_id:Sub-D) — depende de #170 para contrato final; UX/UI concluído, spec disponível; pode iniciar api.ts/types.ts/Header.tsx em paralelo"
-desenv_tasks_merged: []
-sub_issue_168_pr: "#172 (feature/ISSUE-168-schema-collectors -> desenv, aberto, aguardando merge do LT)"
+desenv_tasks_merged: ["#168"]
+sub_issue_168_pr: "#172 (feature/ISSUE-168-schema-collectors -> desenv, MERGED squash, commit fc083f3; branch remota deletada; sub-issue #168 fechada)"
 sub_issues_frontend: {}
 pr_homologacao: ~
 pr_release: ~
@@ -97,14 +97,21 @@ Work Sans, grid 8pt, raios, sombras), sem paleta nova. Decisões principais:
 - `openspec/changes/issue-167-categorizacao-unificada/tasks.md` — task breakdown final com as 4
   sub-tarefas (critérios de aceite + contexto técnico + ordem de dependência), referenciado pelas 4
   sub-issues.
-- `documentacoes/ISSUE-167-categorizacao-unificada/ux-ui-spec-filterbar.md` — **novo (esta
-  invocação)**: spec visual completa do `FilterBar` (layout desktop/mobile, classes BEM, tokens,
-  estados, heurísticas de Nielsen, fluxo de navegação).
+- `documentacoes/ISSUE-167-categorizacao-unificada/ux-ui-spec-filterbar.md` — spec visual completa
+  do `FilterBar` (layout desktop/mobile, classes BEM, tokens, estados, heurísticas de Nielsen,
+  fluxo de navegação).
 
-## Dev #168 — backend-schema-collectors (concluído, PR #172 aberto)
-Branch `feature/ISSUE-168-schema-collectors` (worktree, já removido) → PR #172 para `desenv`
-(NÃO mergeado — aguarda LT). `dotnet test`: 383/383 passando. Stack Docker validada (build+boot
+## Dev #168 — backend-schema-collectors (CONCLUÍDO — merged em desenv)
+Branch `feature/ISSUE-168-schema-collectors` → PR #172 para `desenv`, **squash merge nesta
+invocação do LT** (commit `fc083f3`), branch remota e local deletadas, sub-issue #168 fechada
+com comentário de resumo. `dotnet test`: 383/383 passando. Stack Docker validada (build+boot
 limpo, migration aplicada contra Postgres real, ambiente removido ao final).
+
+**Revisão do LT no merge**: diff do PR #172 conferido (migration + `CategoryDetector` em `Domain`
++ `Product.SetCategory` estendido + integração nos 3 collectors — escopo bate com o descrito).
+Dupla checagem dos Ids de `app_settings`: `SeedFacebookCredentials` (última migration de seed
+anterior) usa Ids 49-50; a migration desta sub-issue usa 51-55 (confirmado no `.cs`, `.Designer.cs`
+e `ModelSnapshot.cs`) — sem colisão.
 
 **Achado de infra durante a implementação** (não bloqueante, contornado nesta sub-issue, mas vale
 registrar em `.claude/melhorias/` para próximas issues que semeiam `app_settings`): os Ids 41-50
@@ -130,8 +137,9 @@ fallback `DefaultCategoryId = "22"`. Comportamento gracioso (sem erro), não cob
 desta issue; mencionar ao LT/PM se a granularidade do vídeo do YouTube importar no futuro.
 
 ## Próximos passos
-1. LT faz o merge de #168 (PR #172) em `desenv`.
-2. Após #168 mergeada em `desenv`: Dev(s) de #169 e #170 em paralelo.
+1. ~~LT faz o merge de #168 (PR #172) em `desenv`.~~ **Concluído.**
+2. Dev de #169 (backend-ia-orcamento) e Dev de #170 (backend-api-filtros) **em paralelo agora**
+   (ambos desbloqueados — base #168 já em `desenv`).
 3. Após #170 mergeada: Dev de #171 integra o `FilterBar` ao contrato final da API.
 4. LT faz o merge de cada sub-issue conforme os Devs concluem (uma invocação por merge, sequencial).
    Quando as 4 estiverem em `desenv_tasks_merged`, LT cria o PR `desenv→homolog`.
@@ -147,5 +155,7 @@ desta issue; mencionar ao LT/PM se a granularidade do vídeo do YouTube importar
 | 6 | Líder Técnico (task breakdown + 4 sub-issues, retomada rota normal) | Líder Técnico | Sonnet | 80395 | 23 | 220s |
 | 7 | UX/UI (spec visual FilterBar, Sub-D) | UX/UI | Sonnet | 96003 | 10 | 279s |
 | 8 | Dev #168 (backend-schema-collectors, migration + CategoryDetector + 3 collectors) | Dev .NET | Sonnet | 234329 | 134 | 1326s |
+| 9 | Líder Técnico (merge PR #172 → desenv, fechamento #168) | Líder Técnico | Sonnet | 57329 | 17 | 138s |
 
-**Total acumulado:** 783.495 tokens · ~61 min proc.
+**Total acumulado:** 840.824 tokens · ~63 min proc.
+
