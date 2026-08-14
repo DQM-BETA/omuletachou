@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import './globals.css';
 import PushSubscriptionManager from '@/components/PushSubscriptionManager';
 
 export const metadata: Metadata = {
