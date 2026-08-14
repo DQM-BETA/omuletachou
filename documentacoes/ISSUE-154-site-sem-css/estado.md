@@ -1,8 +1,8 @@
 ---
 issue: 154
 titulo: "bug: Site público (website) sem nenhum estilo CSS implementado — apenas HTML puro"
-etapa_atual: "QA reprovou (homolog, commit 6e65564) — header ausente em /oferta/{slug}, ver relatorio-qa.md — aguardando Líder Técnico mapear falha e acionar Dev"
-ultimo_agente: qa
+etapa_atual: "Correção pós-QA — sub-issue #156 reaberta (fix: <Header /> ausente em /oferta/[slug], CA-1/CA-8) — aguardando Dev"
+ultimo_agente: lt
 rota: normal
 openspec_change: repos/omuletachou/openspec/changes/issue-154-site-sem-css
 tech_stacks: [nodejs]
@@ -12,9 +12,9 @@ repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-154-site-sem-css
 openspec_path: repos/omuletachou/openspec/changes/issue-154-site-sem-css
 status_comment_id: "5293952020"
-sub_issues: ["#156 (stack:nodejs, task_id:T-01) — merged via PR #157"]
-desenv_tasks_merged: ["#156"]
-pr_feature: "#157 (fix/156-css-website -> desenv, squash merged)"
+sub_issues: ["#156 (stack:nodejs, task_id:T-01) — reaberta: fix header ausente em deal-detail (QA reprovou PR #158)"]
+desenv_tasks_merged: []
+pr_feature: "#157 (fix/156-css-website -> desenv, squash merged) — histórico; nova PR será aberta pelo Dev para o fix"
 sub_issues_frontend: {}
 pr_homologacao: "#158 (desenv -> homolog, merge commit 6e65564d8e4172c5d437af2bb99e00245ee26424)"
 pr_release: ~
@@ -76,8 +76,10 @@ Não há ambiguidade arquitetural real: não é decisão de arquitetura de siste
 5. UX/UI: spec visual a partir do design system do Figma — **feito**
 6. Dev: implementação (CSS + `test:visual`) na sub-issue #156 — **feito**
 7. Líder Técnico: merge PR #157 → desenv + PR homologação #158 (desenv→homolog) — **feito**
-8. Code Review + QA: validação visual (novo checkpoint — Gate Visual passa a funcionar de fato) — **Code Review feito (aprovado, merge #158), próximo: QA**
-9. Gate 2 (Gerente) → merge main
+8. Code Review + QA: validação visual (novo checkpoint — Gate Visual passa a funcionar de fato) — **feito, QA reprovou (header ausente em deal-detail)**
+9. Líder Técnico: mapear falha do QA → reabrir sub-issue #156 — **feito**
+10. Dev: fix pontual (`<Header />` em `app/oferta/[slug]/page.tsx`) — **pendente**
+11. Líder Técnico: novo ciclo merge → Code Review → QA → Gate 2 (Gerente) → merge main
 
 ## UX/UI — Spec visual — concluído
 
@@ -165,6 +167,14 @@ Nota de sincronismo: o `estado.md` encontrado em `homolog` no momento da checage
 
 **Encaminhamento**: issue funcional (não inconsistência de negócio) — Líder Técnico mapeia a falha (fix pequeno: importar/renderizar `<Header />` em `app/oferta/[slug]/page.tsx`, reaproveitando componente e CSS já estilizados nesta mesma issue) e aciona Dev.
 
+## Líder Técnico — Mapeamento de falha do QA — concluído
+
+- Causa raiz confirmada por leitura direta do código: `website/app/oferta/[slug]/page.tsx` não importa nem renderiza `<Header />`; comparado com `website/app/page.tsx` (`import Header from '@/components/Header'` + `<Header activePlatform={platform} />`) e `website/app/categoria/[categoria]/page.tsx` (`import Header ...` + `<Header />`), ambos corretos. O escopo original de #156 (item 1 do corpo da sub-issue) já listava `app/oferta/[slug]/page.tsx` entre as 3 páginas a cobrir — a renderização do Header nessa página ficou de fora na implementação, não é escopo novo.
+- **Decisão de escopo**: reabri a sub-issue **#156** (`gh issue reopen 156`) em vez de criar sub-issue nova — mesmo componente/CSS já prontos, fix de 1 arquivo (import + `<Header />`), mesmo task_id T-01. Comentário de detalhamento postado em #156 (causa raiz, fix sugerido, critérios de aceite para a reabertura, contexto técnico/branch).
+- Comentário de resumo postado na Issue #154 mapeando a falha para o Dev.
+- `estado.md`: `desenv_tasks_merged` esvaziado (remove #156, que volta a ficar pendente até novo merge); `sub_issues` atualizado para refletir a reabertura; `etapa_atual` aponta para Dev.
+- Próxima branch esperada do Dev: `feature/ISSUE-156-header-deal-detail` a partir de `desenv` atualizada (já inclui o merge do PR #157/#158).
+
 ## Ledger de Custo
 
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -178,6 +188,12 @@ Nota de sincronismo: o `estado.md` encontrado em `homolog` no momento da checage
 | 7 | Merge PR #157 + PR homologação #158 + issue técnica #159 | Líder Técnico | Sonnet | 53241 | 18 | 141s |
 | 8 | Code Review — validação PR #158 (build/boot/testes/visual, merge desenv→homolog) | Code Review | Sonnet | 93406 | 56 | 546s |
 | 9 | QA (homolog) — reprovado, header ausente em deal-detail | QA | Sonnet | 132122 | 87 | 783s |
+
+--- Correção pós-QA (2026-08-14) — header ausente em /oferta/[slug] ---
+
+| # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
+|---|-------|--------|--------|--------|-------|-----------|
+| 10 | LT — mapeamento da falha, reabertura #156 | Líder Técnico | Sonnet | 64083 | 15 | 190s |
 
 ---
 
