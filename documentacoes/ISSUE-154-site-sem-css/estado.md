@@ -1,8 +1,8 @@
 ---
 issue: 154
 titulo: "bug: Site público (website) sem nenhum estilo CSS implementado — apenas HTML puro"
-etapa_atual: "Aguardando Aprovação — Gate 2 (PR release #162 homolog->main criado)"
-ultimo_agente: qa
+etapa_atual: "Concluído"
+ultimo_agente: coordenador
 rota: normal
 openspec_change: repos/omuletachou/openspec/changes/issue-154-site-sem-css
 tech_stacks: [nodejs]
@@ -17,12 +17,14 @@ desenv_tasks_merged: ["#156"]
 pr_feature: "#160 (feature/ISSUE-156-header-deal-detail -> desenv, squash merged, delete-branch) — fix pontual do achado de QA (PR #157 é histórico do ciclo anterior)"
 sub_issues_frontend: {}
 pr_homologacao: "#161 (desenv -> homolog, merge commit, MERGEADO) — cobriu o fix de #156 (PR #160); PR anterior #158 já mesclado/fechado em ciclo anterior"
-pr_release: "#162 (homolog -> main, merge commit, NÃO mesclado — aguardando Gate 2 do Gerente)"
+pr_release: "#162 (homolog -> main, merge commit, MERGEADO) — Gerente aprovou, merge executado com sucesso"
 code_review_homolog_pr: 161
 qa_status: aprovado
 figma_url: https://www.figma.com/design/yi6YkNAy9HfHus2oiPi3G7/Diego-Mulet-s-team-library
 blockers: nenhum
-createdAt: "2026-08-14T00:00:00Z"
+createdAt: "2026-08-14T13:38:17Z"
+closedAt: "2026-08-14T22:30:00Z"
+merge_commit: "feade5c8cfb4b83390914d3a50a8c43dcce396be"
 ---
 
 ## Resumo
@@ -82,7 +84,7 @@ Não há ambiguidade arquitetural real: não é decisão de arquitetura de siste
 11. Líder Técnico: merge PR #160 → desenv + novo PR de homologação #161 (desenv→homolog) — **feito**
 12. Sessão principal: `/code-review` + Code Review — **feito, aprovado (PR #161 merge desenv→homolog concluído)**
 13. QA (rodada 2, pós-fix) — **feito, aprovado**
-14. Líder Técnico: PR homolog→main → Gate 2 (Gerente) → merge main — **próximo**
+14. Líder Técnico: PR homolog→main → Gate 2 (Gerente) → merge main — **feito**
 
 ## UX/UI — Spec visual — concluído
 
@@ -288,27 +290,34 @@ Branch sincronizada: `git fetch origin && git checkout homolog && git pull origi
 
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|-------|--------|--------|--------|-------|-----------|
-| 1 | Preparação (Issue + estado.md) | Coordenador | Haiku | 25202 | 14 | 101s |
-| 2 | PM Fase 1 (levantamento, Gate 1) | PM | Sonnet | 27274 | 8 | 65s |
-| 3 | PM Fase 2 (PRD + critérios de aceite) | PM | Sonnet | 50220 | 19 | 197s |
-| 4 | Refinamento Técnico (especificacao-tecnica.md + sub-issue #156) | Líder Técnico | Sonnet | 85826 | 39 | 430s |
-| 5 | UX/UI (spec visual, tokens Figma) | UX/UI | Sonnet | 89850 | 9 | 330s |
-| 6 | Dev (CSS + test:visual, sub-issue #156, PR #157) | Dev Node.js | Sonnet | 150219 | 112 | 962s |
-| 7 | Merge PR #157 + PR homologação #158 + issue técnica #159 | Líder Técnico | Sonnet | 53241 | 18 | 141s |
-| 8 | Code Review — validação PR #158 (build/boot/testes/visual, merge desenv→homolog) | Code Review | Sonnet | 93406 | 56 | 546s |
-| 9 | QA (homolog) — reprovado, header ausente em deal-detail | QA | Sonnet | 132122 | 87 | 783s |
+| 1 | Preparação (Issue + estado.md) | Coordenador | Haiku | 25202 | 14 | 101 |
+| 2 | PM Fase 1 (levantamento, Gate 1) | PM | Sonnet | 27274 | 8 | 65 |
+| 3 | PM Fase 2 (PRD + critérios de aceite) | PM | Sonnet | 50220 | 19 | 197 |
+| 4 | Refinamento Técnico (especificacao-tecnica.md + sub-issue #156) | Líder Técnico | Sonnet | 85826 | 39 | 430 |
+| 5 | UX/UI (spec visual, tokens Figma) | UX/UI | Sonnet | 89850 | 9 | 330 |
+| 6 | Dev (CSS + test:visual, sub-issue #156, PR #157) | Dev Node.js | Sonnet | 150219 | 112 | 962 |
+| 7 | Merge PR #157 + PR homologação #158 + issue técnica #159 | Líder Técnico | Sonnet | 53241 | 18 | 141 |
+| 8 | Code Review — validação PR #158 (build/boot/testes/visual, merge desenv→homolog) | Code Review | Sonnet | 93406 | 56 | 546 |
+| 9 | QA (homolog) — reprovado, header ausente em deal-detail | QA | Sonnet | 132122 | 87 | 783 |
 
 --- Correção pós-QA (2026-08-14) — header ausente em /oferta/[slug] ---
 
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|-------|--------|--------|--------|-------|-----------|
-| 10 | LT — mapeamento da falha, reabertura #156 | Líder Técnico | Sonnet | 64083 | 15 | 190s |
-| 11 | Dev — fix Header ausente em deal-detail, PR #160 | Dev Node.js | Sonnet | 82317 | 58 | 473s |
-| 12 | LT — merge PR #160 + novo PR homologação #161 | Líder Técnico | Sonnet | 59026 | 11 | 170s |
-| 13 | Code Review — validação final PR #161 (build/boot/testes/visual, merge desenv→homolog) | Code Review | Sonnet | 106308 | 52 | 492s |
-| 14 | QA (homolog, rodada 2, pós-fix) — aprovado, 18/18 critérios | QA | Sonnet | 111515 | 39 | 483s |
-| 15 | LT — PR release homolog->main (#162) | Líder Técnico | Sonnet | 46048 | 8 | 56s |
+| 10 | LT — mapeamento da falha, reabertura #156 | Líder Técnico | Sonnet | 64083 | 15 | 190 |
+| 11 | Dev — fix Header ausente em deal-detail, PR #160 | Dev Node.js | Sonnet | 82317 | 58 | 473 |
+| 12 | LT — merge PR #160 + novo PR homologação #161 | Líder Técnico | Sonnet | 59026 | 11 | 170 |
+| 13 | Code Review — validação final PR #161 (build/boot/testes/visual, merge desenv→homolog) | Code Review | Sonnet | 106308 | 52 | 492 |
+| 14 | QA (homolog, rodada 2, pós-fix) — aprovado, 18/18 critérios | QA | Sonnet | 111515 | 39 | 483 |
+| 15 | LT — PR release homolog->main (#162) | Líder Técnico | Sonnet | 46048 | 8 | 56 |
+| 16 | Coordenador — Gate 2 (merge + consolidação custo) | Coordenador | Haiku | 6000 | 20 | 50 |
 
 ---
 
-_Mantido pela sessão principal. Última atualização: 2026-08-14._
+**Totais acumulados:**
+- Tokens: 1.184.452
+- Tools: 565
+- Tempo processamento: 5.878s (97.97 min ≈ 98 min = 1h38min)
+- Tempo decorrido (wall-clock): 8h52min (createdAt 13:38:17Z → closedAt 22:30:00Z)
+
+_Mantido pelo Coordenador. Última atualização: 2026-08-14._
