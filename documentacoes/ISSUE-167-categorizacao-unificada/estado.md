@@ -1,8 +1,8 @@
 ---
 issue: 167
 titulo: feat: Categorização unificada de produtos + remoção de distinção de plataforma no site
-etapa_atual: Em Desenvolvimento — task breakdown concluído, aguardando UX/UI (Sub-D) e Dev(s) backend (Sub-A) em paralelo
-ultimo_agente: lider-tecnico
+etapa_atual: Em Desenvolvimento — UX/UI (Sub-D) concluído, aguardando Dev(s) backend/frontend
+ultimo_agente: ux-ui
 rota: normal
 openspec_change: repos/omuletachou/openspec/changes/issue-167-categorizacao-unificada
 tech_stacks:
@@ -17,7 +17,7 @@ sub_issues:
   - "#168 (backend-schema-collectors, stack:dotnet, task_id:Sub-A) — bloqueante, sem dependências, pode iniciar já"
   - "#169 (backend-ia-orcamento, stack:dotnet, task_id:Sub-B) — depende de #168 mergeada em desenv"
   - "#170 (backend-api-filtros, stack:dotnet, task_id:Sub-C) — depende de #168 mergeada em desenv; paralelo a #169"
-  - "#171 (frontend-filtros, stack:nodejs, task_id:Sub-D) — depende de #170 para contrato final; aguardar mockup UX/UI antes do FilterBar; pode iniciar api.ts/types.ts/Header.tsx em paralelo com UX/UI"
+  - "#171 (frontend-filtros, stack:nodejs, task_id:Sub-D) — depende de #170 para contrato final; UX/UI concluído, spec disponível; pode iniciar api.ts/types.ts/Header.tsx em paralelo"
 desenv_tasks_merged: []
 sub_issues_frontend: {}
 pr_homologacao: ~
@@ -60,21 +60,53 @@ sub-issues prontas juntas (design.md §5.2 exige #170+#171 no mesmo deploy).
 (dropdowns dependentes, slider de faixa de preço, botões de desconto mínimo, seletor de ordenação).
 As sub-issues de backend (#168, #169, #170) não dependem do UX/UI — **podem começar em paralelo**.
 
+## UX/UI — FilterBar (Sub-D)
+Spec visual concluída em `documentacoes/ISSUE-167-categorizacao-unificada/ux-ui-spec-filterbar.md`.
+Reconsultado o Figma do design system (`yi6YkNAy9HfHus2oiPi3G7`) — segue vazio/padrão, sem tokens
+novos desde a Issue #154; a spec reaproveita 100% dos tokens já implementados (`--color-primary`,
+Work Sans, grid 8pt, raios, sombras), sem paleta nova. Decisões principais:
+- **Responsivo**: `<1024px` colapsa em barra-resumo (botão "Filtros" + ordenação inline) + painel
+  bottom-sheet (`filter-bar__drawer`) com os demais controles, mais um FAB de reabertura durante o
+  scroll do grid; `≥1024px` (mesmo limiar de `deals-grid`) expõe os 5 controles em uma única linha —
+  justificativa: 5 controles não cabem em scroll horizontal de chips como o `site-header` (Issue
+  #154), e ocultar tudo atrás de 1 botão no desktop desperdiçaria espaço disponível.
+- **Base técnica**: sem Radix/RNR (stack é Next.js + CSS puro, mesmo padrão já implementado na
+  Issue #154) — elementos HTML nativos e acessíveis (`button`, `input[type=range]`,
+  `ul[role=listbox]`) com classes BEM `filter-bar__*`.
+- **Estados cobertos**: dropdown default/hover/foco/aberto-fechado/disabled (subcategoria antes de
+  escolher categoria, com texto explicativo — heurística de prevenção de erros); botões de desconto
+  default/hover/active(toggle único)/pressed; slider default/hover/drag/foco; "Limpar filtros"
+  habilitado/disabled (visível mesmo sem filtro ativo); pílulas de filtro ativo removíveis
+  individualmente.
+- **Heurísticas de Nielsen**: visibilidade do status (filtro ativo sempre destacado em
+  `--color-primary`, badge de contagem), controle do usuário (limpar tudo, remover pílula
+  individual, 3 formas de fechar o drawer), prevenção de erros, reconhecimento vs. memorização.
+- **Estado vazio (CA 7.5)**: reaproveita 100% `.deals-empty` (Issue #154), só muda o texto/mensagem
+  e adiciona o CTA "Ver todas as ofertas" usando a classe já existente `.deal-card__cta` — nenhum
+  componente visual novo.
+- Nenhuma mudança de estrutura de dados/API — escopo estritamente visual, contrato de filtros já
+  fechado por `especificacao-tecnica.md`/`design.md` (LT/Arquiteto).
+
 ## Documentação produzida (definitivo, dentro do repo)
 - `openspec/changes/issue-167-categorizacao-unificada/proposal.md` — PRD.
 - `documentacoes/ISSUE-167-categorizacao-unificada/criterios-aceite.md` — 27 cenários Given/When/Then.
 - `openspec/changes/issue-167-categorizacao-unificada/design.md` — design técnico do Arquiteto.
 - `documentacoes/ISSUE-167-categorizacao-unificada/especificacao-tecnica.md` — plano técnico
   executável completo.
-- `openspec/changes/issue-167-categorizacao-unificada/tasks.md` — **novo (esta invocação)**: task
-  breakdown final com as 4 sub-tarefas (critérios de aceite + contexto técnico + ordem de
-  dependência), referenciado pelas 4 sub-issues.
+- `openspec/changes/issue-167-categorizacao-unificada/tasks.md` — task breakdown final com as 4
+  sub-tarefas (critérios de aceite + contexto técnico + ordem de dependência), referenciado pelas 4
+  sub-issues.
+- `documentacoes/ISSUE-167-categorizacao-unificada/ux-ui-spec-filterbar.md` — **novo (esta
+  invocação)**: spec visual completa do `FilterBar` (layout desktop/mobile, classes BEM, tokens,
+  estados, heurísticas de Nielsen, fluxo de navegação).
 
 ## Próximos passos
-1. Sessão principal spawna **UX/UI** (mockup do `FilterBar`, ver decisão acima) e, em paralelo, o
-   **Dev de #168** (backend-schema-collectors — sem dependências, pode começar imediatamente).
+1. Sessão principal spawna o **Dev de #168** (backend-schema-collectors — sem dependências, pode
+   começar imediatamente) e, quando pronto, o **Dev de #171** (frontend-filtros — spec de UX/UI já
+   disponível, pode iniciar `api.ts`/`types.ts`/`Header.tsx`/`FilterBar` em paralelo, contra mocks
+   se #170 ainda não estiver pronta).
 2. Após #168 mergeada em `desenv`: Dev(s) de #169 e #170 em paralelo.
-3. Após UX/UI concluído e #170 mergeada: Dev de #171.
+3. Após #170 mergeada: Dev de #171 integra o `FilterBar` ao contrato final da API.
 4. LT faz o merge de cada sub-issue conforme os Devs concluem (uma invocação por merge, sequencial).
    Quando as 4 estiverem em `desenv_tasks_merged`, LT cria o PR `desenv→homolog`.
 
@@ -87,5 +119,6 @@ As sub-issues de backend (#168, #169, #170) não dependem do UX/UI — **podem c
 | 4 | Arquiteto (3 decisões técnicas + achado de dependência circular) | Arquiteto | Sonnet | 110481 | 49 | 673s |
 | 5 | Líder Técnico (especificação técnica consolidada) | Líder Técnico | Sonnet | 100393 | 32 | 288s |
 | 6 | Líder Técnico (task breakdown + 4 sub-issues, retomada rota normal) | Líder Técnico | Sonnet | 80395 | 23 | 220s |
+| 7 | UX/UI (spec visual FilterBar, Sub-D) | UX/UI | Sonnet | 96003 | 10 | 279s |
 
-**Total acumulado (planejamento, antes dos devs):** 453.163 tokens · ~34 min proc.
+**Total acumulado (planejamento, antes dos devs):** 549.166 tokens · ~39 min proc.
