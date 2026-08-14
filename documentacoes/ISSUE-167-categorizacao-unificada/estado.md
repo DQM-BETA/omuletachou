@@ -1,7 +1,7 @@
 ---
 issue: 167
 titulo: feat: Categorização unificada de produtos + remoção de distinção de plataforma no site
-etapa_atual: Code Review — 4 sub-issues mergeadas em desenv; PR de homologação #176 (desenv->homolog) criado
+etapa_atual: QA — Code Review aprovado, merge desenv->homolog concluído (PR #176)
 ultimo_agente: lt
 rota: normal
 openspec_change: repos/omuletachou/openspec/changes/issue-167-categorizacao-unificada
@@ -24,9 +24,9 @@ sub_issue_169_pr: "#174 (feature/ISSUE-169-ia-orcamento -> desenv, MERGED squash
 sub_issue_170_pr: "#173 (feature/ISSUE-170-api-filtros -> desenv, MERGED squash, commit 03c7a05; branch remota deletada; sub-issue #170 fechada)"
 sub_issue_171_pr: "#175 (feature/ISSUE-171-frontend-filtros -> desenv, MERGED squash, commit 0142d86; branch remota deletada; sub-issue #171 fechada)"
 sub_issues_frontend: {}
-pr_homologacao: "#176 (desenv -> homolog, merge commit, aberto)"
+pr_homologacao: "#176 (desenv -> homolog, merge commit 9cd7154, MERGED)"
 pr_release: ~
-code_review_homolog_pr: ~
+code_review_homolog_pr: 176
 qa_status: ~
 figma_url: ~
 blockers: nenhum
@@ -276,6 +276,59 @@ build`: sem erros/warnings. Escopo:
 - Ambiente Docker completamente removido ao final (`docker compose down -v`, imagens `api`/
   `website` locais, `.env` e `docker-compose.override.yml` apagados).
 
+## Code Review — PR #176 (validação final, 2ª camada ao vivo)
+**APROVADO.** Validação executada ao vivo (não só leitura), HEAD de `desenv` confirmado com os 4
+merges (#168/#169/#170/#171, commit `0213891`). Achados do plugin `/code-review` (1ª camada,
+comentário https://github.com/DQM-BETA/omuletachou/pull/176#issuecomment-5298226598) revisados:
+nenhum bloqueante (2 notas não-bloqueantes: slider de preço sem clamp min/max, e reconfirmação de
+2 áreas de sanity-check de PRs anteriores que não se aplicam a este diff).
+
+- `dotnet test`: 414/414 passando (383 pré-#168 + 19 de #169 + 15 de #170 + testes de integração
+  real via Testcontainers, sem regressão).
+- `npm test`: 102/102 passando; cobertura fresca conferida: stmts 94% / branches 90.44% /
+  funcs 90.1% / lines 96.6% (≥80% em todos os eixos, confirma o número reportado pelo Dev #171).
+- `npm run build`: sem erros/warnings.
+- Docker real (`db`+`api`+`website`, build+boot): todos healthy, `/health` 200, sem exceção,
+  migrations aplicadas (`products.subcategory` + 5 índices compostos confirmados via `\d products`).
+- 10 produtos populados via SQL direto no Postgres do container (várias
+  categorias/subcategorias/preços/descontos, incluindo 2 sem match — "Geral").
+- API exercitada via `curl` real: `GET /api/public/deals` sem filtro (CA 6.1/6.5),
+  category+subcategory (CA 6.2), minPrice+maxPrice+minDiscount (CA 6.3), sort
+  price_asc/discount_desc/recent (CA 6.4), combinação completa dos 6 filtros, categoria
+  inexistente → 200 vazio (CA 6.6), `GET /api/public/categories` com árvore e contagem corretas
+  incluindo "Geral" com `subcategories: []` (CA 6.7), rota antiga `/deals/category/{categoria}` →
+  404 (removida), `platform` ausente em 100% do JSON de `/deals` e `/deals/{slug}` (CA 5.1).
+- Home renderizada (HTML real via `curl`): `FilterBar` presente (`data-testid="filter-bar"`),
+  `Header` limpo (`<header class="site-header">` só com brand link, sem chip de plataforma —
+  CA 7.4), filtro `?category=` reflete no grid (2 itens para Eletrônicos), estado vazio
+  (`category=CategoriaInexistente`) renderiza `.deals-empty` com HTTP 200, sem quebra (CA 7.5).
+- Orçamento de IA (CA 4.1-4.5): `claude.monthly_budget_limit_brl` default R$30 confirmado.
+  Estouro simulado via `UPDATE app_settings SET value='{"month":"2026-08","spend_brl":999}' WHERE
+  key='claude.monthly_usage'`; produto `Queued`/`Geral` inserido + `/api/jobs/processor/trigger`
+  disparado (login via usuário seedado) → log "fallback nao classificou ... (orcamento
+  indisponivel ou falha na chamada) — categoria permanece Geral"; produto permaneceu
+  `Category=Geral`; `claude.monthly_usage` inalterado (nenhuma cobrança nova). Produto terminou em
+  `Status=Error` nesta rodada por falta de credenciais de redes sociais no ambiente local limpo
+  (mesmo comportamento documentado na validação Docker do Dev #169 — não é regressão desta
+  validação, é limitação do ambiente sem segredos reais).
+- Playwright (`npm run test:visual`): 5/5 passando contra o site real em Docker
+  (`STAGING_URL=http://localhost:3000`). Screenshots do `FilterBar` inspecionados visualmente:
+  mobile (resumo compacto + drawer com dropdowns dependentes, slider de preço, botões de desconto
+  10%/30%/50%, "Limpar filtros"/"Ver resultados") e desktop (5 controles em linha única, sem
+  drawer) — ambos fiéis à `ux-ui-spec-filterbar.md`.
+- Checklist de veto: compila e sobe (OK); integração real (`ClaudeBudgetServiceIntegrationTests`
+  via Testcontainers.PostgreSql real presente no diff, não mock-only); conformidade com
+  spec/UX (27 critérios de aceite verificados); sem teste-lixo; sem segredo commitado (diff
+  revisado — apenas nomes de chaves de config com valores vazios, padrão já existente no repo);
+  `.first()`/`.nth()`/`.last()` — nenhuma ocorrência em `website/e2e/` (sem risco de duplicação
+  mascarada).
+- Ambiente Docker completamente removido ao final (`docker compose down -v` + imagens
+  `api`/`website` + `.env`/`docker-compose.override.yml` locais apagados).
+- Evidência completa postada no PR:
+  https://github.com/DQM-BETA/omuletachou/pull/176#issuecomment-5298343779
+- **Merge realizado**: `desenv` → `homolog` via merge commit `9cd7154` (PR #176), conforme
+  CLAUDE.md (nunca squash entre branches de longa vida).
+
 ## Próximos passos
 1. ~~LT faz o merge de #168 (PR #172) em `desenv`.~~ **Concluído.**
 2. ~~Dev de #170 (backend-api-filtros).~~ **Concluído.**
@@ -288,7 +341,9 @@ build`: sem erros/warnings. Escopo:
    cria o PR `desenv→homolog`.~~ **Concluído — commit `0142d86`, sub-issue #171 fechada. PR de
    homologação #176 (`desenv→homolog`, merge commit) criado, satisfazendo design.md §5.2
    (#170+#171 no mesmo deploy).**
-8. Sessão principal roda `/code-review` no PR #176 + spawna o agente Code Review.
+8. ~~Sessão principal roda `/code-review` no PR #176 + spawna o agente Code Review.~~
+   **Concluído — aprovado, merge desenv->homolog (commit `9cd7154`).**
+9. Sessão principal spawna QA.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -309,7 +364,9 @@ build`: sem erros/warnings. Escopo:
 | 14 | Dev #171 (frontend-filtros, FilterBar + migração api.ts/types.ts/Header.tsx, PR #175) | Dev Node.js | Sonnet | 298601 | 184 | 2417s |
 | 15 | Líder Técnico (merge PR #175 → desenv, fechamento #171; PR homologação #176 desenv→homolog) | Líder Técnico | Sonnet | 57148 | 22 | 177s |
 
-**Total acumulado:** 1.706.231 tokens · ~144 min proc.
+| 16 | Code Review (validação ao vivo PR #176: build+boot+testes+Docker+Playwright, merge desenv->homolog) | Code Review | Sonnet | 128280 | 75 | 963s |
+
+**Total acumulado:** 1.834.511 tokens · ~160 min proc.
 
 ---
 _Mantido pela sessão principal. Última atualização: 2026-08-14 (recuperação de conteúdo perdido —
