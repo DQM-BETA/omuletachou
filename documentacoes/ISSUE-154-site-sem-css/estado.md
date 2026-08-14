@@ -1,8 +1,8 @@
 ---
 issue: 154
 titulo: "bug: Site público (website) sem nenhum estilo CSS implementado — apenas HTML puro"
-etapa_atual: Dev concluído — PR #157 (fix/156-css-website → desenv) aguardando Líder Técnico (merge)
-ultimo_agente: dev-nodejs
+etapa_atual: "PR #158 desenv→homolog aberto — aguardando /code-review (sessão principal) + Code Review"
+ultimo_agente: lider-tecnico
 rota: normal
 openspec_change: repos/omuletachou/openspec/changes/issue-154-site-sem-css
 tech_stacks: [nodejs]
@@ -12,11 +12,11 @@ repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-154-site-sem-css
 openspec_path: repos/omuletachou/openspec/changes/issue-154-site-sem-css
 status_comment_id: "5293952020"
-sub_issues: ["#156 (stack:nodejs, task_id:T-01) — PR #157 aberto"]
-desenv_tasks_merged: []
-pr_feature: "#157 (fix/156-css-website -> desenv)"
+sub_issues: ["#156 (stack:nodejs, task_id:T-01) — merged via PR #157"]
+desenv_tasks_merged: ["#156"]
+pr_feature: "#157 (fix/156-css-website -> desenv, squash merged)"
 sub_issues_frontend: {}
-pr_homologacao: ~
+pr_homologacao: "#158 (desenv -> homolog)"
 pr_release: ~
 code_review_homolog_pr: ~
 qa_status: ~
@@ -73,10 +73,11 @@ Não há ambiguidade arquitetural real: não é decisão de arquitetura de siste
 2. Gate 1 — **feito**
 3. PM Fase 2: PRD + critérios de aceite — **feito**
 4. Líder Técnico: refinamento técnico (design.md + especificacao-tecnica.md + tasks.md + sub-issue #156) — **feito**
-5. UX/UI: spec visual a partir do design system do Figma — **próximo**
-6. Dev: implementação (CSS + `test:visual`) na sub-issue #156
-7. Code Review + QA: validação visual (novo checkpoint — Gate Visual passa a funcionar de fato)
-8. Gate 2 (Gerente) → merge main
+5. UX/UI: spec visual a partir do design system do Figma — **feito**
+6. Dev: implementação (CSS + `test:visual`) na sub-issue #156 — **feito**
+7. Líder Técnico: merge PR #157 → desenv + PR homologação #158 (desenv→homolog) — **feito**
+8. Code Review + QA: validação visual (novo checkpoint — Gate Visual passa a funcionar de fato) — **próximo**
+9. Gate 2 (Gerente) → merge main
 
 ## UX/UI — Spec visual — concluído
 
@@ -110,6 +111,15 @@ Bug pré-existente identificado durante a validação visual, **não relacionado
 
 PR aberto: **#157** (`fix/156-css-website` → `desenv`), aguardando merge do Líder Técnico.
 
+## Líder Técnico — Merge + PR de homologação — concluído
+
+- Revisado o diff completo do PR #157 (`gh pr diff`): confirmado escopo apenas CSS + setup Playwright — único ponto de "lógica" é o `import './globals.css'` em `layout.tsx` (esperado, é o fix do bug raiz) e a remoção do `page.module.css` órfão (esperado). `jest.config.js`/`package.json`/`package-lock.json` só configuram o runner de teste (ignorar `e2e/` no Jest, adicionar `@playwright/test` como devDependency e o script `test:visual`). Sem mudança de lógica de negócio.
+- Merge squash do PR #157 → `desenv` (`gh pr merge 157 --squash --delete-branch`), branch remota `fix/156-css-website` deletada.
+- Sub-issue #156 fechada com comentário de resumo (`gh issue close 156 --reason completed`).
+- PR de homologação criado: **#158** (`desenv` → `homolog`, merge commit — nunca squash), cobrindo a Issue #154 completa.
+- **Issue técnica separada aberta para o bug pré-existente** (categorias com espaço no nome, mismatch de encoding `formatCategoriaLabel`/`fetchByCategory`): **#159**, label `bug`, rota `backlog` (documentar/planejar; não trabalhar agora), referenciando #154/#157 como origem do achado.
+- `repo_path` deixado em `desenv`, atualizado com o merge (`git pull origin desenv` — fast-forward, PR #157 incorporado).
+
 ## Ledger de Custo
 
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -120,6 +130,7 @@ PR aberto: **#157** (`fix/156-css-website` → `desenv`), aguardando merge do L�
 | 4 | Refinamento Técnico (especificacao-tecnica.md + sub-issue #156) | Líder Técnico | Sonnet | 85826 | 39 | 430s |
 | 5 | UX/UI (spec visual, tokens Figma) | UX/UI | Sonnet | 89850 | 9 | 330s |
 | 6 | Dev (CSS + test:visual, sub-issue #156, PR #157) | Dev Node.js | Sonnet | 150219 | 112 | 962s |
+| 7 | Merge PR #157 + PR homologação #158 + issue técnica #159 | Líder Técnico | Sonnet | 53241 | 18 | 141s |
 
 ---
 
