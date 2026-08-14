@@ -1,7 +1,7 @@
 ---
 issue: 154
 titulo: "bug: Site público (website) sem nenhum estilo CSS implementado — apenas HTML puro"
-etapa_atual: "QA aprovou (homolog, rodada 2, pós-fix PR #161) — aguardando Líder Técnico (PR homolog->main) e Gate 2 do Gerente"
+etapa_atual: "Aguardando Aprovação — Gate 2 (PR release #162 homolog->main criado)"
 ultimo_agente: qa
 rota: normal
 openspec_change: repos/omuletachou/openspec/changes/issue-154-site-sem-css
@@ -17,7 +17,7 @@ desenv_tasks_merged: ["#156"]
 pr_feature: "#160 (feature/ISSUE-156-header-deal-detail -> desenv, squash merged, delete-branch) — fix pontual do achado de QA (PR #157 é histórico do ciclo anterior)"
 sub_issues_frontend: {}
 pr_homologacao: "#161 (desenv -> homolog, merge commit, MERGEADO) — cobriu o fix de #156 (PR #160); PR anterior #158 já mesclado/fechado em ciclo anterior"
-pr_release: ~
+pr_release: "#162 (homolog -> main, merge commit, NÃO mesclado — aguardando Gate 2 do Gerente)"
 code_review_homolog_pr: 161
 qa_status: aprovado
 figma_url: https://www.figma.com/design/yi6YkNAy9HfHus2oiPi3G7/Diego-Mulet-s-team-library
@@ -307,6 +307,7 @@ Branch sincronizada: `git fetch origin && git checkout homolog && git pull origi
 | 12 | LT — merge PR #160 + novo PR homologação #161 | Líder Técnico | Sonnet | 59026 | 11 | 170s |
 | 13 | Code Review — validação final PR #161 (build/boot/testes/visual, merge desenv→homolog) | Code Review | Sonnet | 106308 | 52 | 492s |
 | 14 | QA (homolog, rodada 2, pós-fix) — aprovado, 18/18 critérios | QA | Sonnet | 111515 | 39 | 483s |
+| 15 | LT — PR release homolog->main (#162) | Líder Técnico | Sonnet | 46048 | 8 | 56s |
 
 ---
 
