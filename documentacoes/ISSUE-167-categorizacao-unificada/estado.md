@@ -1,9 +1,9 @@
 ---
 issue: 167
 titulo: feat: Categorização unificada de produtos + remoção de distinção de plataforma no site
-etapa_atual: Backlog — documentação completa, aguardando decisão do Gerente para retomar (rota normal)
+etapa_atual: Retomado pelo Gerente ("pode seguir na rota normal") — LT segue para task breakdown + sub-issues
 ultimo_agente: lider-tecnico
-rota: backlog
+rota: normal
 openspec_change: repos/omuletachou/openspec/changes/issue-167-categorizacao-unificada
 tech_stacks:
   - dotnet
