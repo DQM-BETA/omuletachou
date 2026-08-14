@@ -1,8 +1,8 @@
 ---
 issue: 167
 titulo: feat: Categorização unificada de produtos + remoção de distinção de plataforma no site
-etapa_atual: Refinamento Técnico (Arquitetura)
-ultimo_agente: pm-analista-negocios
+etapa_atual: Refinamento Técnico (Arquitetura concluída — Líder Técnico escreve especificação técnica)
+ultimo_agente: arquiteto-engenheiro
 rota: backlog
 openspec_change: repos/omuletachou/openspec/changes/issue-167-categorizacao-unificada
 tech_stacks:
@@ -54,6 +54,7 @@ A sequência de negócio (dicionário na coleta, IA restrita ao pós-aprovação
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|---|---|---|---|---|---|
-| 1 | Backlog | Coordenador | Haiku | 2850 | 5 | 8 |
-| 2 | PM Fase 1 + Gate 1 | pm-analista-negocios | Sonnet | ~ | ~ | ~ |
-| 3 | PM Fase 2 | pm-analista-negocios | Sonnet | ~ | ~ | ~ |
+| 1 | Preparação (Issue + estado.md) | Coordenador | Haiku | 49906 | 22 | 158s |
+| 2 | PM Fase 1 (validação técnica + levantamento, Gate 1) | PM | Sonnet | 60461 | 28 | 240s |
+| 3 | PM Fase 2 (PRD + critérios de aceite) | PM | Sonnet | 51527 | 16 | 225s |
+| 4 | Arquiteto (3 decisões técnicas + achado de dependência circular) | Arquiteto | Sonnet | 110481 | 49 | 673s |
