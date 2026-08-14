@@ -117,6 +117,25 @@ public class AmazonCollectorTests
     }
 
     [Fact]
+    public async Task CollectAsync_DetectaCategoriaViaCategoryDetector_QuandoProdutoNovo()
+    {
+        // CA 2.1 (Issue #167): o dicionario roda em CollectAsync, sem depender de IA. Titulo
+        // "Fone Bluetooth XPTO" casa com a keyword "fone" (Eletronicos/Audio).
+        using var db = CreateInMemoryContext();
+        await SeedSettingsAsync(db);
+        var aiMock = CreateAiServiceMock();
+        var httpClient = CreateHttpClient(_ => JsonResponse(HttpStatusCode.OK, ValidJsonResponse));
+
+        var collector = new AmazonCollector(httpClient, db, aiMock.Object, NullLogger<AmazonCollector>.Instance);
+
+        var result = (await collector.CollectAsync()).ToList();
+
+        result.Should().HaveCount(1);
+        result[0].Category.Should().Be("Eletrônicos");
+        result[0].Subcategory.Should().Be("Áudio");
+    }
+
+    [Fact]
     public async Task CollectAsync_LancaException_QuandoCredenciaisAusentes()
     {
         // Arrange
@@ -196,6 +215,7 @@ public class AmazonCollectorTests
         updated.SalePrice.Should().Be(99.90m);
         updated.Status.Should().Be(ProductStatus.Published); // preservado
         updated.AiScore.Should().Be(9); // preservado, nao re-scoreado
+        updated.Category.Should().Be("Geral"); // sem recategorizacao retroativa (Issue #167)
 
         aiMock.Verify(a => a.ScoreProductAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()), Times.Never);
     }

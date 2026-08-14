@@ -78,7 +78,10 @@ public class ProcessorJob
 
             EnsureSlug(product);
 
-            EnsureCategory(product);
+            // Categorizacao por dicionario (CategoryDetector) saiu deste job e passou a rodar
+            // nos collectors, na criacao do Product (Issue #167, Sub-A/#168). O fallback via IA
+            // para produtos que ainda ficam "Geral" pos-coleta e escopo da Sub-B/#169
+            // (EnsureCategoryFallbackAsync, nao implementado nesta sub-issue).
 
             var linkOk = await EnsureAffiliateLinkAsync(product, ct);
             if (!linkOk)
@@ -143,12 +146,6 @@ public class ProcessorJob
 
         var slug = sb.ToString().Trim('-');
         return string.IsNullOrWhiteSpace(slug) ? "produto" : slug;
-    }
-
-    private static void EnsureCategory(Product product)
-    {
-        var detected = AfiliadoBot.Application.CategoryDetector.Detect(product.Title);
-        product.SetCategory(detected);
     }
 
     /// <summary>
