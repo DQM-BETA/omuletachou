@@ -212,6 +212,68 @@ Escopo:
 descrito no PR e no `tasks.md`. Sem achados de infra adicionais nesta sub-issue (Ids de
 `app_settings` já reservados por #168, sem colisão).
 
+## Dev #171 — frontend-filtros (PR aberto, aguardando merge do LT)
+Branch `feature/ISSUE-171-frontend-filtros` (worktree, base `desenv` já com #168/#169/#170) → PR
+#175 para `desenv` (NÃO mergeado por este Dev). `npm test`: 102/102 passando (100%), cobertura
+statements 94%/branches 90.4%/functions 90.1%/lines 96.6% (≥80% em todos os eixos). `npm run
+build`: sem erros/warnings. Escopo:
+- `website/lib/api.ts`: `fetchDeals` migrado para aceitar `filters?: DealFilters`
+  (`category`/`subcategory`/`minPrice`/`maxPrice`/`minDiscount`/`sort`), espelhando os
+  `[FromQuery]` reais de `PublicController.GetDeals` (confirmados lendo o código, não a
+  especificação técnica — sem divergência desta vez). Novo `fetchCategories()` para
+  `GET /api/public/categories` (formato real confirmado em `CategoryTreeDto.cs`:
+  `category`/`count`/`subcategories[{subcategory,count}]`). `fetchByCategory` removida.
+- **Achado fora do que a especificação técnica havia mapeado**: `fetchByCategory` tinha um 2º
+  call site não documentado — `lib/related-deals.ts` (usado por `app/oferta/[slug]/page.tsx` para
+  "Mais ofertas"), além do já esperado `app/categoria/[categoria]/page.tsx`. Encontrado só ao
+  rodar o Gate obrigatório de busca de testes afetados (passo g do processo) — `related-deals.ts`
+  migrado para `fetchDeals(1, N, { category })` também, com `related-deals.test.ts` e
+  `app/oferta/[slug]/page.test.tsx` ajustados.
+- `website/lib/types.ts`: `Deal.platform` removido, `Deal.subcategory?` adicionado, novo tipo
+  `CategoryTree`. `platform:` removido de todos os `buildDeal()`/mocks de teste do repo (7
+  arquivos além dos diretamente alterados).
+- `website/components/Header.tsx`: chips de plataforma removidos (CA 7.4).
+- Novo `website/components/FilterBar.tsx` + `app/styles/filter-bar.css`, seguindo
+  `ux-ui-spec-filterbar.md` à risca (classes BEM, tokens, estados). Decisão de implementação não
+  prescrita pela spec: em vez de duplicar a marcação dos controles entre `.filter-bar__row`
+  (desktop) e `.filter-bar__summary`+`.filter-bar__drawer` (mobile) e alternar via CSS
+  `display:none` por media query (como a spec sugere), optei por um hook `useIsDesktop()`
+  (`window.matchMedia`) que renderiza só UM dos dois layouts no DOM por vez — evita elementos
+  duplicados com o mesmo papel/nome acessível (`role=combobox` "Categoria" apareceria 2x),
+  problema real que apareceria tanto em testes quanto para leitores de tela. CSS mantido fiel à
+  spec (inclusive as regras de media query, como fallback/documentação), mas a alternância real é
+  via JS.
+- `website/app/page.tsx` (Home): integra `FilterBar`, conecta filtros da URL a `fetchDeals`,
+  estado vazio orientado a filtro com CTA "Ver todas as ofertas" (CA 7.5).
+- `website/app/categoria/[categoria]/page.tsx`: migrado para `fetchDeals` com filtro `category`,
+  URL pública inalterada.
+- **2 bugs reais encontrados só na validação em browser real** (Playwright contra o site rodando
+  em Docker, viewport mobile e desktop) — nenhum dos dois apareceu nos testes Jest/jsdom:
+  1. Botão "Filtros" tinha um ícone via CSS `::before` (`content: "☰"`); browsers reais incluem
+     conteúdo de pseudo-elemento no cálculo do nome acessível (jsdom não aplica CSS nenhum,
+     então o teste Jest nunca via isso) — corrigido com `aria-label="Filtros"` explícito no botão.
+  2. O FAB de reabertura usava `getBoundingClientRect()` de um elemento `position: sticky`, que
+     por definição nunca "sai" da viewport enquanto grudado — o FAB nunca apareceria de verdade
+     ao rolar. Trocado por um threshold simples de `window.scrollY`, com teste Jest novo cobrindo
+     o comportamento (`fireEvent.scroll` + `Object.defineProperty(window, 'scrollY', ...)`).
+- Validação Docker real (`db`+`api`+`website`, `.env`/`docker-compose.override.yml` locais
+  temporários, removidos ao final): 5 produtos de categorias/preços/descontos variados via SQL
+  direto no Postgres do container. Filtros exercitados via `curl` contra a API real
+  (`category`+`subcategory` combinados, `minPrice`/`maxPrice`+`minDiscount`, `sort=price_asc`,
+  categoria inexistente → 200 vazio, `GET /api/public/categories` com contagem correta, ausência
+  de `platform` em 100% do JSON) e contra o HTML SSR do `website` real (`curl` na Home com
+  querystring de filtros, categoria via `/categoria/{categoria}`, confirmando grid filtrado e
+  ausência de qualquer chip/texto de plataforma no Header renderizado).
+- Playwright (`test:visual`) estendido: 2 novos testes em `e2e/visual.spec.ts` cobrindo o
+  `FilterBar` em mobile (resumo compacto + abrir o drawer, viewport padrão do projeto
+  `mobile-chromium`) e desktop (`page.setViewportSize({width:1280,...})`, os 5 controles em linha
+  única, sem drawer/summary). Screenshots gerados em
+  `documentacoes/ISSUE-167-categorizacao-unificada/screenshots-filterbar/` (não commitados —
+  artefato de validação, ambos os layouts inspecionados visualmente, CSS aplicado corretamente
+  conforme a spec, sem quebra de layout).
+- Ambiente Docker completamente removido ao final (`docker compose down -v`, imagens `api`/
+  `website` locais, `.env` e `docker-compose.override.yml` apagados).
+
 ## Próximos passos
 1. ~~LT faz o merge de #168 (PR #172) em `desenv`.~~ **Concluído.**
 2. ~~Dev de #170 (backend-api-filtros).~~ **Concluído.**
@@ -219,9 +281,11 @@ descrito no PR e no `tasks.md`. Sem achados de infra adicionais nesta sub-issue 
 4. ~~Dev de #169 (backend-ia-orcamento).~~ **Concluído.**
 5. ~~LT faz o merge de #169 (PR #174) em `desenv`.~~ **Concluído — commit `03cb40e`, sub-issue
    #169 fechada.**
-6. As 3 sub-issues de backend (#168, #169, #170) estão mergeadas em `desenv`. Dev de #171
-   (frontend-filtros) integra o `FilterBar` ao contrato final da API — já desbloqueada.
-7. Quando as 4 sub-issues estiverem em `desenv_tasks_merged`, LT cria o PR `desenv→homolog`.
+6. ~~Dev de #171 (frontend-filtros).~~ **Concluído — PR #175 aberto para `desenv`, aguardando
+   merge do LT.**
+7. LT faz o merge de #171 (PR #175) em `desenv`. Com as 4 sub-issues em `desenv_tasks_merged`, LT
+   cria o PR `desenv→homolog` (design.md §5.2 exige #170+#171 no mesmo deploy — já satisfeito,
+   ambas prontas juntas).
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -239,8 +303,9 @@ descrito no PR e no `tasks.md`. Sem achados de infra adicionais nesta sub-issue 
 | 11 | Dev #169 (backend-ia-orcamento, ClaudeBudgetService + fallback IA + tokens reais) | Dev .NET | Sonnet | 234090 | 125 | 1158s |
 | 12 | Líder Técnico (merge PR #173 → desenv, fechamento #170) | Líder Técnico | Sonnet | 66817 | 14 | 139s |
 | 13 | Líder Técnico (merge PR #174 → desenv, fechamento #169) | Líder Técnico | Sonnet | 55626 | 12 | 163s |
+| 14 | Dev #171 (frontend-filtros, FilterBar + migração api.ts/types.ts/Header.tsx, PR #175) | Dev Node.js | Sonnet | 298601 | 184 | 2417s |
 
-**Total acumulado:** 1.350.482 tokens · ~101 min proc.
+**Total acumulado:** 1.649.083 tokens · ~141 min proc.
 
 ---
 _Mantido pela sessão principal. Última atualização: 2026-08-14 (recuperação de conteúdo perdido —
