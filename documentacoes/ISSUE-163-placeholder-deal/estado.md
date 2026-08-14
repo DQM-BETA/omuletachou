@@ -1,9 +1,9 @@
 ---
 issue: 163
 titulo: "chore: Substituir placeholder-deal.png (1x1px) por placeholder visual real"
-etapa_atual: "QA aprovado (PR #165 desenv→homolog mergeado) — aguardando LT (PR homolog→main)"
+etapa_atual: "Aguardando Aprovação — Gate 2 (PR #166 homolog→main criado)"
 rota: rapido
-ultimo_agente: qa
+ultimo_agente: lt
 openspec_change: ~
 tech_stacks:
   - nodejs
@@ -16,7 +16,7 @@ sub_issues: []
 desenv_tasks_merged: []
 sub_issues_frontend: {}
 pr_homologacao: "165 (desenv -> homolog, merge commit af6810f, MERGEADO)"
-pr_release: ~
+pr_release: "166 (homolog -> main, aguardando Gate 2)"
 code_review_homolog_pr: 165
 qa_status: aprovado
 figma_url: ~
@@ -111,8 +111,14 @@ Validação em `homolog` (commit `af6810fcaa89279b041173d6b848ef159bb35627`, con
 
 **Veredito: aprovado.** Todos os 5 critérios objetivos passaram com evidência de execução real (Docker isolado, banco Postgres real, API .NET real, Next.js real).
 
+## Release (Líder Técnico)
+- `git fetch && git checkout homolog && git pull origin homolog`: HEAD confirmado em `af6810fcaa89279b041173d6b848ef159bb35627` (merge commit do PR #165), working tree limpo (exceto `docker-compose.override.yml`, pré-existente, não relacionado).
+- PR de release criado: https://github.com/DQM-BETA/omuletachou/pull/166 (`homolog` → `main`), descrevendo escopo, pipeline (Dev #164, Code Review/QA #165) e os 5 critérios de aceite aprovados. **Não mergeado** — aguardando Gate 2 (Gerente).
+- `repo_path` checked out de volta em `desenv`, atualizado (`git pull origin desenv`).
+
 ## Próximos passos
-- Líder Técnico: PR homolog→main → **Gate 2 (Gerente)**
+- **Gate 2 (Gerente)**: aprovar merge do PR #166 (`homolog` → `main`, merge commit — nunca squash).
+- Após aprovação: Coordenador executa `gh pr merge 166 --merge` e fecha a Issue #163. Card permanece em "Em Desenvolvimento" até o Gerente arrastar manualmente para "Concluído".
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo(s) |
@@ -122,4 +128,4 @@ Validação em `homolog` (commit `af6810fcaa89279b041173d6b848ef159bb35627`, con
 | 3 | LT — merge PR #164 + PR homologação #165 | Líder Técnico | Sonnet | 32843 | 9 | 50s |
 | 4 | Code Review — validação PR #165 (build/boot/testes/visual, merge desenv→homolog) | Code Review | Sonnet | 84148 | 53 | 580s |
 | 5 | QA — validação homolog (build/testes/E2E/visual, 5 critérios) | QA | Sonnet | 71605 | 52 | 484s |
-
+| 6 | LT — PR release #166 (homolog→main) | Líder Técnico | Sonnet | 42416 | 7 | 89s |
