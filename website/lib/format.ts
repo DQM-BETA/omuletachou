@@ -10,5 +10,5 @@ export function resolveDealImageUrl(deal: {
   mediaUrl: string | null;
   mediaLocalPath: string | null;
 }): string {
-  return deal.mediaUrl ?? deal.mediaLocalPath ?? '/placeholder-deal.png';
+  return deal.mediaUrl ?? deal.mediaLocalPath ?? '/placeholder-deal.svg';
 }
