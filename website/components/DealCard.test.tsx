@@ -44,7 +44,7 @@ describe('DealCard', () => {
     render(<DealCard deal={buildDeal({ mediaUrl: null, mediaLocalPath: null })} />);
 
     const image = screen.getByAltText('Fone Bluetooth XYZ') as HTMLImageElement;
-    expect(image.src).toContain('/placeholder-deal.png');
+    expect(image.src).toContain('/placeholder-deal.svg');
   });
 
   it('usa mediaLocalPath como fallback quando mediaUrl é nulo', () => {
