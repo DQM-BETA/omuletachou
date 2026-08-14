@@ -1,8 +1,8 @@
 ---
 issue: 154
 titulo: "bug: Site público (website) sem nenhum estilo CSS implementado — apenas HTML puro"
-etapa_atual: Refinamento Técnico — concluído, aguardando UX/UI
-ultimo_agente: lider-tecnico
+etapa_atual: UX/UI concluído — aguardando Dev
+ultimo_agente: ux-ui
 rota: normal
 openspec_change: repos/omuletachou/openspec/changes/issue-154-site-sem-css
 tech_stacks: [nodejs]
@@ -77,14 +77,24 @@ Não há ambiguidade arquitetural real: não é decisão de arquitetura de siste
 7. Code Review + QA: validação visual (novo checkpoint — Gate Visual passa a funcionar de fato)
 8. Gate 2 (Gerente) → merge main
 
+## UX/UI — Spec visual — concluído
+
+`ux-ui-spec.md` escrito em `docs_path`: consultado o Figma do design system da squad (`get_figma_data`) — arquivo ainda no estado padrão "boas-vindas", nunca customizado com paleta/tokens reais do produto (apenas estilos de texto nomeados reaproveitáveis, família Work Sans). Documentado explicitamente para rastreabilidade. Spec produzida com bloco `:root` de tokens CSS completo (`--color-primary: #e63946` + derivações hover/dark/light em HSL, paleta neutra quente, tipografia Work Sans com fallback, espaçamento 8pt, raio, sombra, breakpoints), mapeamento de 100% das ~35 classes BEM do inventário para regras CSS concretas (valores reais, não genéricos) com estados default/hover/active/disabled documentados, composição das 3 telas, grid responsivo mobile-first (1→2→3→4 colunas), touch targets ≥40-44px, heurísticas de Nielsen traduzidas em critérios verificáveis. Nenhuma mudança de `.tsx` necessária (respeita CA-T2). Comentário de resumo postado na Issue #154.
+
+Nota: commit/push e atualização deste `estado.md` feitos pela sessão principal (fora do escopo de ferramentas do agente UX/UI).
+
+## Próximo agente: Dev (`stack:nodejs`, sub-issue #156)
+
 ## Ledger de Custo
 
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|-------|--------|--------|--------|-------|-----------|
-| 1 | Preparação | Coordenador | Haiku | — | — | — |
-| 2 | PM Fase 1 + Fase 2 | PM | Sonnet | (preencher pelo orquestrador via `<usage>`) | — | — |
-| 3 | Refinamento Técnico | Líder Técnico | Sonnet | (preencher pelo orquestrador via `<usage>`) | — | — |
+| 1 | Preparação (Issue + estado.md) | Coordenador | Haiku | 25202 | 14 | 101s |
+| 2 | PM Fase 1 (levantamento, Gate 1) | PM | Sonnet | 27274 | 8 | 65s |
+| 3 | PM Fase 2 (PRD + critérios de aceite) | PM | Sonnet | 50220 | 19 | 197s |
+| 4 | Refinamento Técnico (especificacao-tecnica.md + sub-issue #156) | Líder Técnico | Sonnet | 85826 | 39 | 430s |
+| 5 | UX/UI (spec visual, tokens Figma) | UX/UI | Sonnet | 89850 | 9 | 330s |
 
 ---
 
-_Mantido pelo Líder Técnico. Última atualização: 2026-08-14._
+_Mantido pela sessão principal. Última atualização: 2026-08-14._
