@@ -1,7 +1,7 @@
 ---
 issue: 154
 titulo: "bug: Site público (website) sem nenhum estilo CSS implementado — apenas HTML puro"
-etapa_atual: "Correção pós-QA — sub-issue #156 reaberta (fix: <Header /> ausente em /oferta/[slug], CA-1/CA-8) — aguardando Dev"
+etapa_atual: "Novo PR de homologação criado (#161, desenv->homolog) cobrindo fix pós-QA de #156 — aguardando /code-review + Code Review"
 ultimo_agente: lt
 rota: normal
 openspec_change: repos/omuletachou/openspec/changes/issue-154-site-sem-css
@@ -12,14 +12,14 @@ repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-154-site-sem-css
 openspec_path: repos/omuletachou/openspec/changes/issue-154-site-sem-css
 status_comment_id: "5293952020"
-sub_issues: ["#156 (stack:nodejs, task_id:T-01) — reaberta: fix header ausente em deal-detail (QA reprovou PR #158)"]
-desenv_tasks_merged: []
-pr_feature: "#157 (fix/156-css-website -> desenv, squash merged) — histórico; nova PR será aberta pelo Dev para o fix"
+sub_issues: ["#156 (stack:nodejs, task_id:T-01) — fechada novamente (fix header ausente em deal-detail, PR #160 mesclado)"]
+desenv_tasks_merged: ["#156"]
+pr_feature: "#160 (feature/ISSUE-156-header-deal-detail -> desenv, squash merged, delete-branch) — fix pontual do achado de QA (PR #157 é histórico do ciclo anterior)"
 sub_issues_frontend: {}
-pr_homologacao: "#158 (desenv -> homolog, merge commit 6e65564d8e4172c5d437af2bb99e00245ee26424)"
+pr_homologacao: "#161 (desenv -> homolog, merge commit) — novo PR cobrindo o fix de #156 (PR #160); PR anterior #158 já mesclado/fechado em ciclo anterior"
 pr_release: ~
-code_review_homolog_pr: 158
-qa_status: reprovado
+code_review_homolog_pr: 161
+qa_status: ~
 figma_url: https://www.figma.com/design/yi6YkNAy9HfHus2oiPi3G7/Diego-Mulet-s-team-library
 blockers: nenhum
 createdAt: "2026-08-14T00:00:00Z"
@@ -78,8 +78,10 @@ Não há ambiguidade arquitetural real: não é decisão de arquitetura de siste
 7. Líder Técnico: merge PR #157 → desenv + PR homologação #158 (desenv→homolog) — **feito**
 8. Code Review + QA: validação visual (novo checkpoint — Gate Visual passa a funcionar de fato) — **feito, QA reprovou (header ausente em deal-detail)**
 9. Líder Técnico: mapear falha do QA → reabrir sub-issue #156 — **feito**
-10. Dev: fix pontual (`<Header />` em `app/oferta/[slug]/page.tsx`) — **pendente**
-11. Líder Técnico: novo ciclo merge → Code Review → QA → Gate 2 (Gerente) → merge main
+10. Dev: fix pontual (`<Header />` em `app/oferta/[slug]/page.tsx`) — **feito** (PR #160)
+11. Líder Técnico: merge PR #160 → desenv + novo PR de homologação #161 (desenv→homolog) — **feito**
+12. Sessão principal: `/code-review` + Code Review — **pendente**
+13. QA (nova rodada) → Gate 2 (Gerente) → merge main — **pendente**
 
 ## UX/UI — Spec visual — concluído
 
@@ -193,6 +195,18 @@ Worktree `.worktrees/feature-ISSUE-156-header-deal-detail`, branch `feature/ISSU
 
 PR aberto: **#160** (`feature/ISSUE-156-header-deal-detail` → `desenv`), aguardando merge do Líder Técnico. Worktree removido (`git worktree remove`). `repo_path` deixado checked out em `desenv`.
 
+## Líder Técnico — Merge PR #160 + novo PR de homologação — concluído
+
+Diferente do ciclo anterior: o PR de homologação anterior (#158, `desenv`→`homolog`) já estava mesclado e fechado, então o fix não pôde absorver em um PR aberto — foi necessário abrir um PR de homologação novo.
+
+- `git pull origin desenv` — já atualizado (`up to date`).
+- Revisado o diff completo do PR #160 (`gh pr diff 160`): confirmado escopo estritamente pontual — apenas `import Header from '@/components/Header'` + `<Header />` em `website/app/oferta/[slug]/page.tsx` (seguindo o padrão de `app/categoria/[categoria]/page.tsx`) e o teste de regressão novo (`CA-1/CA-8`) em `page.test.tsx`. Nenhuma mudança de CSS, dados, rotas ou API.
+- Merge squash do PR #160 → `desenv` (`gh pr merge 160 --squash --delete-branch`), branch remota `feature/ISSUE-156-header-deal-detail` deletada. Merge commit `fec0bb66bc4b5a309c0396ce52a18350f3f8f45c`.
+- `git checkout desenv && git pull origin desenv` — fast-forward, PR #160 incorporado (HEAD `fec0bb6`).
+- Sub-issue #156 fechada novamente com comentário de resumo (`gh issue close 156 --reason completed`) — já tinha sido reaberta uma vez para este fix.
+- **Novo PR de homologação criado**: **#161** (`desenv` → `homolog`, merge commit — nunca squash), referenciando no corpo que corrige o achado de QA do ciclo anterior (PR #158 / `relatorio-qa.md`), já que o PR #158 anterior já estava mesclado e fechado.
+- `repo_path` deixado checked out em `desenv`.
+
 ## Ledger de Custo
 
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -213,6 +227,7 @@ PR aberto: **#160** (`feature/ISSUE-156-header-deal-detail` → `desenv`), aguar
 |---|-------|--------|--------|--------|-------|-----------|
 | 10 | LT — mapeamento da falha, reabertura #156 | Líder Técnico | Sonnet | 64083 | 15 | 190s |
 | 11 | Dev — fix Header ausente em deal-detail, PR #160 | Dev Node.js | Sonnet | 82317 | 58 | 473s |
+| 12 | LT — merge PR #160 + novo PR homologação #161 | Líder Técnico | Sonnet | 59026 | 11 | 170s |
 
 ---
 
