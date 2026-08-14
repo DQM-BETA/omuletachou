@@ -1,16 +1,16 @@
 ---
 issue: 154
 titulo: "bug: Site público (website) sem nenhum estilo CSS implementado — apenas HTML puro"
-etapa_atual: Aguardando Aprovação — Gate 1
+etapa_atual: Refinamento Técnico
 ultimo_agente: pm-analista-negocios
 rota: normal
-openspec_change: ~
+openspec_change: repos/omuletachou/openspec/changes/issue-154-site-sem-css
 tech_stacks: [nodejs]
 repos:
   omuletachou: main
 repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-154-site-sem-css
-openspec_path: repos/omuletachou/openspec/changes/ISSUE-154-site-sem-css
+openspec_path: repos/omuletachou/openspec/changes/issue-154-site-sem-css
 status_comment_id: "5293952020"
 sub_issues: []
 desenv_tasks_merged: []
@@ -36,31 +36,45 @@ Site público (Next.js) renderiza como HTML puro sem estilo CSS — classes BEM 
 - Pipeline anterior não tinha validação visual em navegador (foco em API e Jest).
 - Causa raiz do gap de QA registrada em `.claude/melhorias/2026-08-14-qa-gate-visual-nunca-disparou-website-dashboard.md`: Gate Visual do QA depende do script `test:visual` no `package.json`, inexistente em `website`/`dashboard` desde o scaffold — Gate sempre resolveu N/A.
 
-## PM Fase 1 (levantamento)
+## PM Fase 1 (levantamento) — concluído
 
-Bug técnico claro sobre feature já especificada (Issues #12/#94/#95/#96/#117) — sem requisitos de negócio novos. Levantamento restrito a decisões do Gerente, postado como comentário na Issue #154:
-1. Identidade visual (referência de marca existente vs. criar do zero a partir do Figma)
-2. Prioridade de telas (Home, categoria, deal-detail — todas nesta rodada?)
-3. Escopo de configuração de Playwright/`test:visual` (nesta issue ou issue técnica separada, dado que `dashboard` também não tem)
-4. Responsividade / mobile-first / breakpoints prioritários
-5. Relação com PWA existente (Issue #117) — manifest/ícones precisam alinhar com o CSS novo?
+Bug técnico claro sobre feature já especificada (Issues #12/#94/#95/#96/#117) — sem requisitos de negócio novos. Levantamento restrito a decisões do Gerente, postado como comentário na Issue #154 (5 perguntas: identidade visual, prioridade de telas, escopo do Playwright/`test:visual`, responsividade, relação com PWA).
 
-Aguardando respostas do Gerente para Fase 2 (PRD + critérios de aceite).
+## Gate 1 — respostas do Gerente (comentário `5294013444`)
+
+1. **Identidade visual**: sem brand book formal — âncora `theme-color: #e63946` (já em `app/layout.tsx`) + design system genérico do Figma da squad + conceito de site de ofertas/cupons de afiliado.
+2. **Telas**: as 3 (Home, categoria, `deal-detail`) nesta rodada — mesma aplicação de design system, sem fatiamento.
+3. **Playwright/`test:visual`**: entra no escopo desta issue para `website`. `dashboard` (Angular) vira issue técnica separada (#155, rota `backlog`).
+4. **Mobile-first**: obrigatório — maioria do tráfego é mobile.
+5. **PWA (Issue #117)**: CSS novo deve ser consistente com o manifest existente (cor de tema `#e63946`, ícones) — não é independente.
+
+## PM Fase 2 (PRD + critérios de aceite) — concluído
+
+- `openspec_change` criado: `openspec/changes/issue-154-site-sem-css/proposal.md` (objetivo, usuários, casos de uso/exceção, regras de negócio, integrações, restrições, definição de pronto).
+- `criterios-aceite.md` escrito em `docs_path` (15 critérios Given/When/Then organizados por tema: identidade visual, cobertura de classes CSS — critério objetivo CA-3/CA-4 — estilização por tela, mobile-first, consistência com PWA, setup Playwright/`test:visual`, + 3 critérios transversais).
+- Sumário do PRD postado como comentário na Issue #154.
+
+### Avaliação de ambiguidade arquitetural — sem Arquiteto
+
+Não há ambiguidade arquitetural real: não é decisão de arquitetura de sistema (sem escolha de stack, integração externa nova ou infraestrutura). É aplicação de CSS (CSS Modules e/ou globals — decisão de organização de arquivos, não de arquitetura) sobre uma estrutura de componentes/classes BEM já pronta e estável desde a Issue #12. Todas as decisões de produto relevantes (identidade visual, escopo de telas, mobile-first, integração com PWA) já foram resolvidas pelo Gerente no Gate 1. Segue direto para o **Líder Técnico**, que decide a organização técnica do CSS (module vs. global vs. escopo por componente), o setup do Playwright (`test:visual`) e o task breakdown (provavelmente sub-issue única de Dev, dado o escopo coeso).
 
 ## Próximas Etapas
 
-1. PM Fase 1: requisitos visuais — **feito, aguardando Gate 1**
-2. PM Fase 2: PRD + critérios de aceite (após respostas do Gerente)
-3. Arquiteto: decisão técnica (CSS solution) — se houver ambiguidade arquitetural
-4. UX/UI: spec a partir do design system
-5. Dev(s): implementação
-6. Code Review + QA: validação visual (novo checkpoint)
+1. PM Fase 1: requisitos visuais — **feito**
+2. Gate 1 — **feito**
+3. PM Fase 2: PRD + critérios de aceite — **feito**
+4. Líder Técnico: refinamento técnico (design.md resumido + task breakdown, incluindo setup Playwright) — **próximo**
+5. UX/UI: spec visual a partir do design system (se o LT identificar necessidade de spec visual detalhada antes do Dev)
+6. Dev(s): implementação (CSS + `test:visual`)
+7. Code Review + QA: validação visual (novo checkpoint — Gate Visual passa a funcionar de fato)
+8. Gate 2 (Gerente) → merge main
 
 ## Ledger de Custo
 
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|-------|--------|--------|--------|-------|-----------|
 | 1 | Preparação | Coordenador | Haiku | — | — | — |
+| 2 | PM Fase 1 + Fase 2 | PM | Sonnet | (preencher pelo orquestrador via `<usage>`) | — | — |
 
 ---
 
