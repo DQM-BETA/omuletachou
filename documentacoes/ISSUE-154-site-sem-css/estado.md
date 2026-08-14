@@ -1,8 +1,8 @@
 ---
 issue: 154
 titulo: "bug: Site público (website) sem nenhum estilo CSS implementado — apenas HTML puro"
-etapa_atual: UX/UI concluído — aguardando Dev
-ultimo_agente: ux-ui
+etapa_atual: Dev concluído — PR #157 (fix/156-css-website → desenv) aguardando Líder Técnico (merge)
+ultimo_agente: dev-nodejs
 rota: normal
 openspec_change: repos/omuletachou/openspec/changes/issue-154-site-sem-css
 tech_stacks: [nodejs]
@@ -12,8 +12,9 @@ repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-154-site-sem-css
 openspec_path: repos/omuletachou/openspec/changes/issue-154-site-sem-css
 status_comment_id: "5293952020"
-sub_issues: ["#156 (stack:nodejs, task_id:T-01)"]
+sub_issues: ["#156 (stack:nodejs, task_id:T-01) — PR #157 aberto"]
 desenv_tasks_merged: []
+pr_feature: "#157 (fix/156-css-website -> desenv)"
 sub_issues_frontend: {}
 pr_homologacao: ~
 pr_release: ~
@@ -85,6 +86,30 @@ Nota: commit/push e atualização deste `estado.md` feitos pela sessão principa
 
 ## Próximo agente: Dev (`stack:nodejs`, sub-issue #156)
 
+## Dev (nodejs) — Implementação — concluído
+
+Branch `fix/156-css-website` (worktree `.worktrees/fix-156-css-website`, base `desenv`). Implementado exatamente conforme `especificacao-tecnica.md` + `ux-ui-spec.md`:
+
+- **CSS**: `app/globals.css` reduzido a 5 `@import`s; partials criados em `app/styles/` (`tokens.css`, `reset.css`, `layout.css`, `deal-card.css`, `deal-detail.css`) com os valores exatos da spec do UX/UI (cor de marca, neutros, tipografia Work Sans, espaçamento 8pt, raio, sombra). Mobile-first com breakpoints `min-width` 640/1024/1280px.
+- **Bug raiz corrigido**: `import './globals.css'` adicionado no topo de `app/layout.tsx`.
+- **Limpeza**: `app/page.module.css` removido (órfão, nunca importado).
+- **CA-3 verificado programaticamente**: extraídas todas as classes BEM usadas em `.tsx` (via grep) e cruzadas contra os seletores dos 5 arquivos CSS — 100% cobertas (nenhuma classe sem regra correspondente).
+- **Playwright/`test:visual`**: `@playwright/test` instalado (devDependency, auto-registrado no `package.json` pelo `npm install`) + chromium baixado. `playwright.config.ts` (STAGING_URL first, webServer local fallback, viewport mobile via device Pixel 7, `outputDir`/screenshots redirecionáveis via env `SCREENSHOTS_DIR`). `e2e/helpers.ts` (`getRealCategoriaAndSlug` via `/sitemap.xml`, sem hardcode). `e2e/visual.spec.ts` cobrindo as 3 telas (Home, categoria, `deal-detail`) com screenshot + assert de "sem overflow horizontal" (CA-9). `jest.config.js` ajustado (`testPathIgnorePatterns`) para não tentar rodar os specs do Playwright (runner diferente).
+
+### Validação executada (não só suposta)
+
+- `npm test`: **79/79 passando**, sem regressão.
+- `npm run build`: sem erros de TypeScript.
+- Stack Docker real (`docker compose up -d --build db api website`, `.env` local descartável a partir de `.env.example`, `docker-compose.override.yml` local descartável só para expor portas de teste — nenhum dos dois commitado) com **5 produtos seedados via SQL direto** (`INSERT INTO products ...`, catálogo vazio no ambiente local, tabela/colunas via `ProductConfiguration.cs`) cobrindo os casos de exceção da spec (sem desconto, sem `affiliate_link`/CTA desabilitado, categoria com múltiplos produtos).
+- `STAGING_URL=http://localhost:3000 SCREENSHOTS_DIR={docs_path}/screenshots npm run test:visual`: **3/3 passando**, PNGs confirmados em `documentacoes/ISSUE-154-site-sem-css/screenshots/` (`home.png`, `categoria.png`, `deal-detail.png`) — **inspecionados visualmente** (não só a suíte verde): grid de cards, header sticky com chips ativos, badge `-44%`, preço riscado/atual, CTA vermelho, CTA desabilitado (cinza, "Indisponível"), estado vazio de categoria estilizado (bloco tracejado + ícone). Screenshot adicional em desktop (1280px, ad-hoc, não commitado) confirmou grid em 4 colunas e header sem scroll horizontal.
+- Ambiente Docker removido ao final (`docker compose down -v`), `.env`/`docker-compose.override.yml` locais apagados — nenhum resíduo no worktree.
+
+### Achado fora de escopo (não corrigido, CA-T2 proíbe)
+
+Bug pré-existente identificado durante a validação visual, **não relacionado a CSS**: categorias com espaço no nome (ex. "Casa e Decoracao") retornam o estado vazio em vez do grid — `app/categoria/[categoria]/page.tsx` usa `params.categoria` sem tratamento consistente entre `formatCategoriaLabel` (decodifica) e `fetchByCategory` (reenvia como veio), causando mismatch de encoding contra a API. Categorias de uma palavra (ex. "Eletronicos") funcionam normalmente — confirmado que o CSS de ambos os estados (grid populado e vazio) está correto; é puramente um bug de lógica de fetch, fora do escopo desta issue (CA-T2 proíbe alterar `lib/api.ts`/rotas/fetch aqui). Registrado no PR #157 para o LT avaliar abertura de issue técnica separada.
+
+PR aberto: **#157** (`fix/156-css-website` → `desenv`), aguardando merge do Líder Técnico.
+
 ## Ledger de Custo
 
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -94,6 +119,7 @@ Nota: commit/push e atualização deste `estado.md` feitos pela sessão principa
 | 3 | PM Fase 2 (PRD + critérios de aceite) | PM | Sonnet | 50220 | 19 | 197s |
 | 4 | Refinamento Técnico (especificacao-tecnica.md + sub-issue #156) | Líder Técnico | Sonnet | 85826 | 39 | 430s |
 | 5 | UX/UI (spec visual, tokens Figma) | UX/UI | Sonnet | 89850 | 9 | 330s |
+| 6 | Dev (CSS + test:visual, sub-issue #156, PR #157) | Dev Node.js | Sonnet | 150219 | 112 | 962s |
 
 ---
 
