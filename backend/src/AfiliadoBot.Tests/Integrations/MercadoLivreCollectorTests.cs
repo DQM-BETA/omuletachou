@@ -13,22 +13,23 @@ using Moq.Protected;
 
 namespace AfiliadoBot.Tests.Integrations;
 
+/// <summary>
+/// Testes do fluxo reconstruido do MercadoLivreCollector (Issue #182/#183) — Highlights API por
+/// categoria (GET /highlights/MLB/category/{id}) + resolucao de detalhes por produto
+/// (GET /products/{id} + GET /products/{id}/items), sem multi-get (/items?ids=... bloqueado por
+/// 403, ver design.md secao 10). Fixtures seguem os campos confirmados ao vivo pelo LT
+/// (design.md secao 10.1): "name"/"pictures" em /products/{id} (permalink sempre vazio, ignorado),
+/// "item_id"/"price" em /products/{id}/items.
+/// </summary>
 public class MercadoLivreCollectorTests
 {
-    private const string ValidSearchResponse = """
-        {
-          "results": [
-            {
-              "id": "MLB123456",
-              "title": "Smartphone XPTO",
-              "price": 899.90,
-              "original_price": 1299.90,
-              "thumbnail": "https://http2.mlstatic.com/thumb.jpg",
-              "permalink": "https://produto.mercadolivre.com.br/MLB-123456-smartphone-xpto"
-            }
-          ]
-        }
-        """;
+    // IDs reais do CategoryMap (design.md secao 3.4) usados nos testes para simular categorias
+    // especificas sem depender de todas as 8.
+    private const string EletrodomesticosCategoryId = "MLB5726";
+    private const string ClimatizacaoCategoryId = "MLB252358";
+    private const string CasaECozinhaCategoryId = "MLB1574";
+
+    private const string EmptyHighlightsResponse = """{ "content": [] }""";
 
     private const string TokenResponse = """
         {
@@ -38,6 +39,45 @@ public class MercadoLivreCollectorTests
           "scope": "offline_access read write"
         }
         """;
+
+    private static string HighlightsWithOneProduct(string catalogProductId) => $$"""
+        {
+          "content": [
+            { "id": "{{catalogProductId}}", "position": 1, "type": "PRODUCT" }
+          ]
+        }
+        """;
+
+    private static string HighlightsWithTwoProducts(string catalogProductId1, string catalogProductId2) => $$"""
+        {
+          "content": [
+            { "id": "{{catalogProductId1}}", "position": 1, "type": "PRODUCT" },
+            { "id": "{{catalogProductId2}}", "position": 2, "type": "PRODUCT" }
+          ]
+        }
+        """;
+
+    private static string ProductResponse(string id, string name, string thumbnailUrl) => $$"""
+        {
+          "id": "{{id}}",
+          "name": "{{name}}",
+          "permalink": "",
+          "buy_box_winner": null,
+          "pictures": [
+            { "id": "pic1", "url": "{{thumbnailUrl}}" }
+          ]
+        }
+        """;
+
+    private static string ItemsResponse(params decimal[] prices)
+    {
+        var results = string.Join(",", prices.Select((p, i) =>
+            $$"""{ "item_id": "MLB100000000{{i}}", "seller_id": {{i + 1}}, "price": {{p.ToString(System.Globalization.CultureInfo.InvariantCulture)}}, "category_id": "MLB5726", "shipping": {} }"""));
+
+        return $$"""{ "results": [{{results}}] }""";
+    }
+
+    private const string EmptyItemsResponse = """{ "results": [] }""";
 
     private static AfiliadoBotDbContext CreateInMemoryContext()
     {
@@ -86,12 +126,6 @@ public class MercadoLivreCollectorTests
         return new HttpClient(handlerMock.Object);
     }
 
-    private static HttpClient CreateSequenceHttpClient(params HttpResponseMessage[] responses)
-    {
-        var queue = new Queue<HttpResponseMessage>(responses);
-        return CreateHttpClient(_ => queue.Count > 1 ? queue.Dequeue() : queue.Peek());
-    }
-
     private static HttpResponseMessage JsonResponse(HttpStatusCode statusCode, string body) => new(statusCode)
     {
         Content = new StringContent(body)
@@ -105,53 +139,68 @@ public class MercadoLivreCollectorTests
         return mock;
     }
 
-    [Fact]
-    public async Task CollectAsync_RetornaProdutos_QuandoRespostaValida()
+    /// <summary>
+    /// Monta um HttpClient que roteia por padrao de URL: /oauth/token -> TokenResponse; qualquer
+    /// /highlights/MLB/category/{id} nao coberto por <paramref name="overrides"/> -> highlights
+    /// vazio (categoria sem produtos, isolada das demais). <paramref name="overrides"/> mapeia um
+    /// trecho da URL (ex.: categoria/produto especifico) para a resposta a devolver — o primeiro
+    /// override cujo trecho aparece na URL vence.
+    /// </summary>
+    private static HttpClient CreateMercadoLivreClient(
+        params (string UrlContains, HttpResponseMessage Response)[] overrides)
     {
-        using var db = CreateInMemoryContext();
-        await SeedCredentialsAsync(db);
-        await SeedTokenAsync(db, "token-valido", DateTime.UtcNow.AddHours(1));
-        var aiMock = CreateAiServiceMock();
+        return CreateHttpClient(req =>
+        {
+            var url = req.RequestUri!.ToString();
 
-        var httpClient = CreateHttpClient(req =>
-            req.RequestUri!.ToString().Contains("/search")
-                ? JsonResponse(HttpStatusCode.OK, ValidSearchResponse)
-                : JsonResponse(HttpStatusCode.OK, TokenResponse));
+            if (url.Contains("/oauth/token"))
+                return JsonResponse(HttpStatusCode.OK, TokenResponse);
 
-        var collector = new MercadoLivreCollector(httpClient, db, aiMock.Object, NullLogger<MercadoLivreCollector>.Instance);
+            foreach (var (urlContains, response) in overrides)
+            {
+                if (url.Contains(urlContains))
+                    return response;
+            }
 
-        var result = (await collector.CollectAsync()).ToList();
+            if (url.Contains("/highlights/"))
+                return JsonResponse(HttpStatusCode.OK, EmptyHighlightsResponse);
 
-        result.Should().HaveCount(1);
-        result[0].ExternalId.Should().Be("MLB123456");
-        result[0].SalePrice.Should().Be(899.90m);
-        result[0].MediaUrl.Should().Be("https://http2.mlstatic.com/thumb.jpg");
-        result[0].MediaType.Should().Be("image");
-        result[0].SourceUrl.Should().Be("https://produto.mercadolivre.com.br/MLB-123456-smartphone-xpto");
+            return JsonResponse(HttpStatusCode.NotFound, "{}");
+        });
     }
 
     [Fact]
-    public async Task CollectAsync_DetectaCategoriaViaCategoryDetector_QuandoProdutoNovo()
+    public async Task CollectAsync_ResolveEUpsertaProduto_QuandoHighlightsEProdutoResolvemOk()
     {
-        // CA 2.1 (Issue #167): o dicionario roda em CollectAsync, sem depender de IA. Titulo
-        // "Smartphone XPTO" casa com a keyword "smartphone" (Eletronicos/Celulares e Smartphones).
         using var db = CreateInMemoryContext();
         await SeedCredentialsAsync(db);
         await SeedTokenAsync(db, "token-valido", DateTime.UtcNow.AddHours(1));
         var aiMock = CreateAiServiceMock();
 
-        var httpClient = CreateHttpClient(req =>
-            req.RequestUri!.ToString().Contains("/search")
-                ? JsonResponse(HttpStatusCode.OK, ValidSearchResponse)
-                : JsonResponse(HttpStatusCode.OK, TokenResponse));
+        var httpClient = CreateMercadoLivreClient(
+            ($"/highlights/MLB/category/{EletrodomesticosCategoryId}",
+                JsonResponse(HttpStatusCode.OK, HighlightsWithOneProduct("MLB16855791"))),
+            ("/products/MLB16855791/items",
+                JsonResponse(HttpStatusCode.OK, ItemsResponse(2599.90m, 2499.90m))),
+            ("/products/MLB16855791",
+                JsonResponse(HttpStatusCode.OK, ProductResponse(
+                    "MLB16855791", "Geladeira Frost Free XPTO", "https://http2.mlstatic.com/geladeira.jpg"))));
 
         var collector = new MercadoLivreCollector(httpClient, db, aiMock.Object, NullLogger<MercadoLivreCollector>.Instance);
 
         var result = (await collector.CollectAsync()).ToList();
 
         result.Should().HaveCount(1);
-        result[0].Category.Should().Be("Eletrônicos");
-        result[0].Subcategory.Should().Be("Celulares e Smartphones");
+        result[0].ExternalId.Should().Be("MLB16855791");
+        result[0].Title.Should().Be("Geladeira Frost Free XPTO");
+        result[0].SalePrice.Should().Be(2499.90m); // menor price entre os 2 itens retornados
+        result[0].OriginalPrice.Should().Be(2499.90m); // fallback: sem sinal de desconto disponivel
+        result[0].DiscountPct.Should().Be(0);
+        result[0].MediaUrl.Should().Be("https://http2.mlstatic.com/geladeira.jpg");
+        result[0].MediaType.Should().Be("image");
+        result[0].SourceUrl.Should().Be("https://www.mercadolivre.com.br/p/MLB16855791");
+        result[0].Category.Should().Be("Eletrodomésticos");
+        result[0].Subcategory.Should().Be("Refrigeração");
     }
 
     [Fact]
@@ -186,14 +235,14 @@ public class MercadoLivreCollectorTests
                 tokenCalls++;
                 return JsonResponse(HttpStatusCode.OK, TokenResponse);
             }
-            return JsonResponse(HttpStatusCode.OK, ValidSearchResponse);
+            return JsonResponse(HttpStatusCode.OK, EmptyHighlightsResponse);
         });
 
         var collector = new MercadoLivreCollector(httpClient, db, aiMock.Object, NullLogger<MercadoLivreCollector>.Instance);
 
         var result = (await collector.CollectAsync()).ToList();
 
-        result.Should().HaveCount(1);
+        result.Should().BeEmpty(); // nenhuma categoria retornou produtos
         tokenCalls.Should().Be(1);
 
         var savedToken = await db.AppSettings.FirstAsync(s => s.Key == "mercadolivre.access_token");
@@ -216,15 +265,97 @@ public class MercadoLivreCollectorTests
                 tokenCalls++;
                 return JsonResponse(HttpStatusCode.OK, TokenResponse);
             }
-            return JsonResponse(HttpStatusCode.OK, ValidSearchResponse);
+            return JsonResponse(HttpStatusCode.OK, EmptyHighlightsResponse);
         });
+
+        var collector = new MercadoLivreCollector(httpClient, db, aiMock.Object, NullLogger<MercadoLivreCollector>.Instance);
+
+        await collector.CollectAsync();
+
+        tokenCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task CollectAsync_PulaCategoria_QuandoHighlightsFalha_DemaisCategoriasContinuam()
+    {
+        // CA 5.1: categoria com falha (Highlights) e pulada, sem abortar o ciclo — as demais 7
+        // categorias continuam sendo processadas normalmente.
+        using var db = CreateInMemoryContext();
+        await SeedCredentialsAsync(db);
+        await SeedTokenAsync(db, "token-valido", DateTime.UtcNow.AddHours(1));
+        var aiMock = CreateAiServiceMock();
+
+        var httpClient = CreateMercadoLivreClient(
+            ($"/highlights/MLB/category/{EletrodomesticosCategoryId}",
+                JsonResponse(HttpStatusCode.InternalServerError, string.Empty)),
+            ($"/highlights/MLB/category/{ClimatizacaoCategoryId}",
+                JsonResponse(HttpStatusCode.OK, HighlightsWithOneProduct("MLB20000001"))),
+            ("/products/MLB20000001/items",
+                JsonResponse(HttpStatusCode.OK, ItemsResponse(199.90m))),
+            ("/products/MLB20000001",
+                JsonResponse(HttpStatusCode.OK, ProductResponse(
+                    "MLB20000001", "Ventilador de Mesa XPTO", "https://http2.mlstatic.com/ventilador.jpg"))));
+
+        var collector = new MercadoLivreCollector(httpClient, db, aiMock.Object, NullLogger<MercadoLivreCollector>.Instance);
+
+        IEnumerable<Product>? result = null;
+        var act = async () => result = await collector.CollectAsync();
+
+        await act.Should().NotThrowAsync();
+        result.Should().NotBeNull();
+        result!.Should().ContainSingle(p => p.ExternalId == "MLB20000001");
+    }
+
+    [Fact]
+    public async Task CollectAsync_PulaProduto_QuandoResolucaoFalha_DemaisProdutosContinuam()
+    {
+        // CA 5.2/5.3: produto individual que falha ao resolver e pulado, sem abortar a categoria —
+        // os demais produtos dos Highlights daquela categoria continuam sendo processados.
+        using var db = CreateInMemoryContext();
+        await SeedCredentialsAsync(db);
+        await SeedTokenAsync(db, "token-valido", DateTime.UtcNow.AddHours(1));
+        var aiMock = CreateAiServiceMock();
+
+        var httpClient = CreateMercadoLivreClient(
+            ($"/highlights/MLB/category/{EletrodomesticosCategoryId}",
+                JsonResponse(HttpStatusCode.OK, HighlightsWithTwoProducts("MLB11111111", "MLB22222222"))),
+            ("/products/MLB11111111", JsonResponse(HttpStatusCode.NotFound, """{"error":"not_found"}""")),
+            ("/products/MLB22222222/items",
+                JsonResponse(HttpStatusCode.OK, ItemsResponse(349.90m))),
+            ("/products/MLB22222222",
+                JsonResponse(HttpStatusCode.OK, ProductResponse(
+                    "MLB22222222", "Micro-ondas XPTO", "https://http2.mlstatic.com/microondas.jpg"))));
 
         var collector = new MercadoLivreCollector(httpClient, db, aiMock.Object, NullLogger<MercadoLivreCollector>.Instance);
 
         var result = (await collector.CollectAsync()).ToList();
 
-        result.Should().HaveCount(1);
-        tokenCalls.Should().Be(0);
+        result.Should().ContainSingle();
+        result[0].ExternalId.Should().Be("MLB22222222");
+    }
+
+    [Fact]
+    public async Task CollectAsync_PulaProduto_QuandoItemsVazio()
+    {
+        // CA 3.3/5.2: /products/{id}/items sem resultados — produto pulado (nao ha preco).
+        using var db = CreateInMemoryContext();
+        await SeedCredentialsAsync(db);
+        await SeedTokenAsync(db, "token-valido", DateTime.UtcNow.AddHours(1));
+        var aiMock = CreateAiServiceMock();
+
+        var httpClient = CreateMercadoLivreClient(
+            ($"/highlights/MLB/category/{EletrodomesticosCategoryId}",
+                JsonResponse(HttpStatusCode.OK, HighlightsWithOneProduct("MLB33333333"))),
+            ("/products/MLB33333333/items", JsonResponse(HttpStatusCode.OK, EmptyItemsResponse)),
+            ("/products/MLB33333333",
+                JsonResponse(HttpStatusCode.OK, ProductResponse(
+                    "MLB33333333", "Fogão XPTO", "https://http2.mlstatic.com/fogao.jpg"))));
+
+        var collector = new MercadoLivreCollector(httpClient, db, aiMock.Object, NullLogger<MercadoLivreCollector>.Instance);
+
+        var result = (await collector.CollectAsync()).ToList();
+
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -235,16 +366,16 @@ public class MercadoLivreCollectorTests
         await SeedTokenAsync(db, "token-valido", DateTime.UtcNow.AddHours(1));
 
         var existingProduct = new Product(
-            title: "Smartphone XPTO",
+            title: "Geladeira Frost Free XPTO",
             description: "desc",
-            salePrice: 999m,
-            originalPrice: 1299.90m,
-            discountPct: 23m,
+            salePrice: 2199m,
+            originalPrice: 2199m,
+            discountPct: 0m,
             affiliateLink: null,
-            slug: "smartphone-xpto-mlb123456",
+            slug: "geladeira-frost-free-xpto-mlb16855791",
             category: "Geral",
             platform: Platform.MercadoLivre,
-            externalId: "MLB123456");
+            externalId: "MLB16855791");
         existingProduct.UpdateAiResult(9, "Otimo", "caption antiga");
         existingProduct.MarkAsPublished();
 
@@ -252,10 +383,14 @@ public class MercadoLivreCollectorTests
         await db.SaveChangesAsync();
 
         var aiMock = CreateAiServiceMock();
-        var httpClient = CreateHttpClient(req =>
-            req.RequestUri!.ToString().Contains("/search")
-                ? JsonResponse(HttpStatusCode.OK, ValidSearchResponse)
-                : JsonResponse(HttpStatusCode.OK, TokenResponse));
+        var httpClient = CreateMercadoLivreClient(
+            ($"/highlights/MLB/category/{EletrodomesticosCategoryId}",
+                JsonResponse(HttpStatusCode.OK, HighlightsWithOneProduct("MLB16855791"))),
+            ("/products/MLB16855791/items",
+                JsonResponse(HttpStatusCode.OK, ItemsResponse(2499.90m))),
+            ("/products/MLB16855791",
+                JsonResponse(HttpStatusCode.OK, ProductResponse(
+                    "MLB16855791", "Geladeira Frost Free XPTO", "https://http2.mlstatic.com/geladeira.jpg"))));
 
         var collector = new MercadoLivreCollector(httpClient, db, aiMock.Object, NullLogger<MercadoLivreCollector>.Instance);
 
@@ -263,15 +398,15 @@ public class MercadoLivreCollectorTests
 
         result.Should().HaveCount(1);
 
-        var totalWithSameKey = await db.Products.CountAsync(p => p.Platform == Platform.MercadoLivre && p.ExternalId == "MLB123456");
+        var totalWithSameKey = await db.Products.CountAsync(p => p.Platform == Platform.MercadoLivre && p.ExternalId == "MLB16855791");
         totalWithSameKey.Should().Be(1);
 
-        var updated = await db.Products.FirstAsync(p => p.ExternalId == "MLB123456");
+        var updated = await db.Products.FirstAsync(p => p.ExternalId == "MLB16855791");
         updated.Id.Should().Be(existingProduct.Id);
-        updated.SalePrice.Should().Be(899.90m);
+        updated.SalePrice.Should().Be(2499.90m);
         updated.Status.Should().Be(ProductStatus.Published); // preservado
         updated.AiScore.Should().Be(9); // preservado, nao re-scoreado
-        updated.SourceUrl.Should().Be("https://produto.mercadolivre.com.br/MLB-123456-smartphone-xpto");
+        updated.SourceUrl.Should().Be("https://www.mercadolivre.com.br/p/MLB16855791");
         updated.Category.Should().Be("Geral"); // sem recategorizacao retroativa (Issue #167)
 
         aiMock.Verify(a => a.ScoreProductAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -285,10 +420,14 @@ public class MercadoLivreCollectorTests
         await SeedTokenAsync(db, "token-valido", DateTime.UtcNow.AddHours(1));
         var aiMock = CreateAiServiceMock(score: 8, reason: "Otimo desconto");
 
-        var httpClient = CreateHttpClient(req =>
-            req.RequestUri!.ToString().Contains("/search")
-                ? JsonResponse(HttpStatusCode.OK, ValidSearchResponse)
-                : JsonResponse(HttpStatusCode.OK, TokenResponse));
+        var httpClient = CreateMercadoLivreClient(
+            ($"/highlights/MLB/category/{EletrodomesticosCategoryId}",
+                JsonResponse(HttpStatusCode.OK, HighlightsWithOneProduct("MLB16855791"))),
+            ("/products/MLB16855791/items",
+                JsonResponse(HttpStatusCode.OK, ItemsResponse(2499.90m))),
+            ("/products/MLB16855791",
+                JsonResponse(HttpStatusCode.OK, ProductResponse(
+                    "MLB16855791", "Geladeira Frost Free XPTO", "https://http2.mlstatic.com/geladeira.jpg"))));
 
         var collector = new MercadoLivreCollector(httpClient, db, aiMock.Object, NullLogger<MercadoLivreCollector>.Instance);
 
@@ -300,58 +439,6 @@ public class MercadoLivreCollectorTests
     }
 
     [Fact]
-    public async Task CollectAsync_RetryComBackoff_QuandoRecebe429()
-    {
-        using var db = CreateInMemoryContext();
-        await SeedCredentialsAsync(db);
-        await SeedTokenAsync(db, "token-valido", DateTime.UtcNow.AddHours(1));
-        var aiMock = CreateAiServiceMock();
-
-        var searchQueue = new Queue<HttpResponseMessage>(new[]
-        {
-            JsonResponse(HttpStatusCode.TooManyRequests, string.Empty),
-            JsonResponse(HttpStatusCode.OK, ValidSearchResponse)
-        });
-
-        var httpClient = CreateHttpClient(req =>
-        {
-            if (req.RequestUri!.ToString().Contains("/oauth/token"))
-                return JsonResponse(HttpStatusCode.OK, TokenResponse);
-
-            return searchQueue.Count > 1 ? searchQueue.Dequeue() : searchQueue.Peek();
-        });
-
-        var collector = new MercadoLivreCollector(httpClient, db, aiMock.Object, NullLogger<MercadoLivreCollector>.Instance);
-
-        var result = (await collector.CollectAsync()).ToList();
-
-        result.Should().HaveCount(1);
-    }
-
-    [Fact]
-    public async Task CollectAsync_AbortaCicloSemException_QuandoTodasTentativasFalham()
-    {
-        using var db = CreateInMemoryContext();
-        await SeedCredentialsAsync(db);
-        await SeedTokenAsync(db, "token-valido", DateTime.UtcNow.AddHours(1));
-        var aiMock = CreateAiServiceMock();
-
-        var httpClient = CreateHttpClient(req =>
-            req.RequestUri!.ToString().Contains("/oauth/token")
-                ? JsonResponse(HttpStatusCode.OK, TokenResponse)
-                : JsonResponse(HttpStatusCode.TooManyRequests, string.Empty));
-
-        var collector = new MercadoLivreCollector(httpClient, db, aiMock.Object, NullLogger<MercadoLivreCollector>.Instance);
-
-        IEnumerable<Product>? result = null;
-        var act = async () => result = await collector.CollectAsync();
-
-        await act.Should().NotThrowAsync();
-        result.Should().NotBeNull();
-        result!.Should().BeEmpty();
-    }
-
-    [Fact]
     public async Task CollectAsync_NaoPreencheAffiliateLink_ProdutoFicaNull()
     {
         using var db = CreateInMemoryContext();
@@ -359,10 +446,14 @@ public class MercadoLivreCollectorTests
         await SeedTokenAsync(db, "token-valido", DateTime.UtcNow.AddHours(1));
         var aiMock = CreateAiServiceMock();
 
-        var httpClient = CreateHttpClient(req =>
-            req.RequestUri!.ToString().Contains("/search")
-                ? JsonResponse(HttpStatusCode.OK, ValidSearchResponse)
-                : JsonResponse(HttpStatusCode.OK, TokenResponse));
+        var httpClient = CreateMercadoLivreClient(
+            ($"/highlights/MLB/category/{EletrodomesticosCategoryId}",
+                JsonResponse(HttpStatusCode.OK, HighlightsWithOneProduct("MLB16855791"))),
+            ("/products/MLB16855791/items",
+                JsonResponse(HttpStatusCode.OK, ItemsResponse(2499.90m))),
+            ("/products/MLB16855791",
+                JsonResponse(HttpStatusCode.OK, ProductResponse(
+                    "MLB16855791", "Geladeira Frost Free XPTO", "https://http2.mlstatic.com/geladeira.jpg"))));
 
         var collector = new MercadoLivreCollector(httpClient, db, aiMock.Object, NullLogger<MercadoLivreCollector>.Instance);
 
@@ -370,5 +461,57 @@ public class MercadoLivreCollectorTests
 
         result.Should().HaveCount(1);
         result[0].AffiliateLink.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CollectAsync_UpsertUnico_QuandoMesmoProdutoAparecEmDuasCategoriasNoMesmoCiclo()
+    {
+        // O mesmo catalog_product_id pode aparecer nos Highlights de mais de uma categoria interna
+        // (ex.: um produto de cozinha destacado tanto em "Eletrodomésticos" quanto em
+        // "Casa e Cozinha"). O upsert deve acontecer uma unica vez no ciclo.
+        using var db = CreateInMemoryContext();
+        await SeedCredentialsAsync(db);
+        await SeedTokenAsync(db, "token-valido", DateTime.UtcNow.AddHours(1));
+        var aiMock = CreateAiServiceMock();
+
+        var productCalls = 0;
+        var httpClient = CreateHttpClient(req =>
+        {
+            var url = req.RequestUri!.ToString();
+
+            if (url.Contains("/oauth/token"))
+                return JsonResponse(HttpStatusCode.OK, TokenResponse);
+
+            if (url.Contains($"/highlights/MLB/category/{EletrodomesticosCategoryId}") ||
+                url.Contains($"/highlights/MLB/category/{CasaECozinhaCategoryId}"))
+                return JsonResponse(HttpStatusCode.OK, HighlightsWithOneProduct("MLB44444444"));
+
+            if (url.Contains("/highlights/"))
+                return JsonResponse(HttpStatusCode.OK, EmptyHighlightsResponse);
+
+            if (url.Contains("/products/MLB44444444/items"))
+                return JsonResponse(HttpStatusCode.OK, ItemsResponse(159.90m));
+
+            if (url.Contains("/products/MLB44444444"))
+            {
+                productCalls++;
+                return JsonResponse(HttpStatusCode.OK, ProductResponse(
+                    "MLB44444444", "Airfryer XPTO", "https://http2.mlstatic.com/airfryer.jpg"));
+            }
+
+            return JsonResponse(HttpStatusCode.NotFound, "{}");
+        });
+
+        var collector = new MercadoLivreCollector(httpClient, db, aiMock.Object, NullLogger<MercadoLivreCollector>.Instance);
+
+        var result = (await collector.CollectAsync()).ToList();
+
+        result.Should().ContainSingle(p => p.ExternalId == "MLB44444444");
+        productCalls.Should().Be(1); // resolvido uma unica vez, mesmo aparecendo em 2 categorias
+
+        var totalInDb = await db.Products.CountAsync(p => p.ExternalId == "MLB44444444");
+        totalInDb.Should().Be(1);
+
+        aiMock.Verify(a => a.ScoreProductAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 }
