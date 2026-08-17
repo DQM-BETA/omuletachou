@@ -1,9 +1,9 @@
 ---
 issue: 182
 titulo: fix: MercadoLivreCollector quebrado — endpoint /sites/MLB/search descontinuado pela API, reconstruir com Highlights API
-etapa_atual: QA
+etapa_atual: Em Desenvolvimento
 rota: normal
-ultimo_agente: code-review
+ultimo_agente: lider-tecnico
 openspec_change: repos/omuletachou/openspec/changes/issue-182-mercadolivrecollector-quebrado
 tech_stacks:
   - dotnet
@@ -17,6 +17,7 @@ sub_issues:
   - "#183 (stack:dotnet, task_id:Sub-A) — MercadoLivreCollector: reconstrução com Highlights API"
   - "#184 (stack:dotnet, task_id:Sub-B) — Fluxo semi-manual de link de afiliado (domínio + API de importação)"
   - "#185 (stack:angular, task_id:Sub-C) — Dashboard: tela de importação de links de afiliado"
+  - "#190 (stack:dotnet, task_id:Sub-D) — Fix isolamento de falha em GetJsonAsync (JsonDocument.Parse fora do try/catch), achado do /code-review estático no PR #189"
 desenv_tasks_merged:
   - "#184"
   - "#183"
@@ -134,6 +135,48 @@ blockers: |
     (proxima carga mostra o resto), mas sem aviso na tela de que ha mais pendencias alem das 100
     carregadas se o operador acumular >100 produtos aguardando (~80/dia no pior caso, ~1-2 dias
     sem processar). Sugestao de follow-up em `.claude/melhorias/`, nao é regressao deste PR.
+
+  CORRECAO PRE-QA — achados do `/code-review` estatico no PR #189 (LT, 2026-08-17), Gerente pediu
+  correcao dos 2 achados (https://github.com/DQM-BETA/omuletachou/pull/189#issuecomment-5319794063)
+  antes de acionar o QA:
+  - ACHADO 1 (fix tecnico, sem ambiguidade) — `JsonDocument.Parse(body)` em `GetJsonAsync`
+    (MercadoLivreCollector.cs linha ~409) roda fora do try/catch que envolve o resto do metodo.
+    JsonException de corpo malformado nao vira MercadoLivreApiException (unico tipo capturado
+    pelos chamadores), propaga para fora de CollectAsync ANTES do SaveChangesAsync (chamado uma
+    unica vez ao final do loop duplo de categorias) — perde TODOS os produtos ja resolvidos no
+    ciclo, nao so a categoria/produto com problema. Quebra o isolamento de falha que e premissa
+    central do PR. Sub-issue #190 criada (stack:dotnet), TDD obrigatorio, branch
+    feature/ISSUE-190-json-parse-try-catch base desenv (fluxo padrao feature->desenv->homolog,
+    apesar do codigo ja estar em homolog via PR #189 — LT abrira novo PR desenv->homolog so com
+    esta correcao apos o merge do #190).
+  - ACHADO 2 (ESCALADO, nao decidido pelo LT) — `MercadoLivreCollector.UpsertProductAsync` seta
+    `OriginalPrice = SalePrice` / `DiscountPct = 0` para todo produto ML (Highlights API nao expoe
+    preco original/desconto em `/products/{id}` nem `/products/{id}/items` — fallback documentado
+    no codigo, nao bug de implementacao). Esse `DiscountPct = 0` alimenta o prompt fixo de
+    `ClaudeAiService.ScoreProductAsync` ("Desconto real minimo de 15%; precos inflados
+    penalizam", linha ~39) — 0% e indistinguivel para a IA de "produto sem desconto real",
+    entao o esperado e reprovacao sistematica (ou score bem abaixo de minScore=6) de TODO
+    produto Mercado Livre, zerando na pratica a aprovacao desse canal, mesmo com o collector
+    funcionando mecanicamente. Nunca foi decidido deliberadamente em nenhuma fase anterior (PRD,
+    design.md, Gate 1.5) — efeito colateral descoberto agora pela revisao estatica.
+    ANALISE DO LT: avaliada alternativa tecnica (tornar DiscountPct nullable e omitir a linha do
+    prompt quando o dado nao esta disponivel, em vez de mandar 0% como se fosse valor verificado)
+    — mas toda alternativa avaliada produz o MESMO efeito pratico: isentar o canal Mercado Livre
+    do criterio de desconto minimo de 15% que se aplica as demais plataformas (Amazon/Shopee).
+    Isso e literalmente a decisao de negocio "produtos ML nao precisam de desconto minimo" citada
+    como exemplo de linha vermelha do mandato do LT — nao um bug a corrigir dentro do mandato
+    tecnico. NAO IMPLEMENTADO. Opcoes levantadas para o Gerente (via PM Fase 2, se precisar
+    refinar criterios-aceite.md):
+      (A) excluir ML do criterio de desconto minimo — enviar DiscountPct=null (omitir a linha do
+          prompt) so quando a plataforma nao tem esse dado, mantendo os outros 4 criterios de
+          scoring (categoria/titulo/preco/prazo) sem penalizar por ausencia de sinal;
+      (B) manter como esta (produtos ML sistematicamente reprovados/baixo score) ate existir fonte
+          de preco original para ML — pausa de fato esse canal;
+      (C) investigar fonte alternativa de preco de tabela/historico para ML (fora do escopo desta
+          issue, trabalho adicional nao estimado).
+    Analise completa postada como comentario na Issue #182:
+    https://github.com/DQM-BETA/omuletachou/issues/182#issuecomment-5319915601
+    SEM sub-issue criada para o Achado 2 ate a decisao do Gerente.
 createdAt: 2026-08-17
 status_comment_id: 5317813321
 ---
@@ -156,15 +199,20 @@ status_comment_id: 5317813321
 | 12 | Líder Técnico (merge Sub-A #183) | lider-tecnico | sonnet | 42128 | 9 | 94s | PR #187 (feature/ISSUE-183-mercadolivrecollector-highlights → desenv) mesclado via squash + delete-branch (commit `533e4020`). Sub-issue #183 fechada. `desenv_tasks_merged` = ["#184","#183"]. Risco herdado do parsing defensivo de `/highlights` registrado em `blockers` para validação do CR/QA. Falta só Sub-C (#185) para abrir PR desenv→homolog. |
 | 13 | Dev Angular (Sub-C #185) | dev-angular | sonnet | 220863 | 114 | 1245s | Tela "Links de Afiliado — Mercado Livre" implementada (standalone component, estados loading/vazio/erro, validação client-side de contagem pré-import, painel de skipped, retry preservando texto colado, responsivo). 120/120 testes (92,3% statements), build produção OK, `ng serve` validado (chunk lazy 200). Achado técnico: spy de `MatSnackBar` falha silenciosamente em standalone components que importam `MatSnackBarModule` diretamente (injector local sombreia o singleton do TestBed) — contornado testando o DOM real via `OverlayContainer`. PR #188 feature→desenv aberto. |
 | 14 | Líder Técnico (merge Sub-C #185 + PR homologação) | lider-tecnico | sonnet | 55614 | 20 | 182s | PR #188 (feature/ISSUE-185-links-afiliado-ml → desenv) verificado (120/120 testes, build produção e `ng serve` já validados pelo Dev, sem CI configurado no repo) e mesclado via squash + delete-branch (commit `e3104ec`). Sub-issue #185 fechada. `desenv_tasks_merged` = ["#184","#183","#185"] — as 3 sub-issues da Issue-pai #182 agora estão em `desenv`. PR #189 (`desenv→homolog`, merge commit) aberto cobrindo a Issue-pai #182 completa: reconstrução do MercadoLivreCollector via Highlights API, fluxo semi-manual de link de afiliado (Gate 1.5), nova tela do dashboard. Corpo do PR inclui os dois riscos pendentes de validação ao vivo (parsing defensivo do schema `/highlights` e o permalink `/p/{catalog_product_id}`) para Code Review/QA. `pr_homologacao` = 189, `etapa_atual` = Code Review. |
-| 15 | Code Review (PR #189, homologação) | code-review | sonnet | ~ | ~ | ~ | **APROVADO.** Build real (`dotnet build`/`dotnet test` 427/427) + boot real via Docker (rebuild sem cache, db+api+dashboard healthy) + suíte dashboard (120/120, cobertura 92.32% medida ao vivo) + build produção. Integração real testada end-to-end (produto de teste inserido no Postgres → `GET /api/products?status=AwaitingAffiliateLink` confirmou `sourceUrl` → `POST /api/products/affiliate-links/import` confirmou isolamento de falha por item → banco reconferido `Queued`+`affiliate_link` → dashboard/nginx proxy confirmado). Diff conferido linha a linha contra `especificacao-tecnica.md`/`design.md` — conformidade total. Os 2 riscos herdados (schema `/highlights`, permalink `/p/{id}`) foram retentados com acesso de rede real e continuam bloqueados pela mesma política de rede do ambiente de execução (`PolicyAgent` 403, não resposta do Mercado Livre) — não é achado novo, é reconfirmação independente do mesmo bloqueio já documentado pelo Dev/LT; recomendação explícita ao QA para retentar em ambiente com internet real e, se ainda bloqueado, tratar o primeiro ciclo real do `CollectorJob` em produção como gate final. Achado não-bloqueante registrado (cap `MaxPageSize=100` pré-existente conflita com a suposição `pageSize=200` da especificação técnica §3.6 — sem perda de dado, só sem aviso de mais pendências além de 100). PR #189 mesclado `desenv→homolog` via merge commit `393134d5f869ec1b16769cfd32a26cb155025bea`. `code_review_homolog_pr` = 189, `etapa_atual` = QA. |
+| 15b | `/code-review` (sessão principal, camada estática) | orquestrador (multi-agente) | sonnet+haiku | 1070466 | 137 | 1526s | Análise multi-agente do PR #189 (16 sub-invocações: elegibilidade, CLAUDE.md, resumo, 5 agentes de auditoria paralela, 7 de scoring de confiança, recheck final). 2 achados ≥80 de confiança postados como comentário no PR: `JsonDocument.Parse` sem try/catch em `GetJsonAsync` (risco de perder o ciclo de coleta inteiro) e `DiscountPct=0` colidindo com o critério de scoring da IA (risco de zerar aprovação do canal ML). 5 achados descartados por baixa confiança (&lt;80). Comentário: https://github.com/DQM-BETA/omuletachou/pull/189#issuecomment-5319794063 |
+| 15 | Code Review (PR #189, homologação) | code-review | sonnet | 209304 | 89 | 912s | **APROVADO.** Build real (`dotnet build`/`dotnet test` 427/427) + boot real via Docker (rebuild sem cache, db+api+dashboard healthy) + suíte dashboard (120/120, cobertura 92.32% medida ao vivo) + build produção. Integração real testada end-to-end (produto de teste inserido no Postgres → `GET /api/products?status=AwaitingAffiliateLink` confirmou `sourceUrl` → `POST /api/products/affiliate-links/import` confirmou isolamento de falha por item → banco reconferido `Queued`+`affiliate_link` → dashboard/nginx proxy confirmado). Diff conferido linha a linha contra `especificacao-tecnica.md`/`design.md` — conformidade total. Os 2 riscos herdados (schema `/highlights`, permalink `/p/{id}`) foram retentados com acesso de rede real e continuam bloqueados pela mesma política de rede do ambiente de execução (`PolicyAgent` 403, não resposta do Mercado Livre) — não é achado novo, é reconfirmação independente do mesmo bloqueio já documentado pelo Dev/LT; recomendação explícita ao QA para retentar em ambiente com internet real e, se ainda bloqueado, tratar o primeiro ciclo real do `CollectorJob` em produção como gate final. Achado não-bloqueante registrado (cap `MaxPageSize=100` pré-existente conflita com a suposição `pageSize=200` da especificação técnica §3.6 — sem perda de dado, só sem aviso de mais pendências além de 100). PR #189 mesclado `desenv→homolog` via merge commit `393134d5f869ec1b16769cfd32a26cb155025bea`. `code_review_homolog_pr` = 189, `etapa_atual` = QA. |
+| 16 | Líder Técnico (correção pré-QA, achados `/code-review` PR #189) | lider-tecnico | sonnet | ~ | ~ | ~ | Gerente pediu correção dos 2 achados antes do QA. Achado 1 (JsonDocument.Parse fora do try/catch em GetJsonAsync, quebra isolamento de falha): sub-issue #190 criada (stack:dotnet), tasks.md atualizado (Sub-D), TDD obrigatório, branch feature/ISSUE-190-json-parse-try-catch base desenv. Achado 2 (DiscountPct=0 fixo para ML colide com critério "desconto mínimo 15%" do scoring de IA, reprova sistematicamente o canal ML): analisado, nenhuma correção técnica avaliada evita o efeito de isentar ML do critério — é decisão de negócio, não implementado. Análise completa postada na Issue #182 (comentário) e escalada, sugerindo PM Fase 2. `etapa_atual` = Em Desenvolvimento (sub-issue #190 pronta para Dev; Achado 2 aguardando decisão do Gerente). |
 
 ## Próximo passo
 
-PR #189 (`desenv→homolog`) aprovado pelo Code Review e mesclado (merge commit
-`393134d5f869ec1b16769cfd32a26cb155025bea`). Próximo passo: **QA** em `homolog` — validar os
-critérios de aceite (`criterios-aceite.md`) e, se possível (ambiente com internet real, diferente
-do sandbox de ferramentas dos agentes), retentar a validação ao vivo dos dois riscos herdados
-(schema de `GET /highlights` e permalink `/p/{catalog_product_id}`), ambos ainda não confirmados
-por nenhum agente até agora — ver `blockers` para o histórico completo das tentativas (Dev, LT,
-Code Review, todas bloqueadas pela mesma classe de restrição de rede). Se também bloqueado no
-ambiente do QA, registrar como risco aceito para monitorar no primeiro ciclo real de produção.
+Dois caminhos em paralelo:
+1. **Achado 1 (sub-issue #190, stack:dotnet):** pronta para Dev .NET — fix isolado, TDD obrigatório,
+   branch `feature/ISSUE-190-json-parse-try-catch` base `desenv`. Após merge, LT abre novo PR
+   `desenv→homolog` trazendo só esta correção.
+2. **Achado 2 (DiscountPct=0 × critério de desconto mínimo do scoring de IA):** análise do LT
+   concluiu que qualquer correção técnica avaliada equivale a decidir "produtos ML não precisam de
+   desconto mínimo" — decisão de negócio fora do mandato do LT. Escalado ao Gerente (comentário na
+   Issue #182: https://github.com/DQM-BETA/omuletachou/issues/182#issuecomment-5319915601), sugerido
+   PM Fase 2 se for necessário revisar `criterios-aceite.md`. **Sem sub-issue criada até a decisão.**
+
+QA continua pausado (achados a corrigir antes de acionar) — ver `blockers` para o histórico completo.

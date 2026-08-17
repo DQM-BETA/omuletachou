@@ -175,3 +175,37 @@ posterior à Fase 2 do PM) — critério de aceite funcional está na especifica
 - **Layout/composição visual da tela**: revisar com UX/UI antes de implementar (a sessão principal
   spawna o UX/UI antes desta sub-issue) — este documento define o contrato funcional/de dados, não
   o desenho visual.
+
+## Sub-D — Fix: isolamento de falha em `GetJsonAsync` (achado do `/code-review` estático, PR #189) — `stack:dotnet`
+
+> Adicionada após o merge do PR #189 (`desenv→homolog`). Achado 1 do comentário
+> https://github.com/DQM-BETA/omuletachou/pull/189#issuecomment-5319794063 — sub-issue #190.
+
+### Critérios de aceite
+Ver #190 (CA 1-3, Given/When/Then completos no corpo da sub-issue).
+
+### O que fazer
+1. `JsonDocument.Parse(body)` em `GetJsonAsync` (linha ~409) roda fora do `try/catch` que envolve o
+   restante do método — mover para dentro do `try` (ou `try/catch` próprio), capturar `JsonException`
+   e relançar como `MercadoLivreApiException` (mesmo padrão já usado no método para falha de rede e
+   HTTP não-2xx).
+2. TDD obrigatório: teste que reproduz o bug primeiro (corpo malformado com HTTP 200, mock de
+   `HttpMessageHandler`), confirmar falha, corrigir, confirmar sucesso.
+3. Não alterar o contrato público do método.
+
+### Contexto técnico
+- Arquivo: `backend/src/AfiliadoBot.Infrastructure/Integrations/Platforms/MercadoLivreCollector.cs`
+  (`GetJsonAsync`, linhas ~388-410).
+- Testes: `backend/src/AfiliadoBot.Tests/Integrations/MercadoLivreCollectorTests.cs`.
+- Branch: `feature/ISSUE-190-json-parse-try-catch`, base `desenv`.
+
+## Achado 2 (PR #189, comentário `/code-review`) — NÃO endereçado nesta rodada, escalado
+
+`DiscountPct = 0` fixo para todos os produtos coletados do Mercado Livre (Highlights API não expõe
+preço original/desconto) colide com o critério "Desconto real mínimo de 15%" do prompt de
+`ClaudeAiService.ScoreProductAsync` — na prática reprova sistematicamente todo produto ML. Análise
+completa e decisão de encaminhamento em `documentacoes/ISSUE-182-mercadolivrecollector-quebrado/estado.md`
+(bloco `blockers`) e no comentário da Issue #182. Qualquer correção técnica avaliada (ex.: omitir o
+campo desconto do prompt/scoring quando a plataforma não tem esse dado) produz o mesmo efeito
+prático de isentar o canal ML do critério de desconto mínimo — decisão de negócio, não técnica.
+Encaminhado ao Gerente via PM Fase 2, **sem sub-issue criada** até a decisão.
