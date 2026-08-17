@@ -37,6 +37,7 @@ export class ShellComponent {
     { label: 'Queue', path: '/queue', icon: 'queue' },
     { label: 'Settings', path: '/settings', icon: 'settings' },
     { label: 'Facebook Manual', path: '/facebook-manual', icon: 'facebook' },
+    { label: 'Links ML', path: '/mercadolivre-links', icon: 'link' },
     { label: 'Reports', path: '/reports', icon: 'bar_chart' },
     { label: 'Jobs', path: '/jobs', icon: 'play_circle' },
   ];
