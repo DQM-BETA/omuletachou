@@ -1,9 +1,9 @@
 ---
 issue: 182
 titulo: fix: MercadoLivreCollector quebrado — endpoint /sites/MLB/search descontinuado pela API, reconstruir com Highlights API
-etapa_atual: Backlog
+etapa_atual: Aguardando Aprovação — Gate 1
 rota: normal
-ultimo_agente: coordenador
+ultimo_agente: pm-analista-negocios
 openspec_change: ~
 tech_stacks:
   - dotnet
@@ -30,3 +30,4 @@ status_comment_id: 5317813321
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) | Notas |
 |---|---|---|---|---|---|---|---|
 | 1 | Preparação | coordenador | haiku | - | - | - | Issue criada, estado.md inicializado |
+| 2 | PM Fase 1 | pm-analista-negocios | sonnet | - | - | - | Levantamento postado (perguntas de categorias/volume/frequência/fallback/dedupe), aguardando respostas do Gerente |
