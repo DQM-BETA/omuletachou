@@ -1,9 +1,9 @@
 ---
 issue: 178
 titulo: "bug: Claude__ApiKey nunca chega no container da API (docker-compose.yml/.env.example/runbook incompletos)"
-etapa_atual: QA aprovado (aguardando LT criar PR homolog->main / Gate 2)
+etapa_atual: "Aguardando Aprovação — Gate 2"
 rota: rapido
-ultimo_agente: qa
+ultimo_agente: lt
 openspec_change: ~
 tech_stacks:
   - dotnet
@@ -16,7 +16,7 @@ sub_issues: []
 desenv_tasks_merged: []
 pr_feature: 179
 pr_homologacao: 180
-pr_release: ~
+pr_release: 181
 code_review_homolog_pr: 180
 qa_status: aprovado
 figma_url: ~
@@ -80,8 +80,16 @@ PR homologação: https://github.com/DQM-BETA/omuletachou/pull/180 (desenv→hom
 
 **Conclusão:** todos os 4 critérios objetivos passaram. Fix resolve o bug descrito na Issue #178: a variável `Claude__ApiKey`/`Claude__Model` chega no container com o valor exato do `.env`, o sistema degrada graciosamente sem ela, e a documentação (runbook) está coerente com o comportamento real.
 
+## PR release — homolog→main
+
+**Criado.** PR #181: https://github.com/DQM-BETA/omuletachou/pull/181 (`homolog` → `main`, merge commit — NUNCA squash).
+
+- `git fetch && git checkout homolog && git pull origin homolog` — branch atualizada, HEAD confirmado em `dc67d03e40f27287ee7b56d65435ff069713bc58` (mesmo commit validado pelo QA).
+- PR criado cobrindo a Issue #178, referenciando aprovação de Code Review (PR #180) e QA em `homolog`. NÃO mergeado — aguarda Gate 2 (Gerente).
+- `repo_path` deixado em `desenv` ao final, conforme instrução.
+
 ## Próximos passos
-1. Líder Técnico cria PR `homolog→main` → Gate 2 (Gerente).
+1. **[GATE 2: Gerente]** — aprovar merge do PR #181 (`homolog→main`). Após aprovação, o Coordenador executa o merge (merge commit) e fecha a Issue #178.
 
 ## Custo (ledger)
 
@@ -92,4 +100,4 @@ PR homologação: https://github.com/DQM-BETA/omuletachou/pull/180 (desenv→hom
 | 3 | LT (merge PR #179 + PR homologação #180) | Líder Técnico | Sonnet | 37240 | 11 | 82s |
 | 4 | Code Review (validação ao vivo PR #180, merge desenv->homolog) | Code Review | Sonnet | 71787 | 31 | 299s |
 | 5 | QA (validação independente homolog) | QA | Sonnet | 50053 | 26 | 257s |
-
+| 6 | LT (PR release #181, homolog->main) | Líder Técnico | Sonnet | 37981 | 7 | 86s |
