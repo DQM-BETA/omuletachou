@@ -7,5 +7,6 @@ public enum ProductStatus
     Published,
     Rejected,
     Processing,
-    Error
+    Error,
+    AwaitingAffiliateLink // NOVO — Issue #182/#184: fluxo semi-manual de link de afiliado ML
 }

@@ -1,7 +1,4 @@
-using System.Net;
-using System.Net.Http.Headers;
 using System.Text;
-using System.Text.Json;
 using AfiliadoBot.Domain.Entities;
 using AfiliadoBot.Domain.Enums;
 using AfiliadoBot.Domain.Interfaces;
@@ -19,8 +16,6 @@ namespace AfiliadoBot.Application.Jobs;
 /// </summary>
 public class ProcessorJob
 {
-    private const string AffiliateLinkUrl = "https://api.mercadolibre.com/affiliate-tools/links";
-
     // Horarios fixos do cron do publisher (9h/12h/15h/18h/20h).
     private static readonly int[] RoundRobinHours = { 9, 12, 15, 18, 20 };
 
@@ -187,84 +182,38 @@ public class ProcessorJob
 
     /// <summary>
     /// Garante o link de afiliado do MercadoLivre quando ausente. Amazon/Shopee ou produtos
-    /// com AffiliateLink ja preenchido nao sofrem chamada HTTP adicional (CA13).
+    /// com AffiliateLink ja preenchido nao sofrem nenhuma alteracao (CA13).
+    /// Gate 1.5 (Issue #182/#184): o endpoint affiliate-tools/links nao esta acessivel (404) —
+    /// nao ha mais chamada HTTP alguma aqui. Produto ML sem link vai para
+    /// AwaitingAffiliateLink (fluxo semi-manual, especificacao-tecnica.md §3), nao mais Error.
     /// </summary>
-    /// <returns>false quando a chamada falhou e o produto foi marcado como Error (CA6, CA14).</returns>
-    private async Task<bool> EnsureAffiliateLinkAsync(Product product, CancellationToken ct)
+    /// <returns>
+    /// false quando o produto foi desviado do fluxo normal (Error por SourceUrl ausente, ou
+    /// AwaitingAffiliateLink) — em ambos os casos <see cref="ExecuteAsync"/> persiste e pula
+    /// para o proximo produto do lote (CA6, CA14).
+    /// </returns>
+    private Task<bool> EnsureAffiliateLinkAsync(Product product, CancellationToken ct)
     {
         if (product.Platform != Platform.MercadoLivre || !string.IsNullOrWhiteSpace(product.AffiliateLink))
-            return true;
+            return Task.FromResult(true);
 
         if (string.IsNullOrWhiteSpace(product.SourceUrl))
         {
             _logger.LogWarning(
-                "ProcessorJob: SourceUrl ausente para o produto {ProductId}. Nao e possivel gerar link de afiliado ML.",
+                "ProcessorJob: SourceUrl ausente para o produto {ProductId}. Nao e possivel colocar em espera de link de afiliado ML.",
                 product.Id);
             product.MarkAsError("SourceUrl ausente — nao e possivel gerar link de afiliado ML");
-            return false;
+            return Task.FromResult(false);
         }
 
-        var permalink = product.SourceUrl;
-
-        var accessToken = (await _dbContext.AppSettings
-            .Where(s => s.Key == "mercadolivre.access_token")
-            .Select(s => s.Value)
-            .FirstOrDefaultAsync(ct)) ?? string.Empty;
-
-        var request = new HttpRequestMessage(HttpMethod.Post, AffiliateLinkUrl)
-        {
-            Content = new StringContent(
-                JsonSerializer.Serialize(new { url = permalink }),
-                Encoding.UTF8,
-                "application/json")
-        };
-
-        if (!string.IsNullOrWhiteSpace(accessToken))
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-        HttpResponseMessage response;
-        try
-        {
-            response = await _httpClient.SendAsync(request, ct);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            _logger.LogWarning(ex, "ProcessorJob: falha de rede ao gerar link de afiliado ML para o produto {ProductId}.", product.Id);
-            product.MarkAsError($"Falha ao gerar link de afiliado ML: {ex.Message}");
-            return false;
-        }
-
-        if (!response.IsSuccessStatusCode)
-        {
-            _logger.LogWarning(
-                "ProcessorJob: resposta HTTP {StatusCode} ao gerar link de afiliado ML para o produto {ProductId}.",
-                (int)response.StatusCode, product.Id);
-            product.MarkAsError($"Falha ao gerar link de afiliado ML: HTTP {(int)response.StatusCode}");
-            return false;
-        }
-
-        string? link;
-        try
-        {
-            var body = await response.Content.ReadAsStringAsync(ct);
-            using var doc = JsonDocument.Parse(body);
-            link = doc.RootElement.TryGetProperty("url", out var urlProp) ? urlProp.GetString() : null;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "ProcessorJob: resposta invalida ao gerar link de afiliado ML para o produto {ProductId}.", product.Id);
-            product.MarkAsError($"Falha ao gerar link de afiliado ML: resposta invalida ({ex.Message})");
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(link))
-        {
-            product.MarkAsError("Falha ao gerar link de afiliado ML: resposta sem url");
-            return false;
-        }
-
-        product.SetAffiliateLink(link);
-        return true;
+        // Gate 1.5 (Issue #182/#184): affiliate-tools/links nao existe/nao e acessivel. Fluxo
+        // semi-manual — produto aguarda importacao manual do link via dashboard (ver
+        // especificacao-tecnica.md §3).
+        product.MarkAsAwaitingAffiliateLink();
+        _logger.LogInformation(
+            "ProcessorJob: produto {ProductId} aguardando importacao manual de link de afiliado ML.",
+            product.Id);
+        return Task.FromResult(false);
     }
 
     /// <returns>
