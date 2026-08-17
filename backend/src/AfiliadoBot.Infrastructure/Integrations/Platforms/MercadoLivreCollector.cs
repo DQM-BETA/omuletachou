@@ -1,4 +1,3 @@
-using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -14,18 +13,42 @@ namespace AfiliadoBot.Infrastructure.Integrations.Platforms;
 
 /// <summary>
 /// Collector do MercadoLivre. Autentica via OAuth2 client_credentials com cache/refresh
-/// automatico de token em app_settings, busca produtos mais vendidos, faz upsert por
+/// automatico de token em app_settings, coleta produtos por categoria via Highlights API
+/// (Issue #182/#183 — <c>/sites/MLB/search</c> foi descontinuado pela plataforma, e o multi-get
+/// <c>/items?ids=...</c> retorna HTTP 403 com as credenciais atuais), faz upsert por
 /// (Platform, ExternalId) e aciona scoring automatico via IAiService para produtos novos.
 /// AffiliateLink NAO e preenchido na coleta (fica null ate aprovacao pelo ProcessorJob, Issue #6).
 /// </summary>
 public class MercadoLivreCollector : IPlatformCollector
 {
     private const string OAuthUrl = "https://api.mercadolibre.com/oauth/token";
-    private const string SearchUrl = "https://api.mercadolibre.com/sites/MLB/search?sort=best_seller&limit=20";
-    private const int RateLimitDelayMs = 150;
+    private const string ApiBaseUrl = "https://api.mercadolibre.com";
+    private const string SourceUrlBase = "https://www.mercadolivre.com.br/p";
+
+    // Delay defensivo entre chamadas HTTP consecutivas ao dominio api.mercadolibre.com (Issue
+    // #182, especificacao-tecnica.md secao 2.4 / design.md secao 5.2 — sem rate limiter dedicado,
+    // volume real (~168 chamadas/ciclo, 1x/dia) esta muitas ordens de grandeza abaixo da cota de
+    // 18000 req/hora da aplicacao).
+    private const int RequestDelayMs = 300;
+
     private static readonly TimeSpan TokenExpiryMargin = TimeSpan.FromMinutes(5);
 
-    private static readonly int[] RetryDelaysMs = { 2000, 4000, 8000 };
+    // Categoria interna -> ID(s) reais de categoria/subcategoria do Mercado Livre (site MLB).
+    // Valores confirmados ao vivo pelo LT em 2026-08-17 (design.md secao 3.4) via
+    // GET /sites/MLB/categories + GET /categories/{id}. Todas as 8 categorias mapeiam 1:1 (nenhum
+    // caso N:1 confirmado necessario na arvore atual) — o array supporta N:1 sem mudanca de forma
+    // caso isso mude no futuro.
+    private static readonly Dictionary<string, string[]> CategoryMap = new()
+    {
+        ["Eletrodomésticos"] = new[] { "MLB5726" },   // "Eletrodomésticos" — categoria de topo, 1:1
+        ["Climatização"] = new[] { "MLB252358" },     // "Ar e Ventilação" — subcategoria de Eletrodomésticos (MLB5726); Highlights aceita ID de subcategoria normalmente
+        ["Ferramentas"] = new[] { "MLB263532" },      // "Ferramentas" — categoria de topo, 1:1
+        ["Eletrônicos"] = new[] { "MLB1000" },        // "Eletrônicos, Áudio e Vídeo" — categoria de topo, 1:1
+        ["Casa e Cozinha"] = new[] { "MLB1574" },     // "Casa, Móveis e Decoração" — categoria de topo (cobre subárvore "Cozinha", MLB1618); sem N:1 necessário
+        ["Beleza"] = new[] { "MLB1246" },             // "Beleza e Cuidado Pessoal" — categoria de topo, 1:1
+        ["Moda"] = new[] { "MLB1430" },               // "Calçados, Roupas e Bolsas" — já agrega os 3, categoria de topo, 1:1
+        ["Brinquedos"] = new[] { "MLB1132" },         // "Brinquedos e Hobbies" — categoria de topo, 1:1
+    };
 
     private readonly HttpClient _httpClient;
     private readonly AfiliadoBotDbContext _dbContext;
@@ -46,6 +69,14 @@ public class MercadoLivreCollector : IPlatformCollector
 
     public Platform Platform => Platform.MercadoLivre;
 
+    /// <summary>
+    /// Coleta produtos por categoria via Highlights API (Issue #182/#183). Para cada uma das 8
+    /// categorias internas (CategoryMap), busca ate 10 catalog_product_id ranqueados
+    /// (GET /highlights/MLB/category/{id}) e resolve cada um individualmente
+    /// (GET /products/{id} + GET /products/{id}/items — sem multi-get, bloqueado por 403).
+    /// Isolamento de falha: categoria que falha e pulada (log warning, ciclo continua); produto
+    /// que falha e pulado (log warning, categoria continua).
+    /// </summary>
     public async Task<IEnumerable<Product>> CollectAsync(CancellationToken ct = default)
     {
         var settings = await LoadSettingsAsync(ct);
@@ -60,25 +91,47 @@ public class MercadoLivreCollector : IPlatformCollector
             return new List<Product>();
         }
 
-        await Task.Delay(RateLimitDelayMs, ct);
-
-        var response = await SendWithRetryAsync(accessToken, ct);
-
         var collected = new List<Product>();
 
-        if (response is null)
-        {
-            // Retry esgotado ou falha nao-429 — ciclo abortado sem exception.
-            return collected;
-        }
+        // Dedup dentro do mesmo ciclo: o mesmo catalog_product_id pode aparecer nos Highlights de
+        // mais de uma categoria (ex.: "Climatização" e "Casa e Cozinha"). Resolver/upsertar uma
+        // unica vez por ciclo garante upsert unico sem depender de uma consulta ao banco entre
+        // adds nao salvos ainda (SaveChangesAsync so roda no fim do ciclo) e evita gastar chamadas
+        // HTTP redundantes contra a mesma cota.
+        var resolvedInCycle = new HashSet<string>(StringComparer.Ordinal);
 
-        var items = ParseItems(response);
-
-        foreach (var item in items)
+        foreach (var (categoriaInterna, mlCategoryIds) in CategoryMap)
         {
-            var product = await UpsertProductAsync(item, ct);
-            if (product is not null)
-                collected.Add(product);
+            foreach (var mlCategoryId in mlCategoryIds)
+            {
+                List<string> highlightIds;
+                try
+                {
+                    using var highlightsDoc = await GetJsonAsync(
+                        $"{ApiBaseUrl}/highlights/MLB/category/{mlCategoryId}", accessToken, ct);
+                    highlightIds = ParseHighlightIds(highlightsDoc.RootElement);
+                }
+                catch (MercadoLivreApiException ex)
+                {
+                    _logger.LogWarning(
+                        ex,
+                        "MercadoLivreCollector: categoria {Categoria}/{CategoryId} falhou ao buscar highlights, pulando.",
+                        categoriaInterna, mlCategoryId);
+                    continue;
+                }
+
+                await Task.Delay(RequestDelayMs, ct);
+
+                foreach (var catalogProductId in highlightIds)
+                {
+                    if (!resolvedInCycle.Add(catalogProductId))
+                        continue;
+
+                    var product = await ResolveAndUpsertAsync(catalogProductId, accessToken, ct);
+                    if (product is not null)
+                        collected.Add(product);
+                }
+            }
         }
 
         await _dbContext.SaveChangesAsync(ct);
@@ -225,152 +278,98 @@ public class MercadoLivreCollector : IPlatformCollector
         }
     }
 
-    private async Task<string?> SendWithRetryAsync(string accessToken, CancellationToken ct)
+    /// <summary>
+    /// Resolve um catalog_product_id em Product e faz o upsert. Isolamento de falha por produto
+    /// (Issue #182, especificacao-tecnica.md secao 2.1): qualquer falha de rede/HTTP nao-2xx, ou
+    /// resposta sem nome/sem itens validos, resulta em log de warning + null (produto pulado,
+    /// ciclo/categoria continua).
+    /// </summary>
+    private async Task<Product?> ResolveAndUpsertAsync(string catalogProductId, string accessToken, CancellationToken ct)
     {
-        for (var attempt = 0; attempt <= RetryDelaysMs.Length; attempt++)
+        string? title;
+        string? thumbnail;
+        decimal? salePrice;
+
+        try
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, SearchUrl);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            using var productDoc = await GetJsonAsync($"{ApiBaseUrl}/products/{catalogProductId}", accessToken, ct);
+            await Task.Delay(RequestDelayMs, ct);
+            (title, thumbnail) = ParseProduct(productDoc.RootElement);
 
-            HttpResponseMessage response;
-            try
-            {
-                response = await _httpClient.SendAsync(request, ct);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                _logger.LogWarning(ex, "MercadoLivreCollector: falha de rede na busca de produtos. Ciclo abortado sem exception.");
-                return null;
-            }
-
-            if (response.StatusCode == HttpStatusCode.TooManyRequests)
-            {
-                if (attempt < RetryDelaysMs.Length)
-                {
-                    await Task.Delay(RetryDelaysMs[attempt], ct);
-                    continue;
-                }
-
-                _logger.LogWarning(
-                    "MercadoLivreCollector: rate limit (429) apos {Attempts} tentativas. Ciclo abortado sem exception.",
-                    RetryDelaysMs.Length + 1);
-                return null;
-            }
-
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogWarning(
-                    "MercadoLivreCollector: resposta HTTP {StatusCode} na busca de produtos. Ciclo abortado sem exception.",
-                    (int)response.StatusCode);
-                return null;
-            }
-
-            return await response.Content.ReadAsStringAsync(ct);
+            using var itemsDoc = await GetJsonAsync($"{ApiBaseUrl}/products/{catalogProductId}/items", accessToken, ct);
+            await Task.Delay(RequestDelayMs, ct);
+            salePrice = ParseCheapestItemPrice(itemsDoc.RootElement);
+        }
+        catch (MercadoLivreApiException ex)
+        {
+            _logger.LogWarning(ex, "MercadoLivreCollector: produto {CatalogProductId} nao resolvido, pulando.", catalogProductId);
+            return null;
         }
 
-        return null;
+        if (string.IsNullOrWhiteSpace(title) || salePrice is null)
+        {
+            _logger.LogWarning(
+                "MercadoLivreCollector: produto {CatalogProductId} sem nome ou sem itens validos ({Items}), pulando.",
+                catalogProductId, salePrice is null ? "vazio" : "nome ausente");
+            return null;
+        }
+
+        // Permalink de /products/{id} vem sempre vazio (design.md secao 10.1) — SourceUrl
+        // construido pelo padrao publico de URL de pagina de catalogo do Mercado Livre
+        // (especificacao-tecnica.md secao 1).
+        var sourceUrl = $"{SourceUrlBase}/{catalogProductId}";
+
+        return await UpsertProductAsync(catalogProductId, title!, salePrice.Value, thumbnail, sourceUrl, ct);
     }
 
-    private static List<MercadoLivreItem> ParseItems(string responseBody)
-    {
-        var items = new List<MercadoLivreItem>();
-
-        using var doc = JsonDocument.Parse(responseBody);
-        if (!doc.RootElement.TryGetProperty("results", out var results) ||
-            results.ValueKind != JsonValueKind.Array)
-        {
-            return items;
-        }
-
-        foreach (var item in results.EnumerateArray())
-        {
-            var id = item.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
-            if (string.IsNullOrWhiteSpace(id))
-                continue;
-
-            var title = item.TryGetProperty("title", out var titleProp) ? titleProp.GetString() ?? string.Empty : string.Empty;
-
-            decimal salePrice = 0;
-            if (item.TryGetProperty("price", out var priceProp))
-            {
-                salePrice = priceProp.GetDecimal();
-            }
-
-            decimal? originalPrice = null;
-            if (item.TryGetProperty("original_price", out var originalPriceProp) &&
-                originalPriceProp.ValueKind != JsonValueKind.Null)
-            {
-                originalPrice = originalPriceProp.GetDecimal();
-            }
-
-            string? thumbnail = null;
-            if (item.TryGetProperty("thumbnail", out var thumbnailProp))
-            {
-                thumbnail = thumbnailProp.GetString();
-            }
-
-            string? permalink = null;
-            if (item.TryGetProperty("permalink", out var permalinkProp))
-            {
-                permalink = permalinkProp.GetString();
-            }
-
-            decimal? discount = null;
-            if (item.TryGetProperty("discount", out var discountProp) &&
-                discountProp.ValueKind != JsonValueKind.Null)
-            {
-                discount = discountProp.GetDecimal();
-            }
-
-            var finalOriginalPrice = originalPrice ?? salePrice;
-            var discountPct = discount ?? (finalOriginalPrice > 0
-                ? Math.Round((1 - (salePrice / finalOriginalPrice)) * 100, 2)
-                : 0);
-
-            if (discountPct < 0) discountPct = 0;
-            if (discountPct > 100) discountPct = 100;
-
-            items.Add(new MercadoLivreItem(id!, title, salePrice, finalOriginalPrice, discountPct, thumbnail, permalink));
-        }
-
-        return items;
-    }
-
-    private async Task<Product?> UpsertProductAsync(MercadoLivreItem item, CancellationToken ct)
+    private async Task<Product?> UpsertProductAsync(
+        string externalId,
+        string title,
+        decimal salePrice,
+        string? thumbnail,
+        string sourceUrl,
+        CancellationToken ct)
     {
         var existing = await _dbContext.Products
-            .FirstOrDefaultAsync(p => p.Platform == Platform.MercadoLivre && p.ExternalId == item.Id, ct);
+            .FirstOrDefaultAsync(p => p.Platform == Platform.MercadoLivre && p.ExternalId == externalId, ct);
+
+        // Nenhum campo de preco original/desconto disponivel em /products/{id} nem em
+        // /products/{id}/items (especificacao-tecnica.md secao 2.3) — fallback documentado, nao
+        // um bug: OriginalPrice = SalePrice, DiscountPct = 0.
+        const decimal discountPct = 0;
+        var originalPrice = salePrice;
+        var mediaType = thumbnail is not null ? "image" : null;
 
         if (existing is not null)
         {
             existing.UpdateFromCollector(
-                item.SalePrice,
-                item.OriginalPrice,
-                item.DiscountPct,
+                salePrice,
+                originalPrice,
+                discountPct,
                 imageUrl: null,
-                mediaUrl: item.Thumbnail,
-                mediaType: item.Thumbnail is not null ? "image" : null,
-                sourceUrl: item.Permalink);
+                mediaUrl: thumbnail,
+                mediaType: mediaType,
+                sourceUrl: sourceUrl);
             return existing;
         }
 
-        var slug = GenerateSlug(item.Title, item.Id);
-        var (category, subcategory) = CategoryDetector.Detect(item.Title);
+        var slug = GenerateSlug(title, externalId);
+        var (category, subcategory) = CategoryDetector.Detect(title);
 
         var product = new Product(
-            title: item.Title,
-            description: item.Title,
-            salePrice: item.SalePrice,
-            originalPrice: item.OriginalPrice,
-            discountPct: item.DiscountPct,
+            title: title,
+            description: title,
+            salePrice: salePrice,
+            originalPrice: originalPrice,
+            discountPct: discountPct,
             affiliateLink: null,
             slug: slug,
             category: category,
             platform: Platform.MercadoLivre,
-            externalId: item.Id,
-            mediaUrl: item.Thumbnail,
-            mediaType: item.Thumbnail is not null ? "image" : null,
-            sourceUrl: item.Permalink,
+            externalId: externalId,
+            mediaUrl: thumbnail,
+            mediaType: mediaType,
+            sourceUrl: sourceUrl,
             subcategory: subcategory);
 
         _dbContext.Products.Add(product);
@@ -379,6 +378,156 @@ public class MercadoLivreCollector : IPlatformCollector
         product.UpdateAiResult(score.Score, score.Reason, string.Empty);
 
         return product;
+    }
+
+    /// <summary>
+    /// Chamada HTTP GET autenticada que devolve o corpo parseado como JSON. Falha de
+    /// rede/cancelamento ou resposta HTTP nao-2xx viram <see cref="MercadoLivreApiException"/>,
+    /// para o chamador decidir o isolamento de falha (por categoria ou por produto).
+    /// </summary>
+    private async Task<JsonDocument> GetJsonAsync(string url, string accessToken, CancellationToken ct)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        HttpResponseMessage response;
+        try
+        {
+            response = await _httpClient.SendAsync(request, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            throw new MercadoLivreApiException($"Falha de rede em {url}.", ex);
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new MercadoLivreApiException($"Resposta HTTP {(int)response.StatusCode} em {url}.");
+        }
+
+        var body = await response.Content.ReadAsStringAsync(ct);
+        return JsonDocument.Parse(body);
+    }
+
+    /// <summary>
+    /// Parseia a resposta de GET /highlights/MLB/category/{id} em uma lista ordenada de
+    /// catalog_product_id. Tolerante a variacao de envelope (campo "content" — formato publicado
+    /// da Highlights API — ou "results"/array direto como fallback defensivo, ja que a chamada ao
+    /// vivo nao pode ser reconfirmada neste ambiente, ver PR). Entradas sem "id" sao ignoradas;
+    /// quando presente, "type" diferente de "PRODUCT" e ignorado (ex.: banners promocionais);
+    /// resultado ordenado por "position" quando o campo existir.
+    /// </summary>
+    private static List<string> ParseHighlightIds(JsonElement root)
+    {
+        JsonElement itemsArray;
+        if (root.TryGetProperty("content", out var content) && content.ValueKind == JsonValueKind.Array)
+            itemsArray = content;
+        else if (root.TryGetProperty("results", out var results) && results.ValueKind == JsonValueKind.Array)
+            itemsArray = results;
+        else if (root.ValueKind == JsonValueKind.Array)
+            itemsArray = root;
+        else
+            return new List<string>();
+
+        var entries = new List<(string Id, int Position)>();
+        var fallbackPosition = 0;
+
+        foreach (var entry in itemsArray.EnumerateArray())
+        {
+            fallbackPosition++;
+            var position = fallbackPosition;
+            string? id = null;
+
+            if (entry.ValueKind == JsonValueKind.String)
+            {
+                id = entry.GetString();
+            }
+            else if (entry.ValueKind == JsonValueKind.Object)
+            {
+                if (entry.TryGetProperty("type", out var typeProp) &&
+                    typeProp.ValueKind == JsonValueKind.String &&
+                    !string.Equals(typeProp.GetString(), "PRODUCT", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (entry.TryGetProperty("id", out var idProp) && idProp.ValueKind == JsonValueKind.String)
+                    id = idProp.GetString();
+
+                if (entry.TryGetProperty("position", out var posProp) && posProp.ValueKind == JsonValueKind.Number)
+                    position = posProp.GetInt32();
+            }
+
+            if (!string.IsNullOrWhiteSpace(id))
+                entries.Add((id!, position));
+        }
+
+        return entries.OrderBy(e => e.Position).Select(e => e.Id).ToList();
+    }
+
+    /// <summary>
+    /// Extrai nome e a primeira imagem de GET /products/{catalog_product_id}. "permalink" e
+    /// "buy_box_winner" existem no payload real mas nao sao usados (permalink sempre vazio,
+    /// buy_box_winner sempre null — design.md secao 10.1).
+    /// </summary>
+    private static (string? Title, string? Thumbnail) ParseProduct(JsonElement root)
+    {
+        var title = root.TryGetProperty("name", out var nameProp) && nameProp.ValueKind == JsonValueKind.String
+            ? nameProp.GetString()
+            : null;
+
+        string? thumbnail = null;
+        if (root.TryGetProperty("pictures", out var picturesProp) && picturesProp.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var picture in picturesProp.EnumerateArray())
+            {
+                if (picture.ValueKind == JsonValueKind.Object &&
+                    picture.TryGetProperty("url", out var urlProp) &&
+                    urlProp.ValueKind == JsonValueKind.String &&
+                    !string.IsNullOrWhiteSpace(urlProp.GetString()))
+                {
+                    thumbnail = urlProp.GetString();
+                    break;
+                }
+            }
+        }
+
+        return (title, thumbnail);
+    }
+
+    /// <summary>
+    /// Extrai o menor "price" entre os itens de GET /products/{catalog_product_id}/items.
+    /// Criterio de escolha entre vendedores (especificacao-tecnica.md secao 2.2): sem
+    /// "buy_box_winner" utilizavel (sempre null), o menor preco e o criterio mais defensavel para
+    /// surfacear a melhor oferta disponivel do produto de catalogo. Tolerante ao envelope
+    /// ("results" ou array direto), mesma cautela defensiva do parsing de highlights.
+    /// </summary>
+    private static decimal? ParseCheapestItemPrice(JsonElement root)
+    {
+        JsonElement itemsArray;
+        if (root.TryGetProperty("results", out var results) && results.ValueKind == JsonValueKind.Array)
+            itemsArray = results;
+        else if (root.ValueKind == JsonValueKind.Array)
+            itemsArray = root;
+        else
+            return null;
+
+        decimal? cheapest = null;
+
+        foreach (var entry in itemsArray.EnumerateArray())
+        {
+            if (entry.ValueKind != JsonValueKind.Object)
+                continue;
+
+            if (!entry.TryGetProperty("price", out var priceProp) || priceProp.ValueKind != JsonValueKind.Number)
+                continue;
+
+            var price = priceProp.GetDecimal();
+            if (cheapest is null || price < cheapest)
+                cheapest = price;
+        }
+
+        return cheapest;
     }
 
     private static string GenerateSlug(string title, string externalId)
@@ -407,12 +556,18 @@ public class MercadoLivreCollector : IPlatformCollector
         string? AccessToken,
         DateTime? TokenExpiresAt);
 
-    private record MercadoLivreItem(
-        string Id,
-        string Title,
-        decimal SalePrice,
-        decimal OriginalPrice,
-        decimal DiscountPct,
-        string? Thumbnail,
-        string? Permalink);
+    /// <summary>
+    /// Falha de rede ou resposta HTTP nao-2xx numa chamada a api.mercadolibre.com — usada
+    /// internamente para acionar o isolamento de falha por categoria/produto (Issue #182).
+    /// </summary>
+    private sealed class MercadoLivreApiException : Exception
+    {
+        public MercadoLivreApiException(string message) : base(message)
+        {
+        }
+
+        public MercadoLivreApiException(string message, Exception innerException) : base(message, innerException)
+        {
+        }
+    }
 }
