@@ -1,9 +1,9 @@
 ---
 issue: 178
 titulo: "bug: Claude__ApiKey nunca chega no container da API (docker-compose.yml/.env.example/runbook incompletos)"
-etapa_atual: Code Review (PR feature->desenv aberto)
+etapa_atual: Code Review (PR desenv->homolog aberto)
 rota: rapido
-ultimo_agente: dev
+ultimo_agente: lt
 openspec_change: ~
 tech_stacks:
   - dotnet
@@ -15,7 +15,7 @@ openspec_path: ~
 sub_issues: []
 desenv_tasks_merged: []
 pr_feature: 179
-pr_homologacao: ~
+pr_homologacao: 180
 pr_release: ~
 code_review_homolog_pr: ~
 qa_status: ~
@@ -47,7 +47,8 @@ Branch `fix/ISSUE-178-claude-api-key-env` (base `desenv`), worktree isolado, rem
 - `dotnet test` (backend): 414/414 passando, sem regressão (fix não toca lógica de código, apenas config).
 - Ambiente Docker de teste limpo ao final (`docker compose down -v` + imagem local removida; `.env` de teste não commitado).
 
-PR: https://github.com/DQM-BETA/omuletachou/pull/179 (feature→desenv, NÃO mergeado — aguardando Líder Técnico).
+PR: https://github.com/DQM-BETA/omuletachou/pull/179 (feature→desenv, mergeado via squash pelo Líder Técnico).
+PR homologação: https://github.com/DQM-BETA/omuletachou/pull/180 (desenv→homolog, aberto — aguardando Code Review + QA).
 
 ## Custo (ledger)
 
@@ -55,3 +56,5 @@ PR: https://github.com/DQM-BETA/omuletachou/pull/179 (feature→desenv, NÃO mer
 |---|-------|--------|--------|--------|-------------|-----------|
 | 1 | Coordenador (preparação) | Coordenador | Haiku | 30212 | 34 | 227s |
 | 2 | Dev (fix env vars docker-compose/.env.example/runbook, PR #179) | Dev .NET | Sonnet | 56481 | 37 | 284s |
+| 3 | LT (merge PR #179 + PR homologação #180) | Líder Técnico | Sonnet | 37240 | 11 | 82s |
+
