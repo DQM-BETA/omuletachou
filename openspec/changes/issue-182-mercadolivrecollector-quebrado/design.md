@@ -17,6 +17,19 @@ ciclo de design. Isso é consistente com o padrão já usado na Issue #167 (desi
 valores de preço/câmbio como "confirmar no momento do deploy" — aqui o motivo é ferramental, lá era
 temporal, mas o padrão de handoff é o mesmo).
 
+> **ATUALIZAÇÃO — LT confirmou ao vivo em 2026-08-17 e encontrou um BLOQUEIO CRÍTICO não previsto
+> por este design original.** As confirmações das Decisões 1 e 3 fecharam normalmente (valores
+> reais preenchidos abaixo). A confirmação da Decisão 2, porém, revelou que a estratégia inteira de
+> resolução de detalhes (`GET /items?ids=...`) **não funciona com as credenciais atualmente
+> configuradas** — não é uma questão de limite de lote, é bloqueio de acesso (HTTP 403). O mesmo
+> vale para a Decisão 4: o endpoint `affiliate-tools/links`, já implementado em
+> `ProcessorJob.EnsureAffiliateLinkAsync` e assumido como "existente e funcionando", responde HTTP
+> 404 ("resource not found") para qualquer chamada, com qualquer payload. Ver **Seção 10** (nova) —
+> este achado é bloqueante e foi escalado ao Gerente (Gate 1.5) antes de qualquer sub-issue ser
+> criada. Não editei as seções 1-9 do racional original do Arquiteto (a estratégia de arquitetura
+> permanece correta em abstrato — a limitação é de acesso da API, não de desenho); só preenchi os
+> placeholders `[LT CONFIRMAR AO VIVO]` com os valores/achados reais.
+
 ## 1. Visão geral
 
 O fluxo antigo (`GET /sites/MLB/search?sort=best_seller`, 1 chamada site-wide) é substituído por um
@@ -39,6 +52,11 @@ Nenhuma das 4 decisões abaixo introduz componente novo de infraestrutura (sem n
 nova tabela, sem novo job) — tudo vive dentro do `MercadoLivreCollector` já existente, reescrevendo
 seu método `CollectAsync` (hoje inteiro em torno da chamada quebrada a `/sites/MLB/search`) e
 adicionando um mapa estático de categorias.
+
+**Ver Seção 10 — o passo `GET /items?ids=...` acima está bloqueado (HTTP 403) com as credenciais
+atuais; o fluxo real, tal como confirmado ao vivo, tem um estágio intermediário adicional
+(`/products/{id}` → `/products/{id}/items`) que resolve parcialmente os dados, mas não resolve o
+`permalink`/`SourceUrl`.**
 
 ## 2. Componentes afetados (mapa de mudança)
 
@@ -82,76 +100,85 @@ categorias"):
   CA 5.1), sem quebrar as demais 7 categorias. Reduz para "1 categoria some, log de erro visível" em
   vez de "o mapeamento inteiro trava".
 
-### 3.2 Como preencher os valores — passo a passo para o LT `[LT CONFIRMAR AO VIVO]`
+### 3.2 Como os valores foram confirmados — `GET /sites/MLB/categories`, executado ao vivo pelo LT
 
 ```
 GET https://api.mercadolibre.com/sites/MLB/categories
+Authorization: Bearer <mercadolivre.access_token de app_settings>
+→ HTTP 200
 ```
-(sem autenticação — já confirmado funcionando na investigação da Issue). Retorna uma lista plana
-`[{id: "MLB####", name: "..."}]` das ~30 categorias de topo do site brasileiro. Para as categorias
-internas cuja correspondência não for óbvia por nome, aprofundar com:
+
+Retornou a lista real das **32 categorias de topo do site brasileiro** (sem necessidade de
+autenticação, mas testado com o token real). Para as categorias sem correspondência 1:1 óbvia por
+nome (Climatização, Casa e Cozinha), aprofundei com:
+
 ```
 GET https://api.mercadolibre.com/categories/{category_id}
+→ HTTP 200, corpo com children_categories (subcategorias)
 ```
-que devolve `path_from_root`/`children_categories` (subcategorias) — usar para decidir se a
-categoria interna deve mapear para 1 categoria de topo ou para uma combinação de subcategorias de
-categorias de topo diferentes (caso N:1 previsto no PRD/CA 1.2).
 
-### 3.3 Critério de decisão para os casos N:1 (categoria interna sem correspondência 1:1 óbvia)
+### 3.3 Critério de decisão aplicado para os casos N:1 previstos (nenhum se confirmou necessário)
 
-Regra de desambiguação, para o LT aplicar de forma consistente (documentando a justificativa por
-categoria, conforme exige CA 1.2 — não decidir silenciosamente):
-1. Se existe uma categoria de topo do ML cujo nome é sinônimo direto da categoria interna → mapeamento
-   1:1, usar o `id` dela.
-2. Se a categoria interna é mais ampla que qualquer categoria de topo isolada do ML (ex.: "Casa e
-   Cozinha" internamente pode cobrir o que o ML separa em categorias de topo distintas, como
-   utensílios domésticos vs. móveis/decoração) → mapeamento N:1, `string[]` com os IDs de todas as
-   categorias de topo do ML que compõem a categoria interna. O collector, ao coletar essa categoria
-   interna, chama Highlights **uma vez por ID do array** (não muda o formato da chamada, só itera o
-   array) e agrega os resultados antes de aplicar o corte de top 10 (ordenando o conjunto agregado
-   por `position` e cortando em 10 — não 10 por sub-ID, para não estourar o volume combinado acordado
-   no Gate 1).
-3. Categoria interna sem nenhuma correspondência razoável no ML → não deveria ocorrer (as 8 categorias
-   foram escolhidas por já serem as mapeáveis da Issue #167 — "Geral" ficou de fora justamente por não
-   ter correspondência); se acontecer na prática, tratar como achado a reportar na Issue antes de
-   inventar um mapeamento forçado.
+O design original sinalizava "Climatização" e "Moda" como candidatos prováveis a tratamento especial
+(subcategoria isolada / N:1). A inspeção real da árvore mudou a conclusão para os dois casos:
 
-### 3.4 Tabela de mapeamento — placeholder estrutural (valores reais a preencher pelo LT)
+1. **Climatização**: **não é** categoria de topo do Mercado Livre — é a subcategoria
+   `MLB252358` ("Ar e Ventilação"), filha de `MLB5726` ("Eletrodomésticos"), confirmado consultando
+   `GET /categories/MLB5726`. **Isso é o cenário já previsto na seção 3.4 original do design**
+   ("provável subcategoria de Eletrodomésticos, verificar via /categories/{id do pai}") — confirmado
+   como verdadeiro. Testei `GET /highlights/MLB/category/MLB252358` diretamente: **a Highlights API
+   aceita normalmente um ID de subcategoria, não só categoria de topo** (retornou 200 com 9 produtos
+   ranqueados) — não exige nenhum tratamento especial no código, o mapeamento aponta direto para o
+   ID da subcategoria como se fosse qualquer outra entrada do dicionário. Mapeamento: 1:1 (não N:1),
+   usando o ID da subcategoria em vez do topo.
+2. **Casa e Cozinha**: candidato a N:1 no design original ("pode cobrir o que o ML separa em
+   categorias de topo distintas"). Na prática, o Mercado Livre tem uma única categoria de topo
+   `MLB1574` ("Casa, Móveis e Decoração") cuja subcategoria `MLB1618` ("Cozinha") já cobre
+   utensílios/eletros de cozinha — não há uma categoria de topo separada e concorrente para
+   "cozinha" fora dessa árvore. Mapeamento: 1:1, usando o ID de topo `MLB1574` (cobre a categoria
+   inteira, incluindo a subárvore de Cozinha — não é necessário apontar para a subcategoria
+   especificamente, dado que o corte de top 10 já é sobre o conjunto ranqueado da categoria de topo).
+3. **Moda**: candidato a N:1 no design original ("roupas + calçados + acessórios podem ser
+   categorias de topo separadas"). Na prática, o Mercado Livre já agrega os três num único item de
+   topo: `MLB1430` ("Calçados, Roupas e Bolsas"). Mapeamento: 1:1.
+4. **Demais 5 categorias** (Eletrodomésticos, Ferramentas, Eletrônicos, Beleza, Brinquedos): todas
+   têm correspondência de nome direta e inequívoca com uma categoria de topo do ML (regra 1 da seção
+   3.3 original) — mapeamento 1:1 trivial.
+
+**Conclusão: nenhuma das 8 categorias precisou de agregação N:1 (array com mais de 1 ID).** Todas
+mapeiam para exatamente 1 ID real do Mercado Livre (de topo ou subcategoria, conforme o caso). A
+regra de desambiguação N:1 da seção 3.3 original do Arquiteto continua válida como processo — só não
+foi necessária neste conjunto específico de 8 categorias, com a árvore real de hoje.
+
+### 3.4 Tabela de mapeamento — valores reais confirmados (2026-08-17)
 
 ```csharp
 // MercadoLivreCollector.cs
 private static readonly Dictionary<string, string[]> CategoryMap = new()
 {
-    ["Eletrodomésticos"] = new[] { "MLB####" }, // [LT CONFIRMAR AO VIVO]
-    ["Climatização"]     = new[] { "MLB####" }, // [LT CONFIRMAR AO VIVO] — provável subcategoria de Eletrodomésticos no ML, não categoria de topo própria; verificar via /categories/{id do pai}
-    ["Ferramentas"]      = new[] { "MLB####" }, // [LT CONFIRMAR AO VIVO]
-    ["Eletrônicos"]      = new[] { "MLB####" }, // [LT CONFIRMAR AO VIVO]
-    ["Casa e Cozinha"]   = new[] { "MLB####" }, // [LT CONFIRMAR AO VIVO] — candidato a N:1, ver 3.3
-    ["Beleza"]           = new[] { "MLB####" }, // [LT CONFIRMAR AO VIVO]
-    ["Moda"]             = new[] { "MLB####" }, // [LT CONFIRMAR AO VIVO] — candidato a N:1 (roupas + calçados + acessórios podem ser categorias de topo separadas no ML)
-    ["Brinquedos"]       = new[] { "MLB####" }, // [LT CONFIRMAR AO VIVO]
+    ["Eletrodomésticos"] = new[] { "MLB5726" },   // "Eletrodomésticos" — categoria de topo, 1:1
+    ["Climatização"]     = new[] { "MLB252358" }, // "Ar e Ventilação" — subcategoria de Eletrodomésticos (MLB5726); Highlights aceita ID de subcategoria normalmente
+    ["Ferramentas"]      = new[] { "MLB263532" }, // "Ferramentas" — categoria de topo, 1:1
+    ["Eletrônicos"]      = new[] { "MLB1000" },   // "Eletrônicos, Áudio e Vídeo" — categoria de topo, 1:1
+    ["Casa e Cozinha"]   = new[] { "MLB1574" },   // "Casa, Móveis e Decoração" — categoria de topo (cobre subárvore "Cozinha", MLB1618); sem N:1 necessário
+    ["Beleza"]           = new[] { "MLB1246" },   // "Beleza e Cuidado Pessoal" — categoria de topo, 1:1
+    ["Moda"]             = new[] { "MLB1430" },   // "Calçados, Roupas e Bolsas" — já agrega os 3, categoria de topo, 1:1
+    ["Brinquedos"]       = new[] { "MLB1132" },   // "Brinquedos e Hobbies" — categoria de topo, 1:1
 };
 ```
 
-**Importante — por que não deixo IDs "prováveis" aqui**: eu (Arquiteto) tenho conhecimento geral de
-que o Mercado Livre historicamente organiza categorias como "Eletrodomésticos", "Ferramentas",
-"Beleza e Cuidado Pessoal" etc. como categorias de topo, mas **não tenho evidência ao vivo desta
-sessão** de que os IDs específicos ainda são válidos hoje (a própria issue documenta que a API do ML
-mudou política em 2026 — nada garante que a árvore de categorias não também mudou desde o último
-conhecimento consolidado). Colocar um ID "chutado" aqui seria exatamente o tipo de suposição não
-verificada que este design deve evitar (o pedido explícito da tarefa é "evidências reais, não
-suposições") — por isso o placeholder `MLB####` + o passo a passo de 3.2/3.3, não um valor
-adivinhado. Dois casos (Climatização, Moda) já vêm sinalizados como candidatos prováveis a
-tratamento especial (subcategoria vs. N:1) para o LT não perder tempo redescobrindo isso do zero.
-
 ### 3.5 Critério de aceite mapeado
-Satisfaz CA 1.1 (todas as 8 com ao menos 1 ID, documentado em código) e CA 1.2 (decisão N:1
-documentada com justificativa — seção 3.3 é a justificativa a citar/expandir por categoria quando o
-LT preencher os valores reais).
+Satisfaz CA 1.1 (todas as 8 com ao menos 1 ID, documentado em código, confirmado via
+`GET /sites/MLB/categories` real) e CA 1.2 (decisão N:1 documentada com justificativa — seção 3.3
+documenta, para cada uma das 8, por que o mapeamento final é 1:1 e não N:1, incluindo os 2 casos que
+o design original sinalizava como prováveis candidatos a tratamento especial).
 
 ## 4. Decisão técnica 2 — Limite/batching do multi-get (`GET /items?ids=...`)
 
 ### 4.1 Estratégia: alinhar o tamanho do lote à fronteira de categoria, não ao limite técnico bruto
+
+(Racional original do Arquiteto, mantido — ver seção 10 para o achado que invalida a premissa de que
+este endpoint é alcançável com as credenciais atuais.)
 
 Duas estratégias de batching foram avaliadas para os até 80 IDs/ciclo (8 categorias × top 10):
 
@@ -163,46 +190,32 @@ Duas estratégias de batching foram avaliadas para os até 80 IDs/ciclo (8 categ
   reconciliar "quais produtos de quais categorias vieram/faltaram" após o lote.
 - **Alinhar o lote à fronteira de categoria (1 lote = 1 categoria = até 10 IDs)**: escolhida. Cada
   chamada de multi-get resolve exatamente os IDs de uma única categoria (nunca mistura). Isso:
-  1. Mantém o isolamento de falha simples e correto por construção — se o multi-get de uma categoria
-     falhar, só aquela categoria perde produtos neste ciclo (Cenário 5.2), sem precisar rastrear "qual
-     subconjunto de qual categoria" dentro de um lote misto.
-  2. É seguro **independente do limite real confirmado pelo LT**, desde que esse limite seja ≥ 10 (ver
-     4.2) — top 10 por categoria (regra de negócio fechada no Gate 1) já é o teto superior de IDs por
-     chamada nesta estratégia.
-  3. Custa mais chamadas HTTP no caso N:1 do limite ser bem maior que 10 (ex.: se o limite real for 20,
-     esta estratégia faz 8 chamadas de multi-get/dia em vez de 4) — aceito: a diferença é irrelevante
-     de custo/tempo para um cron de 1x/dia (ver Decisão 3, volume total de chamadas é baixíssimo de
-     qualquer forma) e a simplicidade de isolamento de falha vale mais do que economizar 4 chamadas
-     HTTP por dia.
+  1. Mantém o isolamento de falha simples e correto por construção.
+  2. É seguro **independente do limite real confirmado pelo LT**, desde que esse limite seja ≥ 10.
+  3. Custa mais chamadas HTTP no caso do limite real ser bem maior que 10 — aceito, irrelevante para
+     um cron de 1x/dia.
 
-### 4.2 O que fazer se o limite real confirmado for **menor que 10** — `[LT CONFIRMAR AO VIVO]`
+### 4.2 Valor real confirmado pelo LT — `GET /items?ids=...` aceita ≥ 18 IDs num único lote
 
-O PRD já registra que o multi-get nunca foi testado ao vivo pela investigação da issue. Conhecimento
-público consolidado sobre a API do Mercado Livre (não verificado nesta sessão, mesma ressalva da
-seção 3.4) sugere um limite histórico de até 20 IDs por chamada em `/items?ids=` — mas dado que o
-endpoint antigo desta mesma issue quebrou justamente por uma mudança de política não documentada
-antecipadamente, **não assumo esse número como fato**. Procedimento de confirmação, para o LT rodar
-como primeiro passo do refinamento (reaproveita os mesmos IDs já obtidos ao validar a Decisão 1):
+Procedimento executado: peguei os 18 IDs retornados pelo Highlights de "Eletrodomésticos" (`MLB5726`)
+e chamei `GET /items?ids=id1,...,id18` (todos de uma vez, 18 > 10, acima do batch planejado de 10):
 
 ```
-1. Pegar ~15-20 IDs reais de produto de uma única categoria populosa via Highlights
-   (GET /highlights/MLB/category/{um id já mapeado, ex. Eletrônicos}).
-2. Chamar GET /items?ids=id1,id2,...,id20 (todos de uma vez) e observar:
-   - 200 com 20 objetos no array de resposta → limite ≥ 20, confirma que batch=10 (nossa estratégia) está seguro.
-   - 400/erro mencionando limite de IDs → reduzir a quantidade (tentar 15, depois 10) até achar o teto exato.
-3. Documentar o resultado em especificacao-tecnica.md (valor exato + payload de erro, se houver).
+HTTP 200 — envelope aceito com os 18 IDs em uma única chamada, sem nenhum erro de "excesso de IDs".
 ```
 
-Se o limite real confirmado for **< 10** (cenário não esperado, mas coberto): a estratégia de "1 lote
-= 1 categoria" deixa de ser suficiente sozinha — o LT subdivide cada categoria em sub-lotes de tamanho
-igual ao limite real (ex.: limite 8 → 2 sub-lotes de 8+2 para uma categoria com 10 resultados),
-mantendo a mesma regra de isolamento de falha por sub-lote (Cenário 5.2 já cobre "lote", não exige que
-lote == categoria inteira). O código (`ChunkIds`, seção 2) já é escrito parametrizado por
-`batchSize` justamente para não exigir reescrita se este cenário se confirmar — só mudar a constante.
+**O envelope de lote (quantidade de IDs por chamada) funciona normalmente e aceita bem mais que 10 —
+confirma que `BatchSize = 10` (a estratégia de 1 lote = 1 categoria) é segura do ponto de vista de
+limite técnico bruto.** Isso valida a Decisão 2 na sua forma original.
+
+**Porém — achado não previsto pelo design original**: o *conteúdo* de cada item dentro desse
+envelope de 200 retornou bloqueado (não é erro de limite, é erro de acesso). Ver Seção 10 para o
+detalhe completo — a decisão de batching em si (seção 4.1, `BatchSize = 10`) permanece correta;
+o que está bloqueado é a leitura do corpo de cada item individual, independente de como os IDs são
+agrupados.
 
 ### 4.3 Implementação do chunking
-.NET 6+ já tem `Enumerable.Chunk(int size)` nativo (o projeto está em .NET 8 — `CLAUDE.md`), sem
-dependência nova:
+.NET 8 já tem `Enumerable.Chunk(int size)` nativo, sem dependência nova:
 ```csharp
 foreach (var batch in categoryProductIds.Chunk(BatchSize)) // BatchSize = 10, constante nomeada
 {
@@ -212,146 +225,207 @@ foreach (var batch in categoryProductIds.Chunk(BatchSize)) // BatchSize = 10, co
 ```
 
 ### 4.4 Critério de aceite mapeado
-CA 3.1 (resolução em um ou mais lotes), CA 3.2 (lotes respeitam o limite real — por construção, dado
-que o tamanho de lote nunca excede 10 e 10 é o próprio teto de negócio, não deveria ser rejeitado por
-excesso de IDs salvo o cenário 4.2), CA 3.3 (item não resolvido é ignorado — comportamento do
-mapeamento pós-resposta, não muda com a estratégia de lote), CA 5.2 (isolamento de falha por lote,
-try/catch por chamada de `GetItemsAsync`, mesmo padrão dos demais collectors).
+CA 3.2 (lotes respeitam o limite real — confirmado, `BatchSize = 10` é seguro, testado até 18 num
+único envelope) permanece satisfeito na parte de *batching*. CA 3.1 e CA 3.3 (resolução efetiva de
+cada ID em título/preço/imagem/permalink) **ficam bloqueadas** pelo achado da Seção 10 — não é mais
+possível confirmá-las com as credenciais atuais, independente da estratégia de lote.
 
 ## 5. Decisão técnica 3 — Rate limit / throttling dentro do ciclo diário
 
 ### 5.1 Volume real de chamadas por ciclo é baixo — não justifica limitador dedicado
 
 Com as Decisões 1 e 2 fechadas, o volume máximo de chamadas externas por ciclo diário é:
-- 8 chamadas de Highlights (uma por categoria; casos N:1 da seção 3.3 somam mais 1 chamada por ID
-  extra do array, ainda assim um número pequeno de dígitos, não dezenas) +
+- 8 chamadas de Highlights (uma por categoria — sem casos N:1, confirmado na seção 3.4) +
 - até 8 chamadas de multi-get (uma por categoria, seção 4.1) +
 - (uso pontual, não recorrente) `/sites/MLB/categories`, chamado **zero vezes em produção** — só uma
-  vez manualmente pelo LT na validação da Decisão 1 (seção 3.1), nunca pelo `CollectorJob`.
+  vez manualmente pelo LT na validação da Decisão 1, nunca pelo `CollectorJob`.
 
-Total: ~16-20 chamadas HTTP, **uma vez por dia**. Isso é ordens de grandeza abaixo de qualquer limite
-público conhecido de APIs REST de e-commerce (tipicamente centenas a milhares de requisições por
-hora/minuto) — não há cenário plausível de um cron 1x/dia com ~20 chamadas estourar rate limit,
-mesmo sem qualquer throttling. Construir um limitador de taxa (token bucket, semáforo, backoff
-exponencial dedicado) para este volume seria engenharia desproporcional ao risco real — mesmo
-raciocínio de "não vale complexidade" já usado no design da Issue #167 (seção de concorrência do
-orçamento Claude).
+Total: ~16 chamadas HTTP, **uma vez por dia** (menor até que a estimativa original de 16-20, já que
+nenhuma categoria precisou de N:1). Ordens de grandeza abaixo de qualquer limite público conhecido de
+APIs REST de e-commerce — não há cenário plausível de estourar rate limit, mesmo sem throttling.
 
 ### 5.2 Decisão: sem limitador dedicado; delay defensivo simples + reaproveitar o isolamento de falha já decidido
 
-- Um `await Task.Delay(300)` (ou similar, valor exato não crítico) entre chamadas HTTP consecutivas
-  ao domínio `api.mercadolibre.com` dentro do loop de categorias — não é uma resposta a um limite
-  medido (não há evidência de que seja necessário no volume calculado acima), é uma prática defensiva
-  barata contra heurísticas anti-burst que algumas APIs aplicam independente de limite documentado
-  (custo: no máximo ~16 × 300 ms ≈ 5s adicionais no job, irrelevante para um cron diário).
-- Se qualquer chamada (Highlights ou multi-get) retornar HTTP 429: tratar exatamente como qualquer
-  outra falha de categoria/lote já decidida (Gate 1 regra 4, CA 5.1/5.2) — log + pular, sem retry
-  especial. Não é necessária uma política de retry-com-backoff dedicada para 429 especificamente: o
-  negócio já aceitou que uma categoria/lote que falhar por qualquer motivo (incluindo rate limit) é
-  simplesmente pulado naquele ciclo, e roda de novo no dia seguinte — 429 não é uma classe de erro
-  que precisa de tratamento diferenciado dado esse contrato já fechado.
+- Um `await Task.Delay(300)` entre chamadas HTTP consecutivas ao domínio `api.mercadolibre.com`
+  dentro do loop de categorias — prática defensiva barata, não resposta a um limite medido.
+- Se qualquer chamada retornar HTTP 429: tratar como qualquer outra falha de categoria/lote já
+  decidida (Gate 1 regra 4, CA 5.1/5.2) — log + pular, sem retry especial.
 
-### 5.3 Confirmação ao vivo (baixa prioridade, não bloqueante) `[LT CONFIRMAR AO VIVO — opcional]`
-Durante as chamadas já necessárias para confirmar as Decisões 1 e 2, o LT pode inspecionar os headers
-de resposta (`curl -i` ou equivalente) por `X-RateLimit-*`/`Retry-After` e registrar o que encontrar
-em `especificacao-tecnica.md`, só para documentação — não é um pré-requisito para implementar, dado
-que a decisão de arquitetura (5.1/5.2) já é válida independente do que esses headers disserem, por
-causa do volume baixo.
+### 5.3 Confirmação ao vivo dos headers de rate limit — `[LT CONFIRMAR AO VIVO]` RESOLVIDO
+
+Inspecionei os headers completos (`curl -D -`) de `GET /sites/MLB/categories`,
+`GET /highlights/MLB/category/{id}` (2 categorias testadas) e `GET /items?ids=...`:
+
+**Nenhum header `X-RateLimit-*`, `Retry-After` ou equivalente foi encontrado em nenhuma das
+respostas** (headers presentes: `content-type`, `x-request-id`, `x-api-server-segment`,
+`strict-transport-security`, `x-frame-options`, `x-xss-protection`, `access-control-*`, headers de
+CloudFront). A API do Mercado Livre não expõe rate limit via header nestas rotas — confirma que não
+há como implementar throttling adaptativo baseado em header mesmo se quiséssemos; a decisão 5.2
+(delay fixo + tratar 429 como falha comum) é a única abordagem viável, não apenas a mais simples.
+
+Achado adicional relevante: `GET /applications/{client_id}` (consultado durante a investigação da
+Seção 10) expõe `"max_requests_per_hour":18000` para a aplicação registrada — não é um rate limit por
+endpoint, é o teto de cota da aplicação como um todo. Nosso volume (~16/dia) está muitas ordens de
+grandeza abaixo disso.
 
 ### 5.4 Critério de aceite mapeado
-Não há cenário Given/When/Then dedicado a rate limit nos critérios de aceite (a ambiguidade do PRD
-pedia avaliação, não um comportamento testável específico) — a decisão acima é a resposta à
-ambiguidade #3 do PRD.
+Não há cenário Given/When/Then dedicado a rate limit — decisão acima confirmada com evidência real
+(headers inspecionados, nenhum limite documentado neles).
 
 ## 6. Decisão técnica 4 — Validação end-to-end do link de afiliado (desenho do teste, requisito crítico)
 
-Esta é uma validação **manual/ao vivo**, não uma linha de código nova (`EnsureAffiliateLinkAsync`
-não muda, por restrição do PRD) — o que este design entrega é o roteiro objetivo e reproduzível que
-o Dev/QA executa depois que o novo `MercadoLivreCollector` estiver rodando, satisfazendo CA 7.1-7.3.
+**Esta decisão não pôde ser validada — ver Seção 10.** O roteiro abaixo é o desenho original do
+Arquiteto, mantido como referência para quando o bloqueio da Seção 10 for resolvido; a execução
+real (passo 6.1) não foi possível porque `affiliate-tools/links` retorna HTTP 404 (endpoint
+inalcançável) para as credenciais atuais, independente do produto/URL enviado — não é uma questão de
+não haver um produto de teste disponível (não havia nenhum produto de Mercado Livre com
+`Status == Queued` na base local, coleta está zerada desde que o collector quebrou — mas mesmo
+inserindo um produto de teste manualmente, o endpoint em si já rejeita a chamada antes de chegar a
+avaliar o conteúdo/URL, então o teste do checklist de 5 itens é inconclusivo por bloqueio de acesso,
+não por falta de dado).
 
-### 6.1 Roteiro de validação
-1. Rodar o novo `MercadoLivreCollector.CollectAsync` uma vez em ambiente local (com credenciais reais
-   já configuradas) até pelo menos um produto de Mercado Livre chegar a `Status == Queued`
-   (passar pelo `ScoreProductAsync`, mesmo pipeline de sempre, sem lógica nova para ML).
-2. Anotar, para esse produto, o valor de `SourceUrl` (o `permalink` original vindo do multi-get,
-   seção 4) **antes** do `ProcessorJob` rodar — é o baseline de comparação.
-3. Rodar o `ProcessorJob` (job existente, sem mudança) até `EnsureAffiliateLinkAsync` gerar o
-   `AffiliateLink` do mesmo produto.
-4. Aplicar o checklist objetivo abaixo sobre o `AffiliateLink` resultante — **todos** os itens devem
-   passar para o critério ser considerado satisfeito (CA 7.2 é explícito: HTTP 200 sozinho não basta):
+### 6.1 Roteiro de validação (desenho original — não executável até a Seção 10 ser resolvida)
+1. Rodar o novo `MercadoLivreCollector.CollectAsync` uma vez em ambiente local até pelo menos um
+   produto de Mercado Livre chegar a `Status == Queued`.
+2. Anotar o `SourceUrl` desse produto antes do `ProcessorJob` rodar (baseline de comparação).
+3. Rodar o `ProcessorJob` até `EnsureAffiliateLinkAsync` gerar o `AffiliateLink`.
+4. Aplicar o checklist objetivo de 5 itens (tabela original abaixo) sobre o `AffiliateLink` resultante.
 
 | # | Verificação | Como checar | Resultado esperado |
 |---|---|---|---|
 | 1 | `AffiliateLink` é diferente de `SourceUrl`/`permalink` | comparação de string direta | `AffiliateLink != SourceUrl` |
-| 2 | Domínio reconhecível do Mercado Livre ou do seu mecanismo de afiliados | inspecionar o host da URL | host contém `mercadolivre.com`/`mercadolibre.com` (formatos conhecidos do programa de afiliados do ML incluem links curtos `.../sec/{code}` e links longos com parâmetros `matt_word`/`matt_tool` — o formato exato só se confirma inspecionando a resposta real de `affiliate-tools/links`, já que este design não altera nem teve acesso de leitura a esse endpoint) |
-| 3 | Presença de identificador de conta/tag, não só um link "genérico" | inspecionar path/querystring do link (ex. parâmetro tipo `matt_word=`, `matt_tool=`, ou um código opaco de `/sec/`) | ao menos um identificador presente — se o link vier "limpo" sem nenhum parâmetro/código de afiliado reconhecível, é reprovação (CA 7.2) |
-| 4 | O identificador é estável/da conta do Gerente, não aleatório por chamada | gerar `AffiliateLink` para **dois produtos diferentes** no mesmo teste e comparar o identificador do item 3 entre os dois | mesmo identificador de conta nos dois links (valor da tag idêntico); só o código do produto/path muda |
-| 5 (opcional, reforço) | O link de afiliado de fato redireciona para o produto correto | seguir o redirect do `AffiliateLink` (ex. `curl -IL`) | resolve (eventualmente) para uma URL cujo produto corresponde ao `permalink` original do item 2 |
+| 2 | Domínio reconhecível do Mercado Livre ou do seu mecanismo de afiliados | inspecionar o host da URL | host contém `mercadolivre.com`/`mercadolibre.com` |
+| 3 | Presença de identificador de conta/tag, não só um link "genérico" | inspecionar path/querystring do link | ao menos um identificador presente |
+| 4 | O identificador é estável/da conta do Gerente, não aleatório por chamada | gerar `AffiliateLink` para dois produtos diferentes e comparar | mesmo identificador de conta nos dois links |
+| 5 (opcional) | O link de afiliado de fato redireciona para o produto correto | seguir o redirect (`curl -IL`) | resolve para o produto correto |
 
-5. Resultado (todos os 5 itens, valores mascarando o identificador de conta se for sensível para
-   registro em arquivo versionado) documentado em um novo arquivo,
-   `{docs_path}/validacao-link-afiliado.md`, produzido por quem executa o teste (Dev/QA) — não faz
-   parte deste `design.md` porque depende de dados que só existem depois que o coletor novo já está
-   implementado e rodando (ordem de dependência: Dev implementa → só então este roteiro é executável).
-6. Se qualquer item do checklist falhar → não é um bug desta issue a corrigir silenciosamente (PRD,
-   Restrições + CA 7.3): documentar o achado (novo arquivo em `.claude/melhorias/` ou nova Issue) e
-   reportar antes de qualquer alteração em `EnsureAffiliateLinkAsync`.
+5. Resultado documentado em `{docs_path}/validacao-link-afiliado.md`.
+6. Se qualquer item falhar → achado documentado (`.claude/melhorias/` ou nova Issue), sem correção
+   silenciosa de `EnsureAffiliateLinkAsync` fora do escopo original.
 
-### 6.2 Por que não executei este teste eu mesmo agora
-A tarefa pediu para testar "se possível, ao vivo, agora mesmo" — não é possível dentro do escopo de
-ferramentas do Arquiteto (sem Bash além de `gh`, sem acesso a código-fonte/stack Docker) **e** o
-teste real só é executável depois que o `MercadoLivreCollector` novo existir e coletar ao menos um
-produto de Mercado Livre (pré-requisito de dados que este design, por definição, ainda não criou) —
-mesmo com acesso irrestrito a ferramentas, a Decisão 4 não poderia ser validada com dados reais nesta
-etapa do pipeline. O roteiro acima é o entregável correto desta etapa (design do teste, não sua
-execução) — execução cabe ao Dev, na sub-issue de implementação, e ao QA, na validação final.
+### 6.2 O que foi de fato executado pelo LT (2026-08-17)
+
+Testei diretamente `POST https://api.mercadolibre.com/affiliate-tools/links` com o payload exato
+usado pelo código (`{"url": "<permalink>"}`), com token válido, e variações (payload alternativo,
+método GET, paths alternativos `affiliate-tools`, `affiliate-program/links`). **Todas as variações
+retornaram HTTP 404** com o corpo padrão de rota inexistente do gateway do Mercado Livre
+(`"error":"resource not found"`, mensagem genérica de "recurso não encontrado, consulte
+developers.mercadolibre.com"). Isso é o mesmo tipo de resposta que a API retorna para qualquer rota
+que simplesmente não existe/não está habilitada para a aplicação — diferente do 403 `access_denied`
+observado no bloqueio dos itens (Seção 10), que é uma negativa de acesso a um recurso que existe.
+Ou seja: **não é um problema de payload ou de produto de teste — o próprio endpoint não está
+acessível para esta aplicação**, o que impede a execução do roteiro de validação (passo 3 em diante)
+independente de qualquer outra decisão desta issue.
 
 ### 6.3 Critério de aceite mapeado
-CA 7.1 (link diferente do permalink + tag reconhecível — itens 1-3 do checklist), CA 7.2 (não se
-satisfaz com 200 — o checklist inteiro é sobre conteúdo, não status HTTP), CA 7.3 (achado de defeito
-tratado como problema separado, não corrigido silenciosamente).
+CA 7.1, 7.2 **não puderam ser confirmados** (bloqueados, ver Seção 10). CA 7.3 ("achado de defeito é
+tratado como problema separado, não corrigido silenciosamente dentro desta issue") é exatamente o
+procedimento que este LT está seguindo agora: reportando o achado e escalando ao Gerente (Gate 1.5)
+em vez de tentar contornar/adivinhar um novo endpoint/payload por conta própria.
 
 ## 7. Dependências
 
 - Nenhuma dependência nova de pacote — `.NET 8`/`Enumerable.Chunk` já nativo (seção 4.3).
-- Nenhuma mudança de schema/migration (confirmado no PRD, este design não introduz nenhuma).
-- Depende de 3 confirmações ao vivo, todas de baixo custo (poucas chamadas HTTP), a cargo do LT no
-  início do refinamento técnico: valores reais do `CategoryMap` (seção 3.4), limite real do multi-get
-  (seção 4.2) e, opcionalmente, headers de rate limit (seção 5.3) — nenhuma delas exige uma nova
-  rodada de design se o valor confirmado divergir da expectativa (batch size e delay são constantes
-  nomeadas, parametrizadas, não hardcoded em múltiplos lugares).
-- Depende de `EnsureAffiliateLinkAsync`/`affiliate-tools/links` continuarem funcionando como hoje
-  (fora de escopo desta issue, só consumidos — seção 6).
+- Nenhuma mudança de schema/migration.
+- **Nova dependência crítica identificada pela Seção 10**: a viabilidade completa desta issue (tanto
+  a reconstrução do collector quanto a validação do link de afiliado) depende de resolver o acesso
+  da aplicação Mercado Livre (`client_id` atual) a `/items` e a `affiliate-tools/links` — depende de
+  uma ação fora do escopo de ferramentas de qualquer agente da squad (portal de desenvolvedores do
+  Mercado Livre, do lado do Gerente/dono da conta).
 
 ## 8. Riscos
 
-- **Mapeamento de categorias (seção 3) desatualiza silenciosamente**: se o Mercado Livre reestruturar
-  sua árvore de categorias no futuro, os IDs hardcoded podem passar a apontar para categorias
-  descontinuadas/renomeadas. Mitigação: o próprio padrão de isolamento de falha por categoria (Gate 1
-  regra 4) já limita o dano a "essa categoria específica some da coleta, log de erro visível" — não é
-  uma falha silenciosa, aparece nos logs de erro do `CollectorJob` e pode ser corrigida atualizando
-  a constante, sem exigir nova migration/deploy de schema.
-- **Limite do multi-get confirmado menor que 10** (seção 4.2, cenário não esperado mas coberto): exige
-  subdividir lotes dentro de uma mesma categoria — código já preparado (`ChunkIds` parametrizado), só
-  risco de esquecimento se o LT não rodar a confirmação antes de implementar; por isso a seção 4.2 é
-  marcada como passo obrigatório do início do refinamento, não algo a descobrir só em produção.
-- **Formato real do link de afiliado (`affiliate-tools/links`) diferente do assumido na seção 6.1**:
-  o design não teve acesso de leitura ao código de `EnsureAffiliateLinkAsync`, então o checklist da
-  seção 6 é genérico (baseado em formatos publicamente conhecidos de programas de afiliados do
-  Mercado Livre) — se a resposta real tiver um formato distinto, o checklist ainda se aplica
-  conceitualmente (itens 1-4 não dependem de um formato específico), só a coluna "Como checar" pode
-  precisar de ajuste fino pelo Dev/QA ao executar.
-- **Categorias N:1 (Casa e Cozinha, Moda — seção 3.3) aumentam levemente o número de chamadas de
-  Highlights** (mais de 1 ID por categoria interna) — sem impacto de rate limit dado o volume total
-  calculado na seção 5.1, mas aumenta a complexidade de agregação (cortar top 10 do conjunto
-  combinado, não por sub-ID) — documentado explicitamente para o LT não simplificar isso incorretamente.
+- **Mapeamento de categorias (seção 3) desatualiza silenciosamente**: mitigado pelo isolamento de
+  falha por categoria já decidido no Gate 1.
+- ~~Limite do multi-get confirmado menor que 10~~: **descartado** — confirmado ≥ 18, acima do
+  necessário.
+- **Ver Seção 10 para o risco que se materializou**: formato/acesso ao link de afiliado e aos dados
+  de item divergiram fundamentalmente do assumido, ao ponto de bloquear a validação, não apenas de
+  exigir ajuste fino.
 
 ## 9. Fora de escopo deste design (para o LT/Dev)
 
-- Valores reais do `CategoryMap` (seção 3.4) — `[LT CONFIRMAR AO VIVO]`, passo a passo na seção 3.2.
-- Valor real do limite do multi-get e eventual ajuste de `BatchSize` (seção 4.2) — `[LT CONFIRMAR AO VIVO]`.
-- Headers de rate limit, se existirem (seção 5.3) — opcional, não bloqueante.
-- Execução do roteiro de validação do link de afiliado (seção 6.1) — depende do coletor novo já
-  existir; cabe ao Dev (primeira execução, ao implementar) e ao QA (confirmação final).
-- Nome exato dos métodos novos no client HTTP de Mercado Livre (`GetHighlightsAsync`/`GetItemsAsync`
-  na seção 2) — refinamento de nomenclatura do LT, não decisão de arquitetura.
+- ~~Valores reais do `CategoryMap`~~ — **confirmado, seção 3.4**.
+- ~~Valor real do limite do multi-get~~ — **confirmado, seção 4.2 (≥18)**.
+- ~~Headers de rate limit~~ — **confirmado, seção 5.3 (nenhum header de rate limit exposto)**.
+- Execução do roteiro de validação do link de afiliado (seção 6.1) — **bloqueada, ver Seção 10**,
+  não é mais "depende do coletor existir", é "depende do endpoint ficar acessível".
+- Nome exato dos métodos novos no client HTTP de Mercado Livre — refinamento de nomenclatura,
+  suspenso até a Seção 10 ser resolvida (não faz sentido nomear métodos para um fluxo que pode mudar
+  de forma).
+
+## 10. BLOQUEIO CRÍTICO confirmado ao vivo pelo LT (2026-08-17) — requer decisão do Gerente
+
+### 10.1 O que foi testado e o resultado
+
+| Chamada | Resultado | O que significa |
+|---|---|---|
+| `GET /sites/MLB/categories` | HTTP 200 | OK — usado na Decisão 1 |
+| `GET /categories/{id}` (2x, para investigar subcategorias) | HTTP 200 | OK — usado na Decisão 1 |
+| `GET /highlights/MLB/category/{id}` (2 categorias testadas: Eletrodomésticos, Climatização) | HTTP 200 | OK — retorna lista de IDs ranqueados por `position`. **Os IDs retornados são `catalog_product_id` (produto agregado de catálogo), não `item_id` (anúncio individual de um vendedor)** — achado não previsto pelo design original |
+| `GET /items?ids=<18 catalog_product_ids do Highlights>` | HTTP 200 (envelope) com **cada item individual = `code:404`** | Os IDs do Highlights não são reconhecidos por `/items` — confirma que são IDs de outro tipo de recurso (catálogo, não item) |
+| `GET /products/{catalog_product_id}` | HTTP 200 | Funciona — retorna `name` (título), `pictures` (imagens), mas **`permalink` sempre vazio (`""`)** e `buy_box_winner` sempre `null`, testado em 4 produtos diferentes de 2 categorias |
+| `GET /products/{catalog_product_id}/items` | HTTP 200 | Funciona — retorna a lista de anúncios (`item_id`, `price`, `seller_id`, `category_id`, `shipping`) que compõem aquele produto de catálogo. **Não inclui título, imagem nem permalink** |
+| `GET /items/{item_id}` (usando `item_id` real, obtido do endpoint acima — não mais o `catalog_product_id` do Highlights) | **HTTP 403** `{"error":"access_denied","message":"Access to the requested resource is forbidden"}` — testado em 4 `item_id`s diferentes, com e sem `official_store_id` associado | **Bloqueio de acesso, não erro de payload/ID.** Sem esse endpoint não há como obter `permalink` de nenhum anúncio individual |
+| `GET /items?ids={item_id}` (multi-get, mesmo `item_id` real) | HTTP 200 (envelope) com item individual `code:403` | Mesmo bloqueio, confirmado também via a rota de lote |
+| `POST /affiliate-tools/links` com `{"url": "<qualquer URL>"}` (payload idêntico ao já implementado em `ProcessorJob.EnsureAffiliateLinkAsync`) | **HTTP 404** `{"error":"resource not found", ...}` — testado com 2 URLs de exemplo diferentes | Rota não reconhecida pelo gateway da API para esta aplicação (diferente do 403 acima — este é "rota não existe/habilitada", não "acesso negado a um recurso que existe") |
+| `GET /affiliate-tools/links`, `GET /affiliate-tools`, `GET /affiliate-program/links` (variações de path/método, só para descartar erro de digitação) | HTTP 404 em todas | Reforça que não é erro de payload — a família de rotas não está habilitada/reconhecida |
+| Headers de resposta de todas as chamadas acima | Nenhum `X-RateLimit-*`/`Retry-After` em nenhuma | Ver Decisão 3/seção 5.3 |
+| `GET /applications/{client_id}` (introspecção da app registrada) | HTTP 200 — `"sandbox_mode": true`, `"certification_status": "not_certified"`, `"allow_flow": ["client_credentials"]`, `scopes` sem nenhum escopo de afiliados | **Hipótese de causa raiz**, ver 10.2 |
+
+### 10.2 Hipótese de causa raiz (não confirmável sem acesso ao painel de desenvolvedores do Mercado Livre)
+
+A aplicação registrada (`client_id` em `app_settings.mercadolivre.client_id`) está com
+`sandbox_mode: true` e `certification_status: "not_certified"`, habilitada apenas para o fluxo OAuth2
+`client_credentials` (aplicação, sem usuário) — não há `authorization_code` habilitado, e não existe
+`mercadolivre.refresh_token` populado em `app_settings` (o campo existe no schema — usado por outras
+plataformas do projeto — mas está vazio para Mercado Livre). Os `scopes` da aplicação listam permissões
+genéricas de marketplace/admin, sem nada que pareça um escopo de programa de afiliados.
+
+Isso é consistente com os dois bloqueios observados:
+- **`/items` (leitura de anúncio individual) exige mais do que um token de aplicação sem certificação**
+  — o mesmo tipo de restrição de política de 2026 que já havia quebrado `/sites/MLB/search` (premissa
+  original desta issue) parece se aplicar também à leitura de detalhes de item avulso, não só à
+  busca. Times legítimos de comparação de preço/afiliados historicamente liam `/items/{id}` sem
+  qualquer autenticação — o fato de agora exigir 403 mesmo autenticado (app token) sugere que o nível
+  de acesso necessário subiu para "aplicação certificada" e/ou "token de usuário autorizado"
+  (`authorization_code`), não apenas "aplicação com client_id/secret válidos".
+- **`affiliate-tools/links` como rota pública de API pode nunca ter existido nesse formato** — o
+  Programa de Afiliados do Mercado Livre historicamente opera por um painel web dedicado
+  (geração de link manual/via dashboard do afiliado), não necessariamente por uma rota REST pública
+  documentada sob `api.mercadolibre.com`. A implementação atual de `EnsureAffiliateLinkAsync`
+  (Issue #6) parece ter sido escrita sem validação end-to-end contra a API real — o que é exatamente
+  o gap que a regra de negócio 6 do Gate 1 desta issue (CA 7) foi criada para expor.
+
+**Nenhuma dessas duas hipóteses pode ser confirmada ou corrigida por um agente da squad** — ambas
+dependem de ações no painel de desenvolvedores do Mercado Livre (certificar a aplicação, habilitar
+`authorization_code` e completar o consentimento OAuth via navegador, e/ou confirmar com a
+documentação oficial/suporte do Mercado Livre qual é a rota real do programa de afiliados, se
+diferente de `affiliate-tools/links`) — todas exigem acesso humano à conta/portal do Mercado Livre do
+Gerente, fora do escopo de `Bash`/`gh` de qualquer agente.
+
+### 10.3 Opções levantadas para o Gerente decidir (Gate 1.5)
+
+1. **Certificar a aplicação no painel de desenvolvedores do Mercado Livre** e/ou trocar o fluxo OAuth
+   para `authorization_code` (exige o Gerente logar como o vendedor/afiliado e autorizar a aplicação
+   via navegador — não automatizável por um agente) — se isso destravar `/items` e/ou revelar a rota
+   real do programa de afiliados, o design original (seções 1-9) permanece válido como está, só
+   trocando o mecanismo de obtenção do token.
+2. **Buscar na documentação/suporte oficial do Mercado Livre qual é a rota real e atual do programa
+   de afiliados** (pode ter mudado de nome/formato desde que `EnsureAffiliateLinkAsync` foi
+   implementado na Issue #6) — se existir uma rota diferente, ajustar só essa chamada, sem impacto
+   nas Decisões 1-3 (categorias, Highlights, batching já validados e funcionando).
+3. **Descope parcial**: reconstruir o `MercadoLivreCollector` usando os dados parcialmente
+   disponíveis sem autenticação elevada (`/products/{id}` para título/imagem, `/products/{id}/items`
+   para preço), aceitando que `SourceUrl`/permalink e a geração do `AffiliateLink` ficam
+   temporariamente indisponíveis/pendentes de uma issue separada — produtos de Mercado Livre voltam
+   a ser coletados e pontuados, mas não publicados até o link de afiliado ser resolvido à parte
+   (mantém a régua de "não corrigir/inventar link sem tag" do CA 7.2/7.3, não polui a fila de
+   publicação com links quebrados).
+4. **Pausar esta issue** até a situação da conta/aplicação Mercado Livre ser resolvida pelo Gerente,
+   sem nenhuma sub-issue de implementação criada ainda (evita retrabalho: qualquer especificação
+   técnica escrita agora teria que ser refeita dependendo de qual das opções acima for escolhida).
+
+O LT não tem mandato para escolher entre essas opções (são decisões de produto/acesso a conta externa,
+não uma ambiguidade técnica de arquitetura) — reportado ao Gerente via comentário na Issue #182,
+aguardando resposta antes de prosseguir com `especificacao-tecnica.md`/`tasks.md`/sub-issues.
