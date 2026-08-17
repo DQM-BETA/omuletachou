@@ -1,9 +1,9 @@
 ---
 issue: 182
 titulo: fix: MercadoLivreCollector quebrado — endpoint /sites/MLB/search descontinuado pela API, reconstruir com Highlights API
-etapa_atual: Code Review
+etapa_atual: QA
 rota: normal
-ultimo_agente: lider-tecnico
+ultimo_agente: code-review
 openspec_change: repos/omuletachou/openspec/changes/issue-182-mercadolivrecollector-quebrado
 tech_stacks:
   - dotnet
@@ -25,7 +25,7 @@ sub_issues_frontend:
   "#185": angular
 pr_homologacao: 189
 pr_release: ~
-code_review_homolog_pr: ~
+code_review_homolog_pr: 189
 qa_status: ~
 figma_url: ~
 blockers: |
@@ -100,6 +100,40 @@ blockers: |
     Chromium headless bloqueados por anti-bot). Mitigado pelo checkpoint humano do fluxo
     semi-manual (operador cola a URL na ferramenta oficial do ML e veria erro se o padrao
     estivesse errado), mas vale reconferir manualmente no navegador durante o Code Review/QA.
+
+  RESOLUCAO CODE REVIEW (2026-08-17) — PR #189 APROVADO e mesclado (desenv->homolog, merge commit
+  393134d5f869ec1b16769cfd32a26cb155025bea):
+  - Build real (dotnet build Release) + suite completa (dotnet test, 427/427) + boot real via
+    Docker (rebuild sem cache, db+api+dashboard healthy, /health 200) + suite dashboard
+    (120/120, cobertura 92.32% statements medida ao vivo) + build producao dashboard — tudo
+    executado e confirmado, nao so lido.
+  - Integracao real testada end-to-end (nao mock-only): produto de teste inserido direto no
+    Postgres do container em AwaitingAffiliateLink -> GET /api/products?status=... confirmou
+    sourceUrl no payload -> POST /api/products/affiliate-links/import (1 item valido + 1
+    productId inexistente) confirmou isolamento de falha por item ao vivo -> banco reconferido
+    (status=Queued, affiliate_link preenchido) -> nova listagem confirmou produto sumiu ->
+    dashboard (rota /mercadolivre-links + proxy /api/ do nginx) confirmado servindo via
+    container real.
+  - Os DOIS riscos herdados (schema /highlights e permalink /p/{id}) foram RETENTADOS pelo CR
+    com acesso de rede real: `curl https://api.mercadolibre.com/sites/MLB/categories` (direto e
+    de dentro do container afiliado_api) e `curl https://www.mercadolivre.com.br/p/MLB16855791`
+    -> AMBOS HTTP 403 `PA_UNAUTHORIZED_RESULT_FROM_POLICIES` (bloqueio de politica de rede do
+    proprio ambiente de execucao do agente, mesma classe de restricao que ja impediu o Dev/LT —
+    nao e resposta do Mercado Livre). Continua NAO CONFIRMADO ao vivo por nenhum agente ate
+    agora. Risco aceito para o merge (mesmos motivos do Gate 1.5: parsing defensivo com
+    degradacao visivel — highlights vazio nao lanca excecao, so zera a categoria daquele ciclo,
+    caminho ja testado via isolamento de falha; permalink com checkpoint humano no fluxo
+    semi-manual). RECOMENDACAO EXPLICITA AO QA: tentar validar de novo em ambiente com internet
+    real (ex.: deploy homolog na VM Oracle, se tiver rota de rede diferente do sandbox de
+    ferramentas dos agentes); se tambem bloqueado, o gate final passa a ser monitorar o primeiro
+    ciclo real do CollectorJob em producao (contagem de produtos coletados / logs Hangfire).
+  - Achado nao-bloqueante registrado no PR (nao corrigido, nao impede merge): dashboard usa
+    `pageSize=200` em `listAwaitingAffiliateLink()` assumindo que cobre o pior caso (ver
+    especificacao-tecnica.md §3.6), mas `PaginationExtensions.MaxPageSize=100` (pre-existente,
+    Issue #11, fora do escopo deste PR) trunca silenciosamente acima de 100 — sem perda de dado
+    (proxima carga mostra o resto), mas sem aviso na tela de que ha mais pendencias alem das 100
+    carregadas se o operador acumular >100 produtos aguardando (~80/dia no pior caso, ~1-2 dias
+    sem processar). Sugestao de follow-up em `.claude/melhorias/`, nao é regressao deste PR.
 createdAt: 2026-08-17
 status_comment_id: 5317813321
 ---
@@ -121,13 +155,16 @@ status_comment_id: 5317813321
 | 11 | Dev .NET (Sub-A #183) | dev-dotnet | sonnet | 150764 | 49 | 698s | `MercadoLivreCollector` reconstruído com Highlights API. 415/415 testes passando, boot real via Docker (`/health` 200) confirmado. Nota de risco: confirmação ao vivo do schema `/highlights` não pôde ser reexecutada (sandbox do Dev bloqueia `api.mercadolibre.com`) — parsing escrito defensivamente (aceita `content[]` ou `results[]`), documentado no código/PR; QA deve validar ao vivo. PR #187 feature→desenv aberto. |
 | 12 | Líder Técnico (merge Sub-A #183) | lider-tecnico | sonnet | 42128 | 9 | 94s | PR #187 (feature/ISSUE-183-mercadolivrecollector-highlights → desenv) mesclado via squash + delete-branch (commit `533e4020`). Sub-issue #183 fechada. `desenv_tasks_merged` = ["#184","#183"]. Risco herdado do parsing defensivo de `/highlights` registrado em `blockers` para validação do CR/QA. Falta só Sub-C (#185) para abrir PR desenv→homolog. |
 | 13 | Dev Angular (Sub-C #185) | dev-angular | sonnet | 220863 | 114 | 1245s | Tela "Links de Afiliado — Mercado Livre" implementada (standalone component, estados loading/vazio/erro, validação client-side de contagem pré-import, painel de skipped, retry preservando texto colado, responsivo). 120/120 testes (92,3% statements), build produção OK, `ng serve` validado (chunk lazy 200). Achado técnico: spy de `MatSnackBar` falha silenciosamente em standalone components que importam `MatSnackBarModule` diretamente (injector local sombreia o singleton do TestBed) — contornado testando o DOM real via `OverlayContainer`. PR #188 feature→desenv aberto. |
-| 14 | Líder Técnico (merge Sub-C #185 + PR homologação) | lider-tecnico | sonnet | ~ | ~ | ~ | PR #188 (feature/ISSUE-185-links-afiliado-ml → desenv) verificado (120/120 testes, build produção e `ng serve` já validados pelo Dev, sem CI configurado no repo) e mesclado via squash + delete-branch (commit `e3104ec`). Sub-issue #185 fechada. `desenv_tasks_merged` = ["#184","#183","#185"] — as 3 sub-issues da Issue-pai #182 agora estão em `desenv`. PR #189 (`desenv→homolog`, merge commit) aberto cobrindo a Issue-pai #182 completa: reconstrução do MercadoLivreCollector via Highlights API, fluxo semi-manual de link de afiliado (Gate 1.5), nova tela do dashboard. Corpo do PR inclui os dois riscos pendentes de validação ao vivo (parsing defensivo do schema `/highlights` e o permalink `/p/{catalog_product_id}`) para Code Review/QA. `pr_homologacao` = 189, `etapa_atual` = Code Review. |
+| 14 | Líder Técnico (merge Sub-C #185 + PR homologação) | lider-tecnico | sonnet | 55614 | 20 | 182s | PR #188 (feature/ISSUE-185-links-afiliado-ml → desenv) verificado (120/120 testes, build produção e `ng serve` já validados pelo Dev, sem CI configurado no repo) e mesclado via squash + delete-branch (commit `e3104ec`). Sub-issue #185 fechada. `desenv_tasks_merged` = ["#184","#183","#185"] — as 3 sub-issues da Issue-pai #182 agora estão em `desenv`. PR #189 (`desenv→homolog`, merge commit) aberto cobrindo a Issue-pai #182 completa: reconstrução do MercadoLivreCollector via Highlights API, fluxo semi-manual de link de afiliado (Gate 1.5), nova tela do dashboard. Corpo do PR inclui os dois riscos pendentes de validação ao vivo (parsing defensivo do schema `/highlights` e o permalink `/p/{catalog_product_id}`) para Code Review/QA. `pr_homologacao` = 189, `etapa_atual` = Code Review. |
+| 15 | Code Review (PR #189, homologação) | code-review | sonnet | ~ | ~ | ~ | **APROVADO.** Build real (`dotnet build`/`dotnet test` 427/427) + boot real via Docker (rebuild sem cache, db+api+dashboard healthy) + suíte dashboard (120/120, cobertura 92.32% medida ao vivo) + build produção. Integração real testada end-to-end (produto de teste inserido no Postgres → `GET /api/products?status=AwaitingAffiliateLink` confirmou `sourceUrl` → `POST /api/products/affiliate-links/import` confirmou isolamento de falha por item → banco reconferido `Queued`+`affiliate_link` → dashboard/nginx proxy confirmado). Diff conferido linha a linha contra `especificacao-tecnica.md`/`design.md` — conformidade total. Os 2 riscos herdados (schema `/highlights`, permalink `/p/{id}`) foram retentados com acesso de rede real e continuam bloqueados pela mesma política de rede do ambiente de execução (`PolicyAgent` 403, não resposta do Mercado Livre) — não é achado novo, é reconfirmação independente do mesmo bloqueio já documentado pelo Dev/LT; recomendação explícita ao QA para retentar em ambiente com internet real e, se ainda bloqueado, tratar o primeiro ciclo real do `CollectorJob` em produção como gate final. Achado não-bloqueante registrado (cap `MaxPageSize=100` pré-existente conflita com a suposição `pageSize=200` da especificação técnica §3.6 — sem perda de dado, só sem aviso de mais pendências além de 100). PR #189 mesclado `desenv→homolog` via merge commit `393134d5f869ec1b16769cfd32a26cb155025bea`. `code_review_homolog_pr` = 189, `etapa_atual` = QA. |
 
 ## Próximo passo
 
-As 3 sub-issues (#183, #184, #185) estão mescladas em `desenv`. PR #189 (`desenv→homolog`, merge
-commit) aberto cobrindo a Issue-pai #182 completa. Próximo passo: Code Review (`/code-review` +
-agente Code Review) — validar ao vivo, se possível, o schema real de `GET /highlights` (parsing
-defensivo pode mascarar retorno vazio) e reconferir o padrão de permalink
-`https://www.mercadolivre.com.br/p/{catalog_product_id}` (ambos os riscos documentados em
-`blockers` e no corpo do PR #189). Após Code Review aprovar → QA.
+PR #189 (`desenv→homolog`) aprovado pelo Code Review e mesclado (merge commit
+`393134d5f869ec1b16769cfd32a26cb155025bea`). Próximo passo: **QA** em `homolog` — validar os
+critérios de aceite (`criterios-aceite.md`) e, se possível (ambiente com internet real, diferente
+do sandbox de ferramentas dos agentes), retentar a validação ao vivo dos dois riscos herdados
+(schema de `GET /highlights` e permalink `/p/{catalog_product_id}`), ambos ainda não confirmados
+por nenhum agente até agora — ver `blockers` para o histórico completo das tentativas (Dev, LT,
+Code Review, todas bloqueadas pela mesma classe de restrição de rede). Se também bloqueado no
+ambiente do QA, registrar como risco aceito para monitorar no primeiro ciclo real de produção.
