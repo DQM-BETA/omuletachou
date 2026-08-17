@@ -1,17 +1,17 @@
 ---
 issue: 182
 titulo: fix: MercadoLivreCollector quebrado — endpoint /sites/MLB/search descontinuado pela API, reconstruir com Highlights API
-etapa_atual: Aguardando Aprovação — Gate 1
+etapa_atual: Refinamento Técnico — Arquiteto
 rota: normal
 ultimo_agente: pm-analista-negocios
-openspec_change: ~
+openspec_change: repos/omuletachou/openspec/changes/issue-182-mercadolivrecollector-quebrado
 tech_stacks:
   - dotnet
 repos:
   omuletachou: repos/omuletachou
 repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-182-mercadolivrecollector-quebrado
-openspec_path: ~
+openspec_path: repos/omuletachou/openspec/changes/issue-182-mercadolivrecollector-quebrado
 sub_issues: []
 desenv_tasks_merged: []
 sub_issues_frontend: {}
@@ -31,3 +31,4 @@ status_comment_id: 5317813321
 |---|---|---|---|---|---|---|---|
 | 1 | Preparação | coordenador | haiku | - | - | - | Issue criada, estado.md inicializado |
 | 2 | PM Fase 1 | pm-analista-negocios | sonnet | - | - | - | Levantamento postado (perguntas de categorias/volume/frequência/fallback/dedupe), aguardando respostas do Gerente |
+| 3 | PM Fase 2 | pm-analista-negocios | sonnet | - | - | - | PRD (proposal.md) + criterios-aceite.md escritos incorporando decisões do Gate 1; ambiguidade arquitetural identificada (mapeamento de category IDs, limite/batching do multi-get, rate limit dentro do ciclo, cache da árvore de categorias) → encaminhado ao Arquiteto |
