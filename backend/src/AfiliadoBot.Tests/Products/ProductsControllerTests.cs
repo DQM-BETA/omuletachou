@@ -45,7 +45,12 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
         return loginBody.GetProperty("token").GetString()!;
     }
 
-    private static Product NewProduct(string title, Platform platform, string category = "Geral", string? affiliateLink = "https://exemplo.com/aff")
+    private static Product NewProduct(
+        string title,
+        Platform platform,
+        string category = "Geral",
+        string? affiliateLink = "https://exemplo.com/aff",
+        string? sourceUrl = null)
     {
         return new Product(
             title: title,
@@ -57,7 +62,8 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
             slug: title.ToLowerInvariant().Replace(' ', '-') + "-" + Guid.NewGuid().ToString("N")[..8],
             category: category,
             platform: platform,
-            externalId: Guid.NewGuid().ToString("N"));
+            externalId: Guid.NewGuid().ToString("N"),
+            sourceUrl: sourceUrl);
     }
 
     [Fact]
@@ -369,6 +375,232 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
         var client = _factory.CreateClient();
 
         var response = await client.PatchAsJsonAsync($"/api/products/{Guid.NewGuid()}/status", new { status = "rejected" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    // Issue #182/#184 — fluxo semi-manual de link de afiliado ML.
+
+    [Fact]
+    public async Task GetProducts_FiltroStatusAwaitingAffiliateLink_RetornaApenasCorrespondentesComSourceUrl()
+    {
+        // Sub-B, tasks.md item 6: nenhum endpoint novo de listagem e necessario — o filtro
+        // generico ja existente aceita o novo valor do enum via Enum.TryParse<ProductStatus>.
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var marker = Guid.NewGuid().ToString("N")[..8];
+        var awaiting = NewProduct(
+            $"Produto Aguardando Link {marker}", Platform.MercadoLivre,
+            affiliateLink: null, sourceUrl: "https://www.mercadolivre.com.br/p/MLB111");
+        var queued = NewProduct($"Produto Ja Enfileirado {marker}", Platform.MercadoLivre);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            awaiting.MarkAsAwaitingAffiliateLink();
+            db.Products.Add(awaiting);
+            db.Products.Add(queued);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync("/api/products?status=AwaitingAffiliateLink");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var items = body.GetProperty("items").EnumerateArray().ToList();
+
+        items.Should().Contain(i => i.GetProperty("id").GetGuid() == awaiting.Id);
+        items.Should().NotContain(i => i.GetProperty("id").GetGuid() == queued.Id);
+
+        var awaitingItem = items.Single(i => i.GetProperty("id").GetGuid() == awaiting.Id);
+        awaitingItem.GetProperty("sourceUrl").GetString().Should().Be("https://www.mercadolivre.com.br/p/MLB111");
+    }
+
+    [Fact]
+    public async Task ImportAffiliateLinks_ItemValido_AtualizaProdutoParaQueuedComLink()
+    {
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var product = NewProduct("Produto Import Valido", Platform.MercadoLivre, affiliateLink: null);
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            product.MarkAsAwaitingAffiliateLink();
+            db.Products.Add(product);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.PostAsJsonAsync("/api/products/affiliate-links/import", new
+        {
+            items = new[] { new { productId = product.Id, affiliateLink = "https://ml.link/abc" } }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("imported").GetInt32().Should().Be(1);
+        body.GetProperty("skipped").GetArrayLength().Should().Be(0);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var updated = await db.Products.AsNoTracking().FirstAsync(p => p.Id == product.Id);
+            updated.Status.Should().Be(ProductStatus.Queued);
+            updated.AffiliateLink.Should().Be("https://ml.link/abc");
+        }
+    }
+
+    [Fact]
+    public async Task ImportAffiliateLinks_ProductIdInexistente_EPulado()
+    {
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var idInexistente = Guid.NewGuid();
+
+        var response = await client.PostAsJsonAsync("/api/products/affiliate-links/import", new
+        {
+            items = new[] { new { productId = idInexistente, affiliateLink = "https://ml.link/abc" } }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("imported").GetInt32().Should().Be(0);
+        var skipped = body.GetProperty("skipped").EnumerateArray().ToList();
+        skipped.Should().ContainSingle();
+        skipped[0].GetProperty("productId").GetGuid().Should().Be(idInexistente);
+        skipped[0].GetProperty("reason").GetString().Should().Contain("nao encontrado");
+    }
+
+    [Fact]
+    public async Task ImportAffiliateLinks_ProdutoNaoAwaitingAffiliateLink_EPuladoENaoSobrescreveLink()
+    {
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        // Produto ja com AffiliateLink preenchido (Status = Pending, nao AwaitingAffiliateLink).
+        var product = NewProduct("Produto Ja Com Link", Platform.MercadoLivre, affiliateLink: "https://ml.link/original");
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            db.Products.Add(product);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.PostAsJsonAsync("/api/products/affiliate-links/import", new
+        {
+            items = new[] { new { productId = product.Id, affiliateLink = "https://ml.link/novo-indevido" } }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("imported").GetInt32().Should().Be(0);
+        var skipped = body.GetProperty("skipped").EnumerateArray().ToList();
+        skipped.Should().ContainSingle();
+        skipped[0].GetProperty("reason").GetString().Should().Contain("Pending");
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var untouched = await db.Products.AsNoTracking().FirstAsync(p => p.Id == product.Id);
+            untouched.AffiliateLink.Should().Be("https://ml.link/original");
+        }
+    }
+
+    [Fact]
+    public async Task ImportAffiliateLinks_LinkVazio_EPulado()
+    {
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var product = NewProduct("Produto Link Vazio", Platform.MercadoLivre, affiliateLink: null);
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            product.MarkAsAwaitingAffiliateLink();
+            db.Products.Add(product);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.PostAsJsonAsync("/api/products/affiliate-links/import", new
+        {
+            items = new[] { new { productId = product.Id, affiliateLink = "   " } }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("imported").GetInt32().Should().Be(0);
+        var skipped = body.GetProperty("skipped").EnumerateArray().ToList();
+        skipped.Should().ContainSingle();
+        skipped[0].GetProperty("reason").GetString().Should().Contain("Link vazio");
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var untouched = await db.Products.AsNoTracking().FirstAsync(p => p.Id == product.Id);
+            untouched.Status.Should().Be(ProductStatus.AwaitingAffiliateLink);
+        }
+    }
+
+    [Fact]
+    public async Task ImportAffiliateLinks_LoteMisto_ImportaAlgunsEPulaOutros()
+    {
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var valido = NewProduct("Produto Lote Valido", Platform.MercadoLivre, affiliateLink: null);
+        var jaResolvido = NewProduct("Produto Lote Ja Resolvido", Platform.MercadoLivre, affiliateLink: "https://ml.link/existente");
+        var idInexistente = Guid.NewGuid();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            valido.MarkAsAwaitingAffiliateLink();
+            db.Products.Add(valido);
+            db.Products.Add(jaResolvido);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.PostAsJsonAsync("/api/products/affiliate-links/import", new
+        {
+            items = new object[]
+            {
+                new { productId = valido.Id, affiliateLink = "https://ml.link/lote-valido" },
+                new { productId = jaResolvido.Id, affiliateLink = "https://ml.link/tentativa-indevida" },
+                new { productId = idInexistente, affiliateLink = "https://ml.link/inexistente" },
+            }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("imported").GetInt32().Should().Be(1);
+        body.GetProperty("skipped").GetArrayLength().Should().Be(2);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var reloadedValido = await db.Products.AsNoTracking().FirstAsync(p => p.Id == valido.Id);
+            reloadedValido.Status.Should().Be(ProductStatus.Queued);
+            reloadedValido.AffiliateLink.Should().Be("https://ml.link/lote-valido");
+
+            var reloadedJaResolvido = await db.Products.AsNoTracking().FirstAsync(p => p.Id == jaResolvido.Id);
+            reloadedJaResolvido.AffiliateLink.Should().Be("https://ml.link/existente");
+        }
+    }
+
+    [Fact]
+    public async Task ImportAffiliateLinks_SemToken_Retorna401()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/products/affiliate-links/import", new { items = Array.Empty<object>() });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }

@@ -67,7 +67,8 @@ public class ProductsController : ControllerBase
                 p.Category,
                 p.AiScore,
                 p.AiReason,
-                p.CreatedAt))
+                p.CreatedAt,
+                p.SourceUrl))
             .ToPagedResultAsync(page, pageSize, ct);
 
         return Ok(result);
@@ -137,5 +138,55 @@ public class ProductsController : ControllerBase
         await _db.SaveChangesAsync(ct);
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Issue #182/#184: importa em lote os links de afiliado gerados manualmente pelo operador na
+    /// ferramenta oficial do Mercado Livre. Pareamento produto/link e feito EXPLICITAMENTE por
+    /// ProductId no corpo da requisicao (montado pelo dashboard, que ja tem o ProductId de cada
+    /// linha exibida) — nao por ordem/posicao inferida no servidor, para nao quebrar se a lista de
+    /// AwaitingAffiliateLink mudar entre a exportacao e a importacao (produto novo entrando em espera
+    /// no meio do processo, por exemplo). Nunca falha o lote inteiro por um item invalido (mesmo
+    /// principio de isolamento de falha ja usado no resto do projeto) — cada item e validado e
+    /// reportado individualmente no resultado.
+    /// </summary>
+    [HttpPost("affiliate-links/import")]
+    public async Task<ActionResult<ImportAffiliateLinksResult>> ImportAffiliateLinks(
+        [FromBody] ImportAffiliateLinksRequest request,
+        CancellationToken ct)
+    {
+        var skipped = new List<AffiliateLinkImportSkip>();
+        var imported = 0;
+
+        foreach (var item in request.Items)
+        {
+            if (string.IsNullOrWhiteSpace(item.AffiliateLink))
+            {
+                skipped.Add(new AffiliateLinkImportSkip(item.ProductId, "Link vazio"));
+                continue;
+            }
+
+            var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == item.ProductId, ct);
+            if (product is null)
+            {
+                skipped.Add(new AffiliateLinkImportSkip(item.ProductId, "Produto nao encontrado"));
+                continue;
+            }
+
+            if (product.Status != ProductStatus.AwaitingAffiliateLink)
+            {
+                skipped.Add(new AffiliateLinkImportSkip(
+                    item.ProductId,
+                    $"Status atual e {product.Status}, esperado AwaitingAffiliateLink"));
+                continue;
+            }
+
+            product.ResolveAffiliateLink(item.AffiliateLink.Trim());
+            imported++;
+        }
+
+        await _db.SaveChangesAsync(ct);
+
+        return Ok(new ImportAffiliateLinksResult(imported, skipped));
     }
 }

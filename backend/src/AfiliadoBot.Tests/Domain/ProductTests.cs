@@ -180,4 +180,45 @@ public class ProductTests
         product.Category.Should().Be("Eletrônicos");
         product.Subcategory.Should().BeNull();
     }
+
+    // Issue #182/#184 — fluxo semi-manual de link de afiliado ML.
+
+    [Fact]
+    public void MarkAsAwaitingAffiliateLink_SetsStatus_AwaitingAffiliateLink()
+    {
+        var product = CriarProdutoValido(affiliateLink: null);
+        var updatedAtAntes = product.UpdatedAt;
+
+        product.MarkAsAwaitingAffiliateLink();
+
+        product.Status.Should().Be(ProductStatus.AwaitingAffiliateLink);
+        product.UpdatedAt.Should().BeOnOrAfter(updatedAtAntes);
+    }
+
+    [Fact]
+    public void ResolveAffiliateLink_PreenchLinkEVoltaParaQueued_QuandoLinkValido()
+    {
+        var product = CriarProdutoValido(affiliateLink: null);
+        product.MarkAsAwaitingAffiliateLink();
+
+        product.ResolveAffiliateLink("https://mercadolivre.com/sec/abc123");
+
+        product.AffiliateLink.Should().Be("https://mercadolivre.com/sec/abc123");
+        product.Status.Should().Be(ProductStatus.Queued);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ResolveAffiliateLink_ThrowsWhen_LinkNuloOuVazio(string? link)
+    {
+        var product = CriarProdutoValido(affiliateLink: null);
+        product.MarkAsAwaitingAffiliateLink();
+
+        var act = () => product.ResolveAffiliateLink(link!);
+
+        act.Should().Throw<ArgumentException>().WithParameterName("link");
+        product.Status.Should().Be(ProductStatus.AwaitingAffiliateLink);
+    }
 }
