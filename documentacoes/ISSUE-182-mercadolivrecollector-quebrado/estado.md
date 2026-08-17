@@ -19,6 +19,7 @@ sub_issues:
   - "#185 (stack:angular, task_id:Sub-C) — Dashboard: tela de importação de links de afiliado"
 desenv_tasks_merged:
   - "#184"
+  - "#183"
 sub_issues_frontend:
   "#185": angular
 pr_homologacao: ~
@@ -82,6 +83,15 @@ blockers: |
     importacao, stack:angular). Sub-C tem componente de UI nova (tela de importacao) — proximo
     passo e UX/UI antes dos devs, por definir layout/composicao visual (contrato funcional ja
     especificado em especificacao-tecnica.md secao 3.6).
+
+  RISCO HERDADO DO DEV .NET — Sub-A #183 (registrado pelo LT no merge, 2026-08-17):
+  - O parsing do schema de resposta de GET /highlights foi escrito defensivamente (aceita tanto
+    `content[]` quanto `results[]`) porque o Dev nao conseguiu reconfirmar ao vivo contra a API
+    real do MercadoLivre — o sandbox de execucao do Dev bloqueia `api.mercadolibre.com`. Nao e
+    bloqueador do merge (415/415 testes verdes, boot real via Docker confirmado com `/health`
+    200), mas PRECISA ser validado ao vivo (schema real de producao) pelo Code Review e/ou QA
+    antes do release para `main` — se o schema real divergir do assumido, o parsing defensivo
+    pode mascarar um retorno vazio silenciosamente em vez de falhar visivelmente.
 createdAt: 2026-08-17
 status_comment_id: 5317813321
 ---
@@ -99,11 +109,14 @@ status_comment_id: 5317813321
 | 7 | Coordenador (bookkeeping) | coordenador | haiku | 23018 | 3 | 26s | Comentário 📍 Status da Issue #182 atualizado para etapa Dev/UX-UI, refletindo as 3 sub-issues em paralelo. |
 | 8 | UX/UI (Sub-C #185) | ux-ui | sonnet | 89710 | 14 | 243s | `ux-ui-spec.md` escrito — layout de página única (Angular Material, precedente `facebook-manual`), pareamento visual por ordem com validação client-side pré-POST, todos os estados (loading/vazio/erro/sucesso total-parcial/disabled/readonly) e responsividade em 3 breakpoints especificados. Resumo postado como comentário na Issue #185. Aguardando contrato de API da Sub-B (#184, ainda em execução) antes do Dev Angular iniciar. |
 | 9 | Dev .NET (Sub-B #184) | dev-dotnet | sonnet | 146042 | 64 | 486s | `ProductStatus.AwaitingAffiliateLink` + `Product.MarkAsAwaitingAffiliateLink/ResolveAffiliateLink` + `ProcessorJob.EnsureAffiliateLinkAsync` reescrito (sem HTTP, endpoint morto removido) + `POST api/products/affiliate-links/import` + `SourceUrl` em `ProductListItemDto`. 426/426 testes passando, boot real contra Postgres confirmado (sem migration necessária). PR #186 feature→desenv aberto. |
-| 10 | Líder Técnico (merge Sub-B #184) | lider-tecnico | sonnet | ~ | ~ | ~ | PR #186 (feature/ISSUE-184-fluxo-semi-manual-link-afiliado → desenv) verificado (426/426 testes, sem CI configurado no repo) e mesclado via squash + delete-branch. Sub-issue #184 fechada. `desenv_tasks_merged` = ["#184"]. Sub-A (#183) e Sub-C (#185) ainda pendentes — PR desenv→homolog NÃO criado. |
+| 10 | Líder Técnico (merge Sub-B #184) | lider-tecnico | sonnet | 42710 | 14 | 113s | PR #186 (feature/ISSUE-184-fluxo-semi-manual-link-afiliado → desenv) verificado (426/426 testes, sem CI configurado no repo) e mesclado via squash + delete-branch. Sub-issue #184 fechada. `desenv_tasks_merged` = ["#184"]. Sub-A (#183) e Sub-C (#185) ainda pendentes — PR desenv→homolog NÃO criado. |
+| 11 | Dev .NET (Sub-A #183) | dev-dotnet | sonnet | 150764 | 49 | 698s | `MercadoLivreCollector` reconstruído com Highlights API. 415/415 testes passando, boot real via Docker (`/health` 200) confirmado. Nota de risco: confirmação ao vivo do schema `/highlights` não pôde ser reexecutada (sandbox do Dev bloqueia `api.mercadolibre.com`) — parsing escrito defensivamente (aceita `content[]` ou `results[]`), documentado no código/PR; QA deve validar ao vivo. PR #187 feature→desenv aberto. |
+| 12 | Líder Técnico (merge Sub-A #183) | lider-tecnico | sonnet | ~ | ~ | ~ | PR #187 (feature/ISSUE-183-mercadolivrecollector-highlights → desenv) verificado (415/415 testes reportados pelo Dev, sem CI configurado no repo, `mergeStateStatus: CLEAN`) e mesclado via squash + delete-branch (commit `533e4020`). Sub-issue #183 fechada. `desenv_tasks_merged` = ["#184", "#183"]. Risco de parsing defensivo do schema `/highlights` (não reconfirmado ao vivo pelo Dev) registrado em `blockers` para validação do Code Review/QA. Sub-C (#185) ainda pendente — PR desenv→homolog NÃO criado. |
 
 ## Próximo passo
 
-Sub-B (#184) mesclada em `desenv`. Faltam: **Dev .NET** para Sub-A (#183, MercadoLivreCollector) e
-**Dev Angular** para Sub-C (#185, dashboard — já tem `ux-ui-spec.md` e agora também o contrato de
-API da Sub-B disponível em `desenv`). PR `desenv→homolog` só deve ser criado quando as 3 sub-issues
-estiverem em `desenv_tasks_merged`.
+Sub-B (#184) e Sub-A (#183) mescladas em `desenv`. Falta apenas **Dev Angular** para Sub-C (#185,
+dashboard — já tem `ux-ui-spec.md` e agora também o contrato de API da Sub-B e o coletor da Sub-A
+disponíveis em `desenv`). PR `desenv→homolog` só deve ser criado quando as 3 sub-issues estiverem
+em `desenv_tasks_merged` (falta #185). Quando Sub-C mesclar, o Code Review/QA deve validar ao vivo
+o schema de `/highlights` (risco herdado do Dev, ver `blockers`).
