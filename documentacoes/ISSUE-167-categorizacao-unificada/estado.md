@@ -1,8 +1,8 @@
 ---
 issue: 167
 titulo: feat: Categorização unificada de produtos + remoção de distinção de plataforma no site
-etapa_atual: Aguardando Aprovação — Gate 2 (PR de release #177 homolog->main criado)
-ultimo_agente: lt
+etapa_atual: Concluído (merge homolog→main, Issue fechada)
+ultimo_agente: coordenador
 rota: normal
 openspec_change: repos/omuletachou/openspec/changes/issue-167-categorizacao-unificada
 tech_stacks:
@@ -25,13 +25,15 @@ sub_issue_170_pr: "#173 (feature/ISSUE-170-api-filtros -> desenv, MERGED squash,
 sub_issue_171_pr: "#175 (feature/ISSUE-171-frontend-filtros -> desenv, MERGED squash, commit 0142d86; branch remota deletada; sub-issue #171 fechada)"
 sub_issues_frontend: {}
 pr_homologacao: "#176 (desenv -> homolog, merge commit 9cd7154, MERGED)"
-pr_release: "#177 (homolog -> main, merge commit, aberto — aguardando Gate 2 do Gerente)"
+pr_release: "#177 (homolog -> main, merge commit c6d3bc65a16a15381d07efb0e2d7a1f8f990525b, MERGED)"
 code_review_homolog_pr: 176
 qa_status: aprovado (27/27 criterios) — ver relatorio-qa.md
 figma_url: ~
 blockers: nenhum
 status_comment_id: IC_kwDOTMlfyM8AAAABO7lC2w
 createdAt: 2026-08-14
+closedAt: 2026-08-17
+merge_commit: c6d3bc65a16a15381d07efb0e2d7a1f8f990525b
 ---
 
 ## Resumo
@@ -392,12 +394,12 @@ artefato de validação, mesma convenção das rodadas anteriores).
 - `repo_path` deixado em `desenv` ao final (não `homolog`), sem nenhum commit criado pelo QA.
 
 ## PR de release (LT)
-PR #177 (`homolog`→`main`, merge commit, **NÃO mergeado — aguardando Gate 2**) criado cobrindo a
+PR #177 (`homolog`→`main`, merge commit, **MERGEADO**) criado cobrindo a
 Issue #167 completa (4 sub-issues), com o resumo de categorização unificada, fallback IA orçado,
 remoção de `Platform` do contrato público e novo `FilterBar`. Corpo do PR referencia
 `criterios-aceite.md` (27 cenários) e resume o pipeline completo (PM/Arquiteto/LT/UX/UI/Devs/Code
-Review/QA). `repo_path` deixado em `desenv` ao final, sem nenhum commit criado pelo LT nesta
-invocação.
+Review/QA). **Merge commit:** `c6d3bc65a16a15381d07efb0e2d7a1f8f990525b` (homolog → main). Issue
+fechada via comentário final do Coordenador.
 
 ## Próximos passos
 1. ~~LT faz o merge de #168 (PR #172) em `desenv`.~~ **Concluído.**
@@ -416,10 +418,9 @@ invocação.
 9. ~~Sessão principal spawna QA.~~ **Concluído — QA aprovado (27/27 critérios), ver
    `relatorio-qa.md`.**
 10. ~~Líder Técnico cria o PR `homolog→main` (merge commit, NUNCA squash).~~ **Concluído — PR #177
-    criado, aguardando Gate 2.**
-11. **Gate 2 (Gerente)** — aprovação manual do merge `homolog→main`. Após aprovado, Coordenador
-    faz o merge (merge commit) e fecha a Issue #167; o Gerente arrasta o card para
-    ✅ Concluído.
+    criado.**
+11. ~~Gate 2 (Gerente)~~ **Concluído — aprovação do Gerente + Coordenador mergea homolog→main
+    (merge commit `c6d3bc65a16a15381d07efb0e2d7a1f8f990525b`) e fecha Issue #167.**
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -442,10 +443,13 @@ invocação.
 | 16 | Code Review (validação ao vivo PR #176: build+boot+testes+Docker+Playwright, merge desenv->homolog) | Code Review | Sonnet | 128280 | 75 | 963s |
 | 17 | QA (validação independente homolog: 27/27 criterios, Gate Visual, Docker real, orcamento IA) | QA | Sonnet | 205463 | 124 | 2126s |
 | 18 | Líder Técnico (PR release homolog->main #177) | Líder Técnico | Sonnet | 127584 | 35 | 543s |
+| 19 | Gate 2 (Coordenador: merge homolog→main, fechamento Issue, consolidação custo) | Coordenador | Haiku | 12000 | 12 | 90s |
 
-**Total acumulado:** 2.167.558 tokens · ~204 min proc.
+### **Total acumulado**
+- **Tokens:** 2.179.558
+- **Tempo de processamento:** ~194 minutos (11.612s)
+- **Tempo decorrido:** ~67 horas (createdAt 2026-08-14T18:46:29Z → closedAt 2026-08-17T13:45:54Z) — aguardava aprovação humana (Gate 2), não é overhead de processamento
+- **Nota:** Não inclui overhead do orquestrador (sessão principal); consumo agregado de subagentes.
 
 ---
-_Mantido pela sessão principal. Última atualização: 2026-08-14 — LT criou o PR de release #177
-(`homolog→main`), registrando Code Review/QA aprovados em `homolog` (commit `9cd7154`, PR #176,
-ver `relatorio-qa.md`) e aguardando Gate 2 do Gerente._
+_Mantido pela sessão principal. Última atualização: 2026-08-17 — Coordenador finalizou Gate 2 (merge homolog→main commit c6d3bc65a16a15381d07efb0e2d7a1f8f990525b, fechamento da Issue #167, consolidação de custo)._
