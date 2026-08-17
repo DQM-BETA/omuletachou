@@ -1,9 +1,9 @@
 ---
 issue: 178
 titulo: "bug: Claude__ApiKey nunca chega no container da API (docker-compose.yml/.env.example/runbook incompletos)"
-etapa_atual: "Aguardando Aprovação — Gate 2"
+etapa_atual: "Concluído"
 rota: rapido
-ultimo_agente: lt
+ultimo_agente: coordenador
 openspec_change: ~
 tech_stacks:
   - dotnet
@@ -22,7 +22,9 @@ qa_status: aprovado
 figma_url: ~
 blockers: nenhum
 status_comment_id: 5317053323
-createdAt: "2026-08-17"
+createdAt: "2026-08-17T14:24:51Z"
+closedAt: "2026-08-17T14:56:30Z"
+merge_commit: "fd2d283d53f34d75cceedeb5671bc0d724abbba9"
 ---
 
 ## Contexto
@@ -88,8 +90,15 @@ PR homologação: https://github.com/DQM-BETA/omuletachou/pull/180 (desenv→hom
 - PR criado cobrindo a Issue #178, referenciando aprovação de Code Review (PR #180) e QA em `homolog`. NÃO mergeado — aguarda Gate 2 (Gerente).
 - `repo_path` deixado em `desenv` ao final, conforme instrução.
 
-## Próximos passos
-1. **[GATE 2: Gerente]** — aprovar merge do PR #181 (`homolog→main`). Após aprovação, o Coordenador executa o merge (merge commit) e fecha a Issue #178.
+## Gate 2 — Merge realizado
+
+**Gerente aprovou.** Coordenador executou merge para `main` via `gh pr merge 181 --repo DQM-BETA/omuletachou --merge` (merge commit, NUNCA squash).
+
+- PR #181 (`homolog` → `main`) mergeado com sucesso. Commit merge: `fd2d283d53f34d75cceedeb5671bc0d724abbba9`.
+- Issue #178 fechada automaticamente (PR contém `Closes #178`).
+- Comentário 📍 Status atualizado marcando etapa como "Concluído".
+
+**Resultado:** Fix de `Claude__ApiKey` em produção (main). Sistema de afiliado pronto.
 
 ## Custo (ledger)
 
@@ -101,3 +110,11 @@ PR homologação: https://github.com/DQM-BETA/omuletachou/pull/180 (desenv→hom
 | 4 | Code Review (validação ao vivo PR #180, merge desenv->homolog) | Code Review | Sonnet | 71787 | 31 | 299s |
 | 5 | QA (validação independente homolog) | QA | Sonnet | 50053 | 26 | 257s |
 | 6 | LT (PR release #181, homolog->main) | Líder Técnico | Sonnet | 37981 | 7 | 86s |
+| 7 | Coordenador (Gate 2 — merge + consolidação custo) | Coordenador | Haiku | 18000 | 6 | 110s |
+| **Total** | — | — | — | **301754** | **152** | **1345s (22m 25s)** |
+
+**Tempo decorrido (createdAt → closedAt)**: 31m 39s (1899s)
+**Tempo de processamento (soma de todas as invocações)**: 22m 25s (1345s)
+**Overhead do orquestrador (não incluído acima)**: estimado ~7-10m (gerenciamento de branch, transições, gates)
+
+**Nota:** Ledger registra o tempo de cada worker de forma independente; a soma não equivale ao tempo decorrido (paralelismo + overhead). Rota `rapido` — sem PM, sem Arquiteto, sem UX/UI — reduziu caminho crítico significativamente.
