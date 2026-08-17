@@ -65,14 +65,14 @@ public class ProcessorJobTests
         return new HttpClient(handlerMock.Object);
     }
 
-    private static HttpClient CreateAffiliateLinkClient(string link = "https://ml.link/aff") =>
+    // Issue #182/#184: ProcessorJob nao chama mais nenhuma API para resolver o link de afiliado
+    // ML (fluxo semi-manual) — este client "default" nunca e efetivamente invocado pelo job; e
+    // apenas o valor satisfazendo o parametro HttpClient ainda presente no construtor.
+    private static HttpClient CreateAffiliateLinkClient() =>
         CreateHttpClient(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new StringContent($"{{\"url\": \"{link}\"}}")
+            Content = new StringContent("{\"url\": \"https://ml.link/aff\"}")
         });
-
-    private static HttpClient CreateFailingHttpClient() =>
-        CreateHttpClient(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError));
 
     private static Mock<IMediaStorage> CreateMediaStorageMock(string? localPath = "/app/media/abc.jpg", string mediaType = "image")
     {
@@ -478,22 +478,34 @@ public class ProcessorJobTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_MarcaError_QuandoFalhaGeracaoLinkML()
+    public async Task ExecuteAsync_MarcaAwaitingAffiliateLink_QuandoProdutoMlSemLinkComSourceUrl()
     {
+        // Issue #182/#184 (Gate 1.5): affiliate-tools/links nao e mais chamado — produto ML sem
+        // AffiliateLink e com SourceUrl vai para AwaitingAffiliateLink (fluxo semi-manual), nao
+        // Error. Nenhuma chamada HTTP e feita para resolver o link (callCount permanece 0).
         using var db = CreateInMemoryContext();
         var product = CriarProduto(
             platform: Platform.MercadoLivre,
             affiliateLink: null,
-            sourceUrl: "https://produto.mercadolivre.com.br/MLB-123-produto-teste");
+            sourceUrl: "https://www.mercadolivre.com.br/p/MLB123");
         db.Products.Add(product);
         await db.SaveChangesAsync();
 
-        var job = CreateJob(db, httpClient: CreateFailingHttpClient());
+        var callCount = 0;
+        var httpClient = CreateHttpClient(_ =>
+        {
+            callCount++;
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"url\": \"x\"}") };
+        });
+
+        var job = CreateJob(db, httpClient: httpClient);
         await job.ExecuteAsync();
 
+        callCount.Should().Be(0, "o fluxo semi-manual (Issue #182/#184) nao chama mais nenhuma API para resolver o link de afiliado");
+
         var reloaded = await db.Products.FirstAsync();
-        reloaded.Status.Should().Be(ProductStatus.Error);
-        reloaded.AiReason.Should().Contain("link de afiliado");
+        reloaded.Status.Should().Be(ProductStatus.AwaitingAffiliateLink);
+        reloaded.AffiliateLink.Should().BeNull();
 
         var entries = await db.PublicationQueues.Where(q => q.ProductId == product.Id).ToListAsync();
         entries.Should().BeEmpty();

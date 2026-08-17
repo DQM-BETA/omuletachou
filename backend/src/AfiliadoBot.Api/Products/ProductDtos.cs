@@ -19,7 +19,8 @@ public record ProductListItemDto(
     string Category,
     [property: JsonPropertyName("ai_score")] int? AiScore,
     [property: JsonPropertyName("ai_reason")] string? AiReason,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    string? SourceUrl); // NOVO — Issue #184, campo aditivo ao final (nao quebra consumidores existentes)
 
 /// <summary>
 /// Detalhe de GET /api/products/{id} (CA-B3). ai_score/ai_reason em snake_case, formato exigido
@@ -52,3 +53,19 @@ public record ProductDetailDto(
 /// sistema, nao disponiveis via este endpoint manual.
 /// </summary>
 public record UpdateProductStatusRequest(string Status);
+
+/// <summary>
+/// Um item do lote de POST /api/products/affiliate-links/import (Issue #182/#184) — pareamento
+/// EXPLICITO por ProductId (montado pelo dashboard, que ja tem o ProductId de cada linha
+/// exibida), nao por ordem/posicao inferida no servidor.
+/// </summary>
+public record AffiliateLinkImportItem(Guid ProductId, string AffiliateLink);
+
+/// <summary>Body de POST /api/products/affiliate-links/import (Issue #182/#184).</summary>
+public record ImportAffiliateLinksRequest(List<AffiliateLinkImportItem> Items);
+
+/// <summary>Item pulado na importacao em lote, com o motivo (Issue #182/#184).</summary>
+public record AffiliateLinkImportSkip(Guid ProductId, string Reason);
+
+/// <summary>Resultado de POST /api/products/affiliate-links/import (Issue #182/#184).</summary>
+public record ImportAffiliateLinksResult(int Imported, List<AffiliateLinkImportSkip> Skipped);

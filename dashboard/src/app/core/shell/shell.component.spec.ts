@@ -26,11 +26,14 @@ describe('ShellComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('exibe as 6 páginas do menu lateral', () => {
-    expect(component.navItems.length).toBe(6);
+  it('exibe as 7 páginas do menu lateral (Issue #185: inclui Links ML)', () => {
+    expect(component.navItems.length).toBe(7);
     const compiled = fixture.nativeElement as HTMLElement;
     const items = compiled.querySelectorAll('[data-testid="nav-item"]');
-    expect(items.length).toBe(6);
+    expect(items.length).toBe(7);
+    expect(component.navItems).toContain(
+      jasmine.objectContaining({ label: 'Links ML', path: '/mercadolivre-links' })
+    );
   });
 
   it('botão de logout chama AuthService.logout()', () => {
