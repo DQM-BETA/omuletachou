@@ -40,6 +40,13 @@ services:
       # sem estas vars a API sobe normalmente, mas o login retorna 401 ate seed manual.
       Seed__UserEmail: "${SEED_USER_EMAIL:-}"
       Seed__UserPassword: "${SEED_USER_PASSWORD:-}"
+      # Issue #178: chave da API da Anthropic (Claude), lida pelo Program.cs via
+      # builder.Configuration["Claude:ApiKey"] — sem esta var, scoring/legenda/categorizacao
+      # por IA falham de forma isolada (o resto do sistema sobe normalmente).
+      Claude__ApiKey: "${CLAUDE_API_KEY:-}"
+      # Opcional — vazio deixa o codigo usar o default hardcoded (claude-haiku-4-5-20251001,
+      # AnthropicModels.Claude45Haiku em AnthropicClientWrapper.cs).
+      Claude__Model: "${CLAUDE_MODEL:-}"
     volumes:
       - media_files:/app/media
     networks:
