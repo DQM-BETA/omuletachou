@@ -66,13 +66,17 @@ Validar: `docker compose version` deve reportar Compose v2.
 git clone https://github.com/DQM-BETA/omuletachou.git
 cd omuletachou
 cp .env.example .env
-nano .env   # preencher DB_USER, DB_PASSWORD, JWT_SIGNING_KEY, SEED_USER_EMAIL, SEED_USER_PASSWORD
+nano .env   # preencher DB_USER, DB_PASSWORD, JWT_SIGNING_KEY, SEED_USER_EMAIL, SEED_USER_PASSWORD,
+            # CLAUDE_API_KEY (Issue #178 — sem ela, scoring/legenda/categorizacao por IA falham
+            # de forma isolada; o resto do sistema sobe normalmente)
             # DOMAIN_ROOT/WEBSITE_PUBLIC_URL/DASHBOARD_PUBLIC_URL/API_PUBLIC_URL já vêm
             # corretos no .env.example — ajustar só se o domínio final for diferente
 chmod +x deploy.sh
 ```
 
 `DB_PASSWORD` e `JWT_SIGNING_KEY` devem ser gerados fortes, ex.: `openssl rand -base64 32`.
+`CLAUDE_API_KEY` é a chave da API da Anthropic (formato `sk-ant-...`), obtida no console da
+Anthropic — não é gerada localmente.
 `.env` nunca é commitado (já coberto por `.gitignore`).
 
 ## 5. Primeiro deploy
@@ -123,10 +127,15 @@ Não é automação — é procedimento manual documentado.
 
 Acessar `https://dashboard.omuletachou.com.br`, fazer login com o usuário seed (§4), ir em
 **Settings** e preencher as credenciais de cada integração (Amazon, Mercado Livre, Shopee,
-Telegram, YouTube, Instagram, TikTok, Claude API) — armazenadas em `app_settings` (mesmo
-padrão desde a Issue #11). Sem essas credenciais preenchidas, o sistema sobe normalmente, mas
-os jobs que dependem de cada integração falham de forma isolada (comportamento esperado,
-coberto pelas issues anteriores).
+Telegram, YouTube, Instagram, TikTok) — armazenadas em `app_settings` (mesmo padrão desde a
+Issue #11). Sem essas credenciais preenchidas, o sistema sobe normalmente, mas os jobs que
+dependem de cada integração falham de forma isolada (comportamento esperado, coberto pelas
+issues anteriores).
+
+**Claude API é exceção**: apesar de existirem chaves `claude.api_key`/`claude.model`
+seedadas em `app_settings`, elas são código morto (Issue #178 — nenhum lugar do sistema as lê).
+A chave da Anthropic é lida exclusivamente da variável de ambiente `CLAUDE_API_KEY` no `.env`
+(§4), não da tela de Settings.
 
 ## 9. Checklist de verificação pós-deploy
 
