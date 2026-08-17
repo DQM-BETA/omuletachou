@@ -2,29 +2,18 @@ import { render, screen } from '@testing-library/react';
 import Header from './Header';
 
 describe('Header', () => {
-  it('renderiza o brand e os filtros de plataforma', () => {
+  it('renderiza o brand/logo', () => {
     render(<Header />);
 
-    expect(screen.getByText('O Mulet Achou')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Todas' })).toHaveAttribute('href', '/');
-    expect(screen.getByRole('link', { name: 'Amazon' })).toHaveAttribute(
-      'href',
-      '/?platform=Amazon'
-    );
-    expect(screen.getByRole('link', { name: 'Mercado Livre' })).toHaveAttribute(
-      'href',
-      '/?platform=MercadoLivre'
-    );
-    expect(screen.getByRole('link', { name: 'Shopee' })).toHaveAttribute(
-      'href',
-      '/?platform=Shopee'
-    );
+    expect(screen.getByRole('link', { name: 'O Mulet Achou' })).toHaveAttribute('href', '/');
   });
 
-  it('CA-A5: marca a plataforma ativa via aria-current', () => {
-    render(<Header activePlatform="Amazon" />);
+  it('Issue #167 (CA 7.4): não renderiza nenhum chip/filtro de plataforma (Amazon/MercadoLivre/Shopee)', () => {
+    render(<Header />);
 
-    expect(screen.getByRole('link', { name: 'Amazon' })).toHaveAttribute('aria-current', 'true');
-    expect(screen.getByRole('link', { name: 'Todas' })).not.toHaveAttribute('aria-current');
+    expect(screen.queryByText('Amazon')).not.toBeInTheDocument();
+    expect(screen.queryByText('Mercado Livre')).not.toBeInTheDocument();
+    expect(screen.queryByText('Shopee')).not.toBeInTheDocument();
+    expect(screen.queryByText('Todas')).not.toBeInTheDocument();
   });
 });

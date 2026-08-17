@@ -1,5 +1,5 @@
-import { fetchDeals, fetchDeal, fetchByCategory } from './api';
-import type { Deal, PagedResult } from './types';
+import { fetchDeals, fetchDeal, fetchCategories } from './api';
+import type { CategoryTree, Deal, PagedResult } from './types';
 
 const mockDeal: Deal = {
   title: 'Fone Bluetooth XYZ',
@@ -12,7 +12,6 @@ const mockDeal: Deal = {
   slug: 'fone-bluetooth-xyz',
   category: 'eletronicos',
   collectedAt: '2026-07-01T12:00:00Z',
-  platform: 'Amazon',
 };
 
 function pagedResult(items: Deal[]): PagedResult<Deal> {
@@ -83,12 +82,57 @@ describe('lib/api', () => {
         json: async () => pagedResult([mockDeal]),
       });
 
-      await fetchDeals(2, 24, 'eletronicos');
+      await fetchDeals(2, 24, { category: 'eletronicos' });
 
       const [calledUrl] = fetchMock.mock.calls[0];
       expect(calledUrl).toContain('page=2');
       expect(calledUrl).toContain('pageSize=24');
       expect(calledUrl).toContain('category=eletronicos');
+    });
+
+    it('Issue #167 (CA 6.1-6.4): aplica todos os filtros combináveis (subcategory/preço/desconto/sort)', async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => pagedResult([mockDeal]),
+      });
+
+      await fetchDeals(1, 12, {
+        category: 'Eletrônicos',
+        subcategory: 'Celulares',
+        minPrice: 100,
+        maxPrice: 500,
+        minDiscount: 30,
+        sort: 'price_asc',
+      });
+
+      const [calledUrl] = fetchMock.mock.calls[0];
+      const params = new URL(calledUrl).searchParams;
+      expect(params.get('category')).toBe('Eletrônicos');
+      expect(params.get('subcategory')).toBe('Celulares');
+      expect(params.get('minPrice')).toBe('100');
+      expect(params.get('maxPrice')).toBe('500');
+      expect(params.get('minDiscount')).toBe('30');
+      expect(params.get('sort')).toBe('price_asc');
+    });
+
+    it('sem filtros informados, não envia nenhum parâmetro de filtro (CA 6.1)', async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => pagedResult([]),
+      });
+
+      await fetchDeals(1, 12);
+
+      const [calledUrl] = fetchMock.mock.calls[0];
+      const params = new URL(calledUrl).searchParams;
+      expect(params.has('category')).toBe(false);
+      expect(params.has('subcategory')).toBe(false);
+      expect(params.has('minPrice')).toBe(false);
+      expect(params.has('maxPrice')).toBe(false);
+      expect(params.has('minDiscount')).toBe(false);
+      expect(params.has('sort')).toBe(false);
     });
 
     it('CA-T2: propaga erro 5xx (não engole) para o Next.js servir cache antigo', async () => {
@@ -151,19 +195,37 @@ describe('lib/api', () => {
     });
   });
 
-  describe('fetchByCategory', () => {
-    it('CA-C1: retorna as ofertas da categoria, paginadas', async () => {
+  describe('fetchCategories', () => {
+    it('Issue #167 (CA 6.7): retorna a árvore de categorias/subcategorias do endpoint público', async () => {
+      const tree: CategoryTree[] = [
+        {
+          category: 'Eletrônicos',
+          count: 10,
+          subcategories: [{ subcategory: 'Celulares', count: 6 }],
+        },
+      ];
       fetchMock.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => pagedResult([mockDeal]),
+        json: async () => tree,
       });
 
-      const result = await fetchByCategory('eletronicos', 1, 12);
+      const result = await fetchCategories();
 
-      expect(result.items).toHaveLength(1);
+      expect(result).toEqual(tree);
       const [calledUrl] = fetchMock.mock.calls[0];
-      expect(calledUrl).toContain('/api/public/deals/category/eletronicos?');
+      expect(calledUrl).toContain('/api/public/categories');
+    });
+
+    it('propaga erro 5xx (não engole)', async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        json: async () => ({}),
+      });
+
+      await expect(fetchCategories()).rejects.toThrow(/500/);
     });
   });
 });

@@ -4,6 +4,7 @@ using System.Text.Json;
 using AfiliadoBot.Domain.Entities;
 using AfiliadoBot.Domain.Enums;
 using AfiliadoBot.Domain.Interfaces;
+using AfiliadoBot.Domain.Services;
 using AfiliadoBot.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -24,7 +25,6 @@ public class AmazonCollector : IPlatformCollector
     private const string Service = "ProductAdvertisingAPI";
     private const string AmzTarget = "com.amazon.paapi5.v1.ProductAdvertisingAPIv1.SearchItems";
     private const string RequiredMarketplace = "www.amazon.com.br";
-    private const string DefaultCategory = "Geral";
 
     private static readonly int[] RetryDelaysMs = { 2000, 4000, 8000 };
 
@@ -293,6 +293,7 @@ public class AmazonCollector : IPlatformCollector
         }
 
         var slug = GenerateSlug(item.Title, item.Asin);
+        var (category, subcategory) = CategoryDetector.Detect(item.Title);
 
         var product = new Product(
             title: item.Title,
@@ -302,10 +303,11 @@ public class AmazonCollector : IPlatformCollector
             discountPct: item.DiscountPct,
             affiliateLink: affiliateLink,
             slug: slug,
-            category: DefaultCategory,
+            category: category,
             platform: Platform.Amazon,
             imageUrl: item.ImageUrl,
-            externalId: item.Asin);
+            externalId: item.Asin,
+            subcategory: subcategory);
 
         _dbContext.Products.Add(product);
 

@@ -20,7 +20,6 @@ function buildDeal(overrides: Partial<Deal> = {}): Deal {
     slug: 'fone-bluetooth-xyz',
     category: 'eletronicos',
     collectedAt: '2026-07-01T12:00:00Z',
-    platform: 'Amazon',
     ...overrides,
   };
 }

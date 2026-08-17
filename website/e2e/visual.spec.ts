@@ -60,3 +60,54 @@ test.describe('Visual — Site público (CA-13/CA-14, mobile-first)', () => {
     });
   });
 });
+
+test.describe('Visual — FilterBar (Issue #167 / Sub-D #171)', () => {
+  test('Mobile (<1024px): resumo compacto + abrir o drawer de filtros', async ({ page }) => {
+    // Viewport já é mobile por padrão (playwright.config.ts, projeto mobile-chromium).
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    const summary = page.locator('.filter-bar__summary');
+    await expect(summary).toBeVisible();
+    await expect(page.locator('.filter-bar__row')).toHaveCount(0);
+
+    await page.screenshot({
+      path: path.join(SCREENSHOTS_DIR, 'filter-bar-mobile-summary.png'),
+      fullPage: true,
+    });
+
+    await page.getByRole('button', { name: /^Filtros/ }).click();
+    const drawerPanel = page.locator('.filter-bar__drawer-panel');
+    await expect(drawerPanel).toBeVisible();
+
+    const hasHorizontalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+    );
+    expect(hasHorizontalOverflow).toBe(false);
+
+    await page.screenshot({
+      path: path.join(SCREENSHOTS_DIR, 'filter-bar-mobile-drawer.png'),
+      fullPage: true,
+    });
+  });
+
+  test('Desktop (>=1024px): os 5 controles em linha única, sem drawer', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    const row = page.locator('.filter-bar__row');
+    await expect(row).toBeVisible();
+    await expect(page.locator('.filter-bar__summary')).toHaveCount(0);
+    await expect(page.getByRole('combobox', { name: 'Categoria', exact: true })).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Subcategoria' })).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Ordenar por' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '10%+' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Limpar filtros' })).toBeVisible();
+
+    await page.screenshot({
+      path: path.join(SCREENSHOTS_DIR, 'filter-bar-desktop.png'),
+      fullPage: true,
+    });
+  });
+});

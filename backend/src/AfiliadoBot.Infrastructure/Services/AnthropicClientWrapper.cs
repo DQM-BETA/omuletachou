@@ -15,7 +15,7 @@ public class AnthropicClientWrapper : IAnthropicClientWrapper
         _model = string.IsNullOrWhiteSpace(model) ? AnthropicModels.Claude45Haiku : model;
     }
 
-    public async Task<string> CompleteAsync(string systemPrompt, string userMessage, CancellationToken ct = default)
+    public async Task<ClaudeCompletionResult> CompleteAsync(string systemPrompt, string userMessage, CancellationToken ct = default)
     {
         var client = new AnthropicClient(_apiKey);
 
@@ -33,6 +33,15 @@ public class AnthropicClientWrapper : IAnthropicClientWrapper
         };
 
         var response = await client.Messages.GetClaudeMessageAsync(parameters, ct);
-        return response.Content.OfType<TextContent>().FirstOrDefault()?.Text ?? string.Empty;
+        var text = response.Content.OfType<TextContent>().FirstOrDefault()?.Text ?? string.Empty;
+
+        // Issue #167 (Sub-B/#169): a resposta ja traz o uso real de tokens (Usage.InputTokens/
+        // OutputTokens) — nao estimamos mais nada na mao (design.md §3.1). InputTokens/
+        // OutputTokens ficam 0 quando Usage vier nulo (nao deveria acontecer na API real, mas
+        // evita NullReferenceException em cenarios inesperados).
+        var inputTokens = response.Usage?.InputTokens ?? 0;
+        var outputTokens = response.Usage?.OutputTokens ?? 0;
+
+        return new ClaudeCompletionResult(text, inputTokens, outputTokens);
     }
 }

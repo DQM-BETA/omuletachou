@@ -127,6 +127,45 @@ public class ShopeeCollectorTests
     }
 
     [Fact]
+    public async Task CollectAsync_DetectaCategoriaViaCategoryDetector_QuandoProdutoNovo()
+    {
+        // CA 2.1 (Issue #167): o dicionario roda em CollectAsync, sem depender de IA. Titulo
+        // "Fone Bluetooth XPTO" casa com a keyword "fone" (Eletronicos/Audio).
+        using var db = CreateInMemoryContext();
+        await SeedCredentialsAsync(db);
+        var aiMock = CreateAiServiceMock();
+
+        var httpClient = CreateHttpClient(_ => JsonResponse(HttpStatusCode.OK, ValidGraphQlResponseComImagem));
+
+        var collector = new ShopeeCollector(httpClient, db, aiMock.Object, NullLogger<ShopeeCollector>.Instance);
+
+        var result = (await collector.CollectAsync()).ToList();
+
+        result.Should().HaveCount(1);
+        result[0].Category.Should().Be("Eletrônicos");
+        result[0].Subcategory.Should().Be("Áudio");
+    }
+
+    [Fact]
+    public async Task CollectAsync_CategoriaGeral_QuandoTituloSemPalavraChave()
+    {
+        // CA 2.2 (Issue #167): sem match no dicionario -> Category = "Geral", Subcategory nula.
+        using var db = CreateInMemoryContext();
+        await SeedCredentialsAsync(db);
+        var aiMock = CreateAiServiceMock();
+
+        var httpClient = CreateHttpClient(_ => JsonResponse(HttpStatusCode.OK, ValidGraphQlResponseSemMidia));
+
+        var collector = new ShopeeCollector(httpClient, db, aiMock.Object, NullLogger<ShopeeCollector>.Instance);
+
+        var result = (await collector.CollectAsync()).ToList();
+
+        result.Should().HaveCount(1);
+        result[0].Category.Should().Be("Geral");
+        result[0].Subcategory.Should().BeNull();
+    }
+
+    [Fact]
     public async Task CollectAsync_LancaException_QuandoCredenciaisAusentes()
     {
         using var db = CreateInMemoryContext();
@@ -218,6 +257,7 @@ public class ShopeeCollectorTests
         updated.SalePrice.Should().Be(79.90m);
         updated.Status.Should().Be(ProductStatus.Published); // preservado
         updated.AiScore.Should().Be(9); // preservado, nao re-scoreado
+        updated.Category.Should().Be("Geral"); // sem recategorizacao retroativa (Issue #167)
 
         aiMock.Verify(a => a.ScoreProductAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()), Times.Never);
     }

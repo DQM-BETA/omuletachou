@@ -76,9 +76,14 @@ public class ProcessorJob
 
             await DownloadMediaAsync(product, ct);
 
-            EnsureSlug(product);
+            // Categorizacao por dicionario (CategoryDetector) saiu deste job e passou a rodar
+            // nos collectors, na criacao do Product (Issue #167, Sub-A/#168). O fallback via IA
+            // roda aqui, ANTES do slug (Issue #167 — Sub-B/#169, CA 3.1, design.md §3.6): so
+            // produtos ainda "Geral" pos-coleta (dicionario nao achou match) e ja aprovados
+            // (Status == Queued, garantido pela query do topo deste metodo) sao elegiveis.
+            await EnsureCategoryFallbackAsync(product, ct);
 
-            EnsureCategory(product);
+            EnsureSlug(product);
 
             var linkOk = await EnsureAffiliateLinkAsync(product, ct);
             if (!linkOk)
@@ -121,6 +126,41 @@ public class ProcessorJob
         }
     }
 
+    /// <summary>
+    /// Fallback de categorizacao via IA (Issue #167 — Sub-B/#169, CA 3.1-3.3). So aciona
+    /// ClassifyCategoryAsync quando o dicionario (CategoryDetector, na coleta) ainda nao
+    /// classificou o produto (Category == "Geral") — CA 3.3. O filtro Status == Queued (CA 3.2)
+    /// ja e garantido pela query do topo de ExecuteAsync (produtos rejeitados nunca chegam neste
+    /// ponto do loop), entao nao repete a checagem aqui (design.md §3.6).
+    /// Classification null (orcamento estourado — CA 4.3 — ou erro/timeout da chamada) mantem o
+    /// produto em "Geral", sem excecao, sem bloquear o restante do loop (mesma postura ja usada
+    /// para GenerateCaptionAsync/ScoreProductAsync).
+    /// </summary>
+    private async Task EnsureCategoryFallbackAsync(Product product, CancellationToken ct)
+    {
+        if (!string.Equals(product.Category, "Geral", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        _logger.LogInformation(
+            "ProcessorJob: acionando fallback de categorizacao via IA para o produto {ProductId}.",
+            product.Id);
+
+        var classification = await _aiService.ClassifyCategoryAsync(product, ct);
+        if (classification is not null)
+        {
+            product.SetCategory(classification.Category, classification.Subcategory);
+            _logger.LogInformation(
+                "ProcessorJob: fallback classificou o produto {ProductId} como {Category}/{Subcategory}.",
+                product.Id, classification.Category, classification.Subcategory);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "ProcessorJob: fallback nao classificou o produto {ProductId} (orcamento indisponivel ou falha na chamada) — categoria permanece Geral.",
+                product.Id);
+        }
+    }
+
     private static void EnsureSlug(Product product)
     {
         if (!string.IsNullOrWhiteSpace(product.Slug))
@@ -143,12 +183,6 @@ public class ProcessorJob
 
         var slug = sb.ToString().Trim('-');
         return string.IsNullOrWhiteSpace(slug) ? "produto" : slug;
-    }
-
-    private static void EnsureCategory(Product product)
-    {
-        var detected = AfiliadoBot.Application.CategoryDetector.Detect(product.Title);
-        product.SetCategory(detected);
     }
 
     /// <summary>

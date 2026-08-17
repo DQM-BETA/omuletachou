@@ -9,7 +9,9 @@ public class ProductTests
     private static Product CriarProdutoValido(
         decimal salePrice = 100m,
         decimal discountPct = 10m,
-        string? affiliateLink = "https://amzn.to/xyz") =>
+        string? affiliateLink = "https://amzn.to/xyz",
+        string category = "Eletronicos",
+        string? subcategory = null) =>
         new Product(
             title: "Produto Teste",
             description: "Descricao",
@@ -18,8 +20,9 @@ public class ProductTests
             discountPct: discountPct,
             affiliateLink: affiliateLink,
             slug: "produto-teste",
-            category: "Eletronicos",
-            platform: Platform.Amazon);
+            category: category,
+            platform: Platform.Amazon,
+            subcategory: subcategory);
 
     [Fact]
     public void Constructor_ThrowsWhen_SalePriceNegative()
@@ -121,5 +124,60 @@ public class ProductTests
         var product = CriarProdutoValido();
         var act = () => product.UpdateStatusManually(status);
         act.Should().Throw<ArgumentException>().WithParameterName("status");
+    }
+
+    [Fact]
+    public void Constructor_SetaSubcategoria_QuandoInformada()
+    {
+        var product = CriarProdutoValido(category: "Eletrônicos", subcategory: "Áudio");
+        product.Category.Should().Be("Eletrônicos");
+        product.Subcategory.Should().Be("Áudio");
+    }
+
+    [Fact]
+    public void Constructor_SubcategoriaNula_QuandoNaoInformada()
+    {
+        var product = CriarProdutoValido();
+        product.Subcategory.Should().BeNull();
+    }
+
+    [Fact]
+    public void SetCategory_Sobrescreve_QuandoCategoriaAtualEhGeral()
+    {
+        var product = CriarProdutoValido(category: "Geral");
+        product.SetCategory("Eletrônicos", "Áudio");
+
+        product.Category.Should().Be("Eletrônicos");
+        product.Subcategory.Should().Be("Áudio");
+    }
+
+    [Fact]
+    public void SetCategory_NaoSobrescreve_QuandoCategoriaAtualJaEspecifica()
+    {
+        var product = CriarProdutoValido(category: "Moda", subcategory: "Calçados");
+        product.SetCategory("Eletrônicos", "Áudio");
+
+        product.Category.Should().Be("Moda");
+        product.Subcategory.Should().Be("Calçados");
+    }
+
+    [Fact]
+    public void SetCategory_NaoAlteraNada_QuandoCategoriaNovaVazia()
+    {
+        var product = CriarProdutoValido(category: "Geral");
+        product.SetCategory("", "Áudio");
+
+        product.Category.Should().Be("Geral");
+        product.Subcategory.Should().BeNull();
+    }
+
+    [Fact]
+    public void SetCategory_SubcategoriaNula_QuandoSubcategoriaNaoInformada()
+    {
+        var product = CriarProdutoValido(category: "Geral");
+        product.SetCategory("Eletrônicos");
+
+        product.Category.Should().Be("Eletrônicos");
+        product.Subcategory.Should().BeNull();
     }
 }

@@ -82,7 +82,24 @@ public class AppSettingConfiguration : IEntityTypeConfiguration<AppSetting>
             new { Id = 37, Key = "instagram.app_secret", Value = "", UpdatedAt = now },
             new { Id = 38, Key = "instagram.token_expires_at", Value = "", UpdatedAt = now },
             new { Id = 39, Key = "instagram.token_invalid", Value = "false", UpdatedAt = now },
-            new { Id = 40, Key = "api.public_base_url", Value = "", UpdatedAt = now }
+            new { Id = 40, Key = "api.public_base_url", Value = "", UpdatedAt = now },
+            // Ids 41-50 ja usados por migrations de seed anteriores (SeedTikTokCredentials,
+            // SeedPushVapidKeys, SeedFacebookCredentials — Ids 41-46/47-48/49-50 respectivamente)
+            // via InsertData direto na migration, sem atualizar este HasData/o model snapshot
+            // (divergencia pre-existente entre o historico real de migrations e o modelo
+            // declarativo — registrada em .claude/melhorias na Issue #167/#168). Por isso os
+            // seeds novos abaixo comecam em 51, nao 41, para nao colidir com linhas ja inseridas
+            // em bancos existentes (confirmado rodando a migration contra Postgres real).
+            //
+            // Orcamento mensal de fallback de categorizacao via Claude (Issue #167 — CA 4.1).
+            // Preco/cambio sao placeholders "soft guard" (design.md §8): Gerente/DevOps confirma
+            // a tabela de precos vigente da Anthropic para claude-haiku-4-5-20251001 antes do
+            // deploy; nao bloqueante ate la (fallback so roda quando implementado na Sub-B/#169).
+            new { Id = 51, Key = "claude.monthly_budget_limit_brl", Value = "30", UpdatedAt = now },
+            new { Id = 52, Key = "claude.monthly_usage", Value = "{\"month\":\"\",\"spend_brl\":0}", UpdatedAt = now },
+            new { Id = 53, Key = "claude.price_input_usd_per_mtok", Value = "1", UpdatedAt = now },
+            new { Id = 54, Key = "claude.price_output_usd_per_mtok", Value = "5", UpdatedAt = now },
+            new { Id = 55, Key = "claude.usd_brl_rate", Value = "5.5", UpdatedAt = now }
         );
     }
 }
