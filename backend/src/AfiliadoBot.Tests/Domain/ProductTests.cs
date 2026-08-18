@@ -88,6 +88,54 @@ public class ProductTests
         product.Status.Should().Be(ProductStatus.Rejected);
     }
 
+    // Issue #199 (segundo bug) — coluna "ai_reason" e varchar(300) (ProductConfiguration). A
+    // resposta real da IA (Claude, nao mock) pode facilmente passar de 300 caracteres, derrubando
+    // o SaveChangesAsync do ciclo inteiro de coleta (mesma causa raiz do bug do slug).
+
+    [Fact]
+    public void UpdateAiResult_TruncaAiReason_QuandoMaiorQue300Caracteres()
+    {
+        var product = CriarProdutoValido();
+        var reasonLongo = new string('a', 350);
+
+        product.UpdateAiResult(score: Product.AiScoreThreshold, reason: reasonLongo, caption: "Caption");
+
+        product.AiReason.Should().NotBeNull();
+        product.AiReason!.Length.Should().Be(300);
+        product.AiReason.Should().Be(new string('a', 300));
+    }
+
+    [Fact]
+    public void UpdateAiResult_NaoTruncaAiReason_QuandoDentroDoLimite()
+    {
+        var product = CriarProdutoValido();
+        product.UpdateAiResult(score: Product.AiScoreThreshold, reason: "Motivo curto", caption: "Caption");
+
+        product.AiReason.Should().Be("Motivo curto");
+    }
+
+    [Fact]
+    public void MarkAsError_TruncaAiReason_QuandoMaiorQue300Caracteres()
+    {
+        var product = CriarProdutoValido();
+        var reasonLongo = new string('b', 350);
+
+        product.MarkAsError(reasonLongo);
+
+        product.AiReason.Should().NotBeNull();
+        product.AiReason!.Length.Should().Be(300);
+        product.AiReason.Should().Be(new string('b', 300));
+    }
+
+    [Fact]
+    public void MarkAsError_NaoTruncaAiReason_QuandoDentroDoLimite()
+    {
+        var product = CriarProdutoValido();
+        product.MarkAsError("Erro curto");
+
+        product.AiReason.Should().Be("Erro curto");
+    }
+
     [Fact]
     public void MarkAsPublished_ChangesStatus()
     {
