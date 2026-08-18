@@ -540,6 +540,13 @@ public class MercadoLivreCollector : IPlatformCollector
         return cheapest;
     }
 
+    // Coluna "slug" e varchar(300) (ProductConfiguration). Titulos reais do Mercado Livre podem
+    // ser longos o suficiente para estourar esse limite depois de concatenar o sufixo do
+    // externalId (Issue #199) — como SaveChangesAsync roda uma unica vez ao final do loop duplo de
+    // categorias em CollectAsync, um slug > 300 chars derrubava o ciclo inteiro, nao so o produto
+    // com o titulo longo.
+    private const int MaxSlugLength = 300;
+
     private static string GenerateSlug(string title, string externalId)
     {
         var baseSlug = title.ToLowerInvariant().Trim();
@@ -557,7 +564,15 @@ public class MercadoLivreCollector : IPlatformCollector
         if (string.IsNullOrWhiteSpace(slugBase))
             slugBase = "produto";
 
-        return $"{slugBase}-{externalId.ToLowerInvariant()}";
+        var suffix = $"-{externalId.ToLowerInvariant()}";
+
+        // Trunca apenas a parte derivada do titulo — o sufixo do externalId precisa ficar intacto,
+        // pois e o que garante unicidade do slug entre produtos.
+        var maxSlugBaseLength = Math.Max(0, MaxSlugLength - suffix.Length);
+        if (slugBase.Length > maxSlugBaseLength)
+            slugBase = slugBase[..maxSlugBaseLength].Trim('-');
+
+        return $"{slugBase}{suffix}";
     }
 
     private record MercadoLivreSettings(

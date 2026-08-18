@@ -7,6 +7,13 @@ public class Product
     // Score threshold para aprovacao por IA
     public const int AiScoreThreshold = 6;
 
+    // Coluna "ai_reason" e varchar(300) (ProductConfiguration). Com a IA real (Claude, nao mock,
+    // Issue #199) a resposta pode facilmente passar de 300 caracteres — como SaveChangesAsync roda
+    // uma unica vez ao final do loop de coleta (MercadoLivreCollector/AmazonCollector/
+    // ShopeeCollector), um unico produto com reason estourado derrubava o ciclo inteiro (mesma
+    // causa raiz do bug do slug, Issue #199 primeira correcao).
+    private const int MaxAiReasonLength = 300;
+
     public Guid Id { get; private set; }
     public string Title { get; private set; } = string.Empty;
     public string Description { get; private set; } = string.Empty;
@@ -87,7 +94,7 @@ public class Product
     public void UpdateAiResult(int score, string reason, string caption)
     {
         AiScore = score;
-        AiReason = reason;
+        SetAiReason(reason);
         AiCaption = caption;
         UpdatedAt = DateTime.UtcNow;
 
@@ -122,8 +129,20 @@ public class Product
             throw new ArgumentException("Reason nao pode ser nulo ou vazio.", nameof(reason));
 
         Status = ProductStatus.Error;
-        AiReason = reason;
+        SetAiReason(reason);
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Atribui AiReason truncando para caber em varchar(300) (Issue #199 — segundo bug: a resposta
+    /// real da IA pode passar de 300 caracteres). Usado por UpdateAiResult e MarkAsError para nao
+    /// duplicar a logica de truncagem.
+    /// </summary>
+    private void SetAiReason(string? reason)
+    {
+        AiReason = reason is not null && reason.Length > MaxAiReasonLength
+            ? reason[..MaxAiReasonLength]
+            : reason;
     }
 
     /// <summary>
