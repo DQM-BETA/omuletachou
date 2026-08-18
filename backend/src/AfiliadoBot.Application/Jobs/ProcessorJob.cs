@@ -91,15 +91,16 @@ public class ProcessorJob
 
             if (queuedCount == 0)
             {
-                // Item A4 (Issue #133 / #145): nenhuma rede qualificou (nenhuma habilitada com
-                // credenciais completas) — nao marcar como Published incondicionalmente.
-                // Reaproveita ProductStatus.Error (sem introduzir novo status de dominio).
-                product.MarkAsError("Nenhuma rede social habilitada com credenciais validas para publicar este produto.");
+                // Issue #208: visibilidade no site nao depende mais de rede social qualificada.
+                // Zero entradas de PublicationQueue e um caminho esperado (nenhuma rede
+                // habilitada/com credenciais completas), nao um erro — apenas log informativo
+                // para observabilidade, sem bloquear a publicacao no site.
+                _logger.LogInformation(
+                    "ProcessorJob: produto {ProductId} publicado no site sem nenhuma rede social qualificada.",
+                    product.Id);
             }
-            else
-            {
-                product.MarkAsPublished();
-            }
+
+            product.MarkAsPublished();
 
             await _dbContext.SaveChangesAsync(ct);
         }
@@ -218,8 +219,9 @@ public class ProcessorJob
 
     /// <returns>
     /// Quantidade de entradas de <see cref="PublicationQueue"/> efetivamente adicionadas ao
-    /// contexto para o produto (item A4 — usado por <see cref="ExecuteAsync"/> para decidir
-    /// entre <c>MarkAsPublished</c> e <c>MarkAsError</c>).
+    /// contexto para o produto. Desde a Issue #208, esse valor nao influencia mais o
+    /// <see cref="Product.Status"/>: <see cref="ExecuteAsync"/> usa apenas para log de
+    /// observabilidade quando zero (publicacao no site independe de rede social qualificada).
     /// </returns>
     private async Task<int> CreatePublicationQueueEntriesAsync(
         Product product,

@@ -7,6 +7,7 @@ using AfiliadoBot.Domain.Interfaces;
 using AfiliadoBot.Infrastructure.Data;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Moq.Protected;
@@ -437,10 +438,12 @@ public class ProcessorJobTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_MarcaError_QuandoNenhumaRedeQualificada()
+    public async Task ExecuteAsync_MarcaPublished_QuandoNenhumaRedeQualificada()
     {
-        // Item A4 (Issue #133 / #145): zero entradas de PublicationQueue criadas (nenhuma rede
-        // habilitada e com credenciais completas) — o produto deve ir para Error, nao Published.
+        // Issue #208 (substitui o comportamento das Issues #133/#145): zero entradas de
+        // PublicationQueue criadas (nenhuma rede habilitada e com credenciais completas) NAO
+        // bloqueia mais a visibilidade no site — o produto deve ir para Published, nao Error.
+        // A ausencia de rede qualificada nao e registrada como erro em lugar nenhum (CA 3.2).
         using var db = CreateInMemoryContext();
         var product = CriarProduto();
         db.Products.Add(product);
@@ -451,19 +454,19 @@ public class ProcessorJobTests
         await job.ExecuteAsync();
 
         var reloaded = await db.Products.FirstAsync();
-        reloaded.Status.Should().Be(ProductStatus.Error);
-        reloaded.AiReason.Should().Contain("Nenhuma rede social habilitada");
+        reloaded.Status.Should().Be(ProductStatus.Published);
 
         var entries = await db.PublicationQueues.Where(q => q.ProductId == product.Id).ToListAsync();
         entries.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task ExecuteAsync_MarcaError_QuandoRedeHabilitadaMasSemCredenciais()
+    public async Task ExecuteAsync_MarcaPublished_QuandoRedeHabilitadaMasSemCredenciais()
     {
-        // Regressao do fix A4: rede habilitada porem sem credenciais completas nao qualifica —
-        // zero entradas criadas, produto vai para Error (mesmo comportamento do teste acima,
-        // agora coberto tambem quando ha uma rede "quase" configurada).
+        // Issue #208: rede habilitada porem sem credenciais completas continua nao qualificando
+        // (nenhuma entrada de PublicationQueue e criada para ela — sem regressao na logica de
+        // CreatePublicationQueueEntriesAsync), mas isso nao impede mais o produto de ser
+        // publicado no site (CA 2.2/CA 3.2).
         using var db = CreateInMemoryContext();
         var product = CriarProduto();
         db.Products.Add(product);
@@ -474,7 +477,96 @@ public class ProcessorJobTests
         await job.ExecuteAsync();
 
         var reloaded = await db.Products.FirstAsync();
-        reloaded.Status.Should().Be(ProductStatus.Error);
+        reloaded.Status.Should().Be(ProductStatus.Published);
+
+        var entries = await db.PublicationQueues.Where(q => q.ProductId == product.Id).ToListAsync();
+        entries.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_LogaInformacao_QuandoNenhumaRedeQualificada()
+    {
+        // Decisao de observabilidade (especificacao-tecnica.md §0.2): LogInformation explicito
+        // quando queuedCount == 0, distinto do LogWarning das redes puladas individualmente —
+        // nao e uma condicao anomala, e o comportamento correto pos-Issue #208.
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto();
+        db.Products.Add(product);
+        await db.SaveChangesAsync();
+
+        var loggerMock = new Mock<ILogger<ProcessorJob>>();
+        var job = new ProcessorJob(
+            db,
+            CreateMediaStorageMock().Object,
+            CreateAiServiceMock().Object,
+            CreateAffiliateLinkClient(),
+            loggerMock.Object);
+
+        await job.ExecuteAsync();
+
+        loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("publicado no site sem nenhuma rede social qualificada")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Theory]
+    [InlineData(Platform.Amazon)]
+    [InlineData(Platform.MercadoLivre)]
+    [InlineData(Platform.Shopee)]
+    public async Task ExecuteAsync_MarcaPublished_ECriaFila_QuandoRedeQualificada(Platform platform)
+    {
+        // CA 2.1 / não-regressão explícita: produto aprovado + link já válido (bypassa o fluxo
+        // semi-manual ML) + rede social qualificada -> Published E entrada correspondente em
+        // PublicationQueue, para as 3 plataformas de origem suportadas.
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto(platform: platform, affiliateLink: "https://afiliado.example.com/produto");
+        db.Products.Add(product);
+        await SeedNetworkAsync(db, "telegram", true, ("telegram.bot_token", "abc"), ("telegram.channel_id", "123"));
+        await db.SaveChangesAsync();
+
+        var job = CreateJob(db);
+        await job.ExecuteAsync();
+
+        var reloaded = await db.Products.FirstAsync();
+        reloaded.Status.Should().Be(ProductStatus.Published);
+
+        var entries = await db.PublicationQueues.Where(q => q.ProductId == product.Id).ToListAsync();
+        entries.Should().ContainSingle(e => e.SocialNetwork == SocialNetwork.Telegram);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NaoReenfileira_ProdutoJaPublicadoQuandoRedeQualificaDepois()
+    {
+        // CA 6.1/6.2 (não-retroatividade): produto já Published (fora do fluxo Queued) sem
+        // nenhuma PublicationQueue continua sem receber novas entradas mesmo depois de uma rede
+        // social ser qualificada — comportamento já emergente da query do topo de ExecuteAsync
+        // (Status == Queued), coberto aqui explicitamente.
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto();
+        db.Products.Add(product);
+        await db.SaveChangesAsync();
+
+        var job = CreateJob(db);
+        await job.ExecuteAsync();
+
+        var afterFirstRun = await db.Products.FirstAsync();
+        afterFirstRun.Status.Should().Be(ProductStatus.Published);
+        (await db.PublicationQueues.Where(q => q.ProductId == product.Id).ToListAsync()).Should().BeEmpty();
+
+        // Rede qualifica depois que o produto ja foi publicado.
+        await SeedNetworkAsync(db, "telegram", true, ("telegram.bot_token", "abc"), ("telegram.channel_id", "123"));
+        await db.SaveChangesAsync();
+
+        await job.ExecuteAsync();
+
+        var afterSecondRun = await db.Products.FirstAsync();
+        afterSecondRun.Status.Should().Be(ProductStatus.Published);
+        (await db.PublicationQueues.Where(q => q.ProductId == product.Id).ToListAsync()).Should().BeEmpty();
     }
 
     [Fact]
