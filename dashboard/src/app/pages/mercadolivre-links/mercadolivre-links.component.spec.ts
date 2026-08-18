@@ -279,6 +279,128 @@ describe('MercadolivreLinksComponent', () => {
     expect(component.panelExpanded).toBeTrue();
   });
 
+  it('BUG #195: import que zera a esperar (0 importados, N pulados) mantem o painel de pulados visivel mesmo com a lista vazia', () => {
+    setup();
+    fixture.detectChanges();
+
+    const result: ImportAffiliateLinksResult = {
+      imported: 0,
+      skipped: [
+        { productId: 'p1', reason: 'Status atual e Pending, esperado AwaitingAffiliateLink' },
+        { productId: 'p2', reason: 'Link vazio' },
+      ],
+    };
+    productsServiceSpy.importAffiliateLinks.and.returnValue(of(result));
+    // reload esvazia a lista de pendentes (cenario comum: lote inteiro resolvido, por skip ou sucesso)
+    productsServiceSpy.listAwaitingAffiliateLink.and.returnValue(of(pagedResult([])));
+
+    component.pastedText = 'https://ml.com/afiliado/1\nhttps://ml.com/afiliado/2';
+    fixture.detectChanges();
+
+    component.import();
+    fixture.detectChanges();
+
+    expect(component.products.length).toBe(0);
+    expect(component.skipped?.length).toBe(2);
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    // painel de skipped precisa continuar no DOM mesmo com o import-card pai sem produtos pendentes
+    const panel = compiled.querySelector('[data-testid="skipped-panel"]');
+    expect(panel).toBeTruthy();
+    const items = compiled.querySelectorAll('[data-testid="skipped-item"]');
+    expect(items.length).toBe(2);
+    expect(items[0].textContent).toContain('Status atual e Pending, esperado AwaitingAffiliateLink');
+    expect(items[1].textContent).toContain('Link vazio');
+  });
+
+  it('BUG #195: import misto (alguns importados, alguns pulados) que tambem esvazia a lista mantem o painel de pulados visivel', () => {
+    setup();
+    fixture.detectChanges();
+
+    const result: ImportAffiliateLinksResult = {
+      imported: 1,
+      skipped: [{ productId: 'p2', reason: 'Status atual e Pending, esperado AwaitingAffiliateLink' }],
+    };
+    productsServiceSpy.importAffiliateLinks.and.returnValue(of(result));
+    // condicao de corrida plausivel: p2 mudou de status entre o load() e o clique em Importar,
+    // e o reload nao traz nenhum produto novo -> lista fica vazia mesmo com skip pendente
+    productsServiceSpy.listAwaitingAffiliateLink.and.returnValue(of(pagedResult([])));
+
+    component.pastedText = 'https://ml.com/afiliado/1\nhttps://ml.com/afiliado/2';
+    fixture.detectChanges();
+
+    component.import();
+    fixture.detectChanges();
+
+    expect(component.products.length).toBe(0);
+    expect(component.skipped).toEqual([
+      { productId: 'p2', reason: 'Status atual e Pending, esperado AwaitingAffiliateLink' },
+    ]);
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const panel = compiled.querySelector('[data-testid="skipped-panel"]');
+    expect(panel).toBeTruthy();
+    expect(compiled.querySelector('[data-testid="skipped-item"]')?.textContent).toContain(
+      'Fone bluetooth XYZ — Status atual e Pending, esperado AwaitingAffiliateLink'
+    );
+    // sem produtos pendentes: nao deve exibir textarea/botao de importar (evita reenvio inconsistente)
+    expect(compiled.querySelector('[data-testid="links-textarea"]')).toBeFalsy();
+  });
+
+  it('BUG #195: import 100% bem-sucedido que esvazia a lista NAO exibe painel de pulados (sem regressao do caminho feliz)', () => {
+    setup();
+    fixture.detectChanges();
+
+    const result: ImportAffiliateLinksResult = { imported: 2, skipped: [] };
+    productsServiceSpy.importAffiliateLinks.and.returnValue(of(result));
+    productsServiceSpy.listAwaitingAffiliateLink.and.returnValue(of(pagedResult([])));
+
+    component.pastedText = 'https://ml.com/afiliado/1\nhttps://ml.com/afiliado/2';
+    fixture.detectChanges();
+
+    component.import();
+    fixture.detectChanges();
+
+    expect(component.products.length).toBe(0);
+    // caminho feliz (0 pulados): o componente nunca atribui [] a `skipped` (so entra no branch
+    // `else` quando skipped.length > 0) — continua null, e o painel nao deve ser exibido
+    expect(component.skipped).toBeNull();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('[data-testid="skipped-panel"]')).toBeFalsy();
+    expect(compiled.querySelector('[data-testid="empty-message"]')).toBeTruthy();
+  });
+
+  it('BUG #195: "Ver detalhes" da snackbar expande o painel de pulados corretamente mesmo com a lista de pendentes vazia', () => {
+    setup();
+    fixture.detectChanges();
+
+    const result: ImportAffiliateLinksResult = {
+      imported: 0,
+      skipped: [{ productId: 'p1', reason: 'Link vazio' }, { productId: 'p2', reason: 'Link vazio' }],
+    };
+    productsServiceSpy.importAffiliateLinks.and.returnValue(of(result));
+    productsServiceSpy.listAwaitingAffiliateLink.and.returnValue(of(pagedResult([])));
+
+    component.pastedText = 'https://ml.com/afiliado/1\nhttps://ml.com/afiliado/2';
+    fixture.detectChanges();
+
+    component.import();
+    fixture.detectChanges();
+
+    expect(component.panelExpanded).toBeFalse();
+    const detailsButton = Array.from(overlayContainerElement.querySelectorAll('button')).find((btn) =>
+      btn.textContent?.includes('Ver detalhes')
+    ) as HTMLButtonElement;
+    expect(detailsButton).toBeTruthy();
+    detailsButton.click();
+    fixture.detectChanges();
+
+    expect(component.panelExpanded).toBeTrue();
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('[data-testid="skipped-panel"]')).toBeTruthy();
+  });
+
   it('erro na importacao: exibe snackbar de erro e preserva o conteudo da textarea', () => {
     setup();
     fixture.detectChanges();

@@ -117,51 +117,56 @@
     </mat-card-content>
   </mat-card>
 
-  <mat-card class="import-card" *ngIf="!loading && !errorMessage && products.length > 0">
-    <div class="card-header-row">
+  <mat-card
+    class="import-card"
+    *ngIf="!loading && !errorMessage && (products.length > 0 || (skipped && skipped.length > 0))"
+  >
+    <div class="card-header-row" *ngIf="products.length > 0">
       <h2 class="card-title">2. Colar links gerados pelo Mercado Livre</h2>
     </div>
 
     <mat-card-content>
-      <mat-form-field appearance="outline" class="links-field">
-        <textarea
-          matInput
-          cdkTextareaAutosize
-          cdkAutosizeMinRows="6"
-          [(ngModel)]="pastedText"
-          [disabled]="loading || importing"
-          placeholder="Cole aqui os links gerados pelo Mercado Livre, um por linha, na mesma ordem da lista acima"
-          data-testid="links-textarea"
-        ></textarea>
-      </mat-form-field>
+      <ng-container *ngIf="products.length > 0">
+        <mat-form-field appearance="outline" class="links-field">
+          <textarea
+            matInput
+            cdkTextareaAutosize
+            cdkAutosizeMinRows="6"
+            [(ngModel)]="pastedText"
+            [disabled]="loading || importing"
+            placeholder="Cole aqui os links gerados pelo Mercado Livre, um por linha, na mesma ordem da lista acima"
+            data-testid="links-textarea"
+          ></textarea>
+        </mat-form-field>
 
-      <div class="import-footer">
-        <div class="paste-counter" [ngClass]="pasteCounterClass" data-testid="paste-counter">
-          <mat-icon>{{ pasteCounterIcon }}</mat-icon>
-          <span>{{ pasteCounterMessage }}</span>
+        <div class="import-footer">
+          <div class="paste-counter" [ngClass]="pasteCounterClass" data-testid="paste-counter">
+            <mat-icon>{{ pasteCounterIcon }}</mat-icon>
+            <span>{{ pasteCounterMessage }}</span>
+          </div>
+
+          <button
+            mat-raised-button
+            color="primary"
+            [disabled]="!canImport"
+            [class.full-width-mobile]="isMobile"
+            (click)="import()"
+            data-testid="import-button"
+          >
+            <mat-icon *ngIf="!importing">publish</mat-icon>
+            <mat-spinner *ngIf="importing" diameter="20"></mat-spinner>
+            {{ importing ? 'Importando…' : 'Importar links' }}
+          </button>
         </div>
 
-        <button
-          mat-raised-button
-          color="primary"
-          [disabled]="!canImport"
-          [class.full-width-mobile]="isMobile"
-          (click)="import()"
-          data-testid="import-button"
-        >
-          <mat-icon *ngIf="!importing">publish</mat-icon>
-          <mat-spinner *ngIf="importing" diameter="20"></mat-spinner>
-          {{ importing ? 'Importando…' : 'Importar links' }}
-        </button>
-      </div>
-
-      <p class="processor-note">
-        <mat-icon>info</mat-icon>
-        <span
-          >Após importar, você pode disparar <a routerLink="/jobs">Jobs → Processor</a> para publicar
-          imediatamente.</span
-        >
-      </p>
+        <p class="processor-note">
+          <mat-icon>info</mat-icon>
+          <span
+            >Após importar, você pode disparar <a routerLink="/jobs">Jobs → Processor</a> para publicar
+            imediatamente.</span
+          >
+        </p>
+      </ng-container>
 
       <mat-expansion-panel
         *ngIf="skipped && skipped.length > 0"
