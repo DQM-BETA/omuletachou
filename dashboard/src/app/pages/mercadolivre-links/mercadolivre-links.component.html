@@ -13,13 +13,13 @@
       <button
         mat-raised-button
         color="primary"
-        *ngIf="!loading && !errorMessage && products.length > 0"
+        *ngIf="!loading && !errorMessage && displayedProducts.length > 0"
         [class.full-width-mobile]="isMobile"
         (click)="copyUrls()"
         data-testid="copy-urls-button"
       >
         <mat-icon>{{ copied ? 'check' : 'content_copy' }}</mat-icon>
-        {{ copied ? 'Copiado!' : 'Copiar URLs (' + products.length + ')' }}
+        {{ copied ? 'Copiado!' : 'Copiar URLs (' + displayedProducts.length + ')' }}
       </button>
     </div>
 
@@ -45,11 +45,33 @@
         <p class="subtext">Assim que o coletor de Mercado Livre trouxer novos produtos, eles aparecem aqui.</p>
       </div>
 
+      <div
+        class="batch-size-row"
+        *ngIf="!loading && !errorMessage && products.length > 0"
+      >
+        <mat-form-field appearance="outline" class="batch-size-field">
+          <mat-label>Quantidade por lote</mat-label>
+          <input
+            matInput
+            type="number"
+            min="1"
+            step="1"
+            [ngModel]="batchSize"
+            (ngModelChange)="batchSize = $event"
+            data-testid="batch-size-input"
+          />
+          <mat-hint>Limite atual da ferramenta oficial do Mercado Livre: 30 URLs por vez.</mat-hint>
+        </mat-form-field>
+        <span class="batch-size-summary" data-testid="batch-size-summary">
+          Exibindo {{ displayedProducts.length }} de {{ products.length }} produtos pendentes.
+        </span>
+      </div>
+
       <table
         mat-table
-        [dataSource]="products"
+        [dataSource]="displayedProducts"
         class="products-table"
-        *ngIf="!loading && !errorMessage && products.length > 0 && !isMobile"
+        *ngIf="!loading && !errorMessage && displayedProducts.length > 0 && !isMobile"
         data-testid="products-table"
       >
         <ng-container matColumnDef="index">
@@ -90,11 +112,11 @@
 
       <mat-list
         class="products-list-mobile"
-        *ngIf="!loading && !errorMessage && products.length > 0 && isMobile"
+        *ngIf="!loading && !errorMessage && displayedProducts.length > 0 && isMobile"
         data-testid="products-list-mobile"
       >
         <mat-list-item
-          *ngFor="let product of products; let i = index"
+          *ngFor="let product of displayedProducts; let i = index"
           class="product-list-item"
           data-testid="product-list-item"
         >
@@ -119,14 +141,14 @@
 
   <mat-card
     class="import-card"
-    *ngIf="!loading && !errorMessage && (products.length > 0 || (skipped && skipped.length > 0))"
+    *ngIf="!loading && !errorMessage && (displayedProducts.length > 0 || (skipped && skipped.length > 0))"
   >
-    <div class="card-header-row" *ngIf="products.length > 0">
+    <div class="card-header-row" *ngIf="displayedProducts.length > 0">
       <h2 class="card-title">2. Colar links gerados pelo Mercado Livre</h2>
     </div>
 
     <mat-card-content>
-      <ng-container *ngIf="products.length > 0">
+      <ng-container *ngIf="displayedProducts.length > 0">
         <mat-form-field appearance="outline" class="links-field">
           <textarea
             matInput
