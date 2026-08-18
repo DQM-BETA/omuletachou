@@ -267,3 +267,64 @@ Ver #190 (CA 1-3, Given/When/Then completos no corpo da sub-issue).
   Seção 9 (cenários 9.1-9.5).
 - Repo: `repos/omuletachou`. Stack: ASP.NET Core 8 / xUnit + Moq + FluentAssertions.
 - Branch: `feature/ISSUE-192-scoring-ml-desconto`, base `desenv`.
+
+## Sub-F — Fix: painel de skipped inacessível quando lista de pendentes esvazia (achado 1 do QA, 1ª rodada) — `stack:angular`
+
+> Adicionada após reprovação do QA na 1ª rodada em `homolog` (commit `cabc2f96387ea547ca2e9a3ab68656df6354cc7b`).
+> Achado 1 (bloqueante) de `documentacoes/ISSUE-182-mercadolivrecollector-quebrado/relatorio-qa.md`.
+> Sub-issue #195 criada.
+
+### Critérios de aceite
+
+- **Dado** um import que resulta em 0 produtos importados e N produtos pulados (N > 0), e a lista
+  de `AwaitingAffiliateLink` fica vazia após o reload — **quando** o import concluir — **então** o
+  painel de skipped continua visível no DOM, mostrando os N itens pulados com seus motivos.
+- **Dado** um import misto (alguns importados, alguns pulados) que também esvazia a lista —
+  **quando** o import concluir — **então** o painel de skipped continua visível (mesmo
+  comportamento acima).
+- **Dado** um import 100% bem-sucedido (`skipped.length === 0`) que esvazia a lista — **quando** o
+  import concluir — **então** nenhum painel de skipped é exibido (sem regressão do caminho feliz) e
+  o estado vazio ("sem pendências") aparece normalmente.
+- **Dado** a lista de pendentes ainda não vazia após o import (`products.length > 0`) com itens
+  pulados — **quando** o import concluir — **então** o comportamento atual é preservado (painel
+  visível, já validado no fluxo feliz do QA).
+- Clicar em "Ver detalhes" na snackbar (ação que seta `panelExpanded = true`) deve expandir o painel
+  corretamente em todos os cenários acima (hoje falha silenciosamente quando o elemento já não
+  existe no DOM).
+
+### O que fazer
+1. Em `mercadolivre-links.component.html`, o `<mat-expansion-panel data-testid="skipped-panel">`
+   (linha ~166, `*ngIf="skipped && skipped.length > 0"`) está aninhado dentro do
+   `<mat-card class="import-card">` (linha ~120, `*ngIf="!loading && !errorMessage &&
+   products.length > 0"`). Quando `products.length` chega a zero após `this.load()` (chamado ao
+   final de `import()`), o card inteiro some do DOM e leva o painel de skipped junto, mesmo com
+   `skipped.length > 0`.
+2. Desacoplar a visibilidade do painel de skipped da condição `products.length > 0` do card pai —
+   avaliar a melhor forma ao implementar (ex.: mover o `mat-expansion-panel` para fora do `*ngIf` do
+   `import-card`, em um bloco irmão próprio condicionado só a `skipped.length > 0`; ou ajustar a
+   condição do `import-card` para
+   `*ngIf="!loading && !errorMessage && (products.length > 0 || (skipped && skipped.length > 0))"`
+   — neste caso, garantir que o restante do card (textarea/contador/botão "Importar") não fique
+   visível/habilitado de forma inconsistente quando só o painel de skipped precisa aparecer; pode
+   ser necessário envolver esse restante em seu próprio `*ngIf="products.length > 0"` interno).
+3. Confirmar que `skipped` (propriedade do componente) não é resetada por `load()` antes do template
+   renderizar o novo estado (checar ordem de atribuição em `mercadolivre-links.component.ts`).
+4. TDD obrigatório: escrever primeiro o teste que reproduz o bug (mock de `skipped` populado com
+   `products` vazio após reload, assertar presença do `[data-testid="skipped-panel"]` no DOM via
+   `fixture.debugElement.query`), confirmar RED, corrigir, confirmar GREEN. Cobrir os 4 cenários dos
+   critérios de aceite acima em `mercadolivre-links.component.spec.ts`.
+
+### Contexto técnico
+- Repo: `repos/omuletachou`. Stack: Angular 17+, Angular Material.
+- Arquivos: `dashboard/src/app/pages/mercadolivre-links/mercadolivre-links.component.html` (linhas
+  ~120 `import-card` `*ngIf`, ~163-166 `skipped-panel` `*ngIf`),
+  `dashboard/src/app/pages/mercadolivre-links/mercadolivre-links.component.ts` (`import()`/`load()`,
+  propriedades `products`/`skipped`/`panelExpanded`).
+- Testes: `dashboard/src/app/pages/mercadolivre-links/mercadolivre-links.component.spec.ts`.
+- Relatório de QA completo (repro passo a passo, screenshots): `documentacoes/ISSUE-182-mercadolivrecollector-quebrado/relatorio-qa.md`
+  seção "Achado 1"; screenshots `06-skip-scenario-after-import.png`,
+  `08-repro-after-import-dom-state.png`, `09-repro-after-ver-detalhes-click.png` em
+  `documentacoes/ISSUE-182-mercadolivrecollector-quebrado/screenshots/`.
+- Especificação técnica original da tela: `documentacoes/ISSUE-182-mercadolivrecollector-quebrado/especificacao-tecnica.md`
+  §3.6.
+- Branch: `feature/ISSUE-195-skipped-panel-visibilidade`, base `desenv`.
