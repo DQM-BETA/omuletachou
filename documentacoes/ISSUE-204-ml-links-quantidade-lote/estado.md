@@ -1,6 +1,6 @@
 issue: 204
 titulo: feat: permitir escolher a quantidade de produtos por lote na tela de importação de links ML (limite real da ferramenta oficial do ML)
-etapa_atual: QA
+etapa_atual: Aguardando PR homolog→main (Gate 2)
 ultimo_agente: code-review
 openspec_change: ~
 tech_stacks:
@@ -17,7 +17,7 @@ pr_feature: 205
 pr_homologacao: 206
 pr_release: ~
 code_review_homolog_pr: 206
-qa_status: ~
+qa_status: aprovado — ver relatorio-qa.md e ledger etapa 4
 figma_url: ~
 blockers: nenhum
 rota: rapido
@@ -45,6 +45,7 @@ status_comment_id: ~
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Ferramentas | Tempo (s) |
 |---|-------|--------|--------|--------|------------|-----------|
-| 1 | Preparar Issue | coordenador | haiku | — | gh issue create, gh label, gh issue edit | — |
-| 2 | Merge PR205 + PR206 | lider-tecnico | sonnet | — | gh pr merge, gh pr create, git | — |
-| 3 | Code Review (PR #206, homologação) | code-review | sonnet | ~ | gh, npm test/build, docker compose, curl, psql — aprovado, ver Notas para evidência completa | ~ |
+| 1 | Preparar Issue | coordenador | haiku | 21439 | 4 | 57s |
+| 2 | Merge PR205 + PR206 | lider-tecnico | sonnet | 33339 | 14 | 72s |
+| 3 | Code Review (PR #206, homologação) | code-review | sonnet | 98546 | 62 | 520s | Aprovado, ver Notas para evidência completa |
+| 4 | QA (homolog) | qa | sonnet | 86286 | 40 | 502s | **APROVADO.** homolog sincronizado (fast-forward, commit `c95a0ce...`). 129/129 testes, cobertura ≥80% em todas as métricas. Validação real com N=3 (valor arbitrário, provando ausência de hardcode) via import real, confirmado no Postgres: pareamento correto, produto fora do lote intocado. Pendentes 109→106 (efeito colateral esperado da validação ao vivo, mesma prática do CR). E2E N/A (sem Playwright no dashboard). Achado informativo não-bloqueante já registrado pelo CR (MaxPageSize=100). Relatório: `relatorio-qa.md`. Comentário: https://github.com/DQM-BETA/omuletachou/issues/204#issuecomment-5331958841
