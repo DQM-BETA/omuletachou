@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { MatTooltip } from '@angular/material/tooltip';
 import { ProductsComponent } from './products.component';
 import { PagedResult } from '../../core/services/paged-result.model';
 import { ProductListItem } from '../../core/services/products.service';
@@ -129,6 +131,50 @@ describe('ProductsComponent', () => {
 
     const reloadReq = httpMock.expectOne(r => r.url === '/api/products');
     reloadReq.flush(mockPage);
+  });
+
+  it('CA-B6 — tooltip com o motivo do erro aparece no badge de Status (não no de AI Score) quando Status = Error', () => {
+    const errorProduct: ProductListItem = {
+      id: 'p3',
+      title: 'Produto com falha de publicação',
+      salePrice: 59.9,
+      originalPrice: 79.9,
+      discountPct: 25,
+      status: 'Error',
+      platform: 'Amazon',
+      slug: 'produto-falha-publicacao',
+      category: 'eletronicos',
+      createdAt: '2026-07-18T10:00:00Z',
+      ai_score: 9,
+      ai_reason: 'Nenhuma rede social habilitada com credenciais válidas para publicar este produto.',
+    };
+
+    component.filterForm.patchValue({ status: 'Error' });
+    component.applyFilters();
+
+    const req = httpMock.expectOne(r => r.url === '/api/products' && r.params.get('status') === 'Error');
+    req.flush({ ...mockPage, items: [errorProduct], totalItems: 1 });
+    fixture.detectChanges();
+
+    const statusBadge = fixture.debugElement.query(By.css('[data-testid="status-badge"]'));
+    const statusTooltip = statusBadge.injector.get(MatTooltip);
+    expect(statusTooltip.disabled).toBeFalse();
+    expect(statusTooltip.message).toBe(errorProduct.ai_reason as string);
+
+    const aiScoreBadge = fixture.debugElement.query(By.css('[data-testid="ai-score-badge"]'));
+    const aiScoreTooltip = aiScoreBadge.injector.get(MatTooltip);
+    expect(aiScoreTooltip.disabled).toBeTrue();
+  });
+
+  it('CA-B7 — tooltip de justificativa do AI Score permanece no badge de AI Score quando Status != Error', () => {
+    const aiScoreBadge = fixture.debugElement.queryAll(By.css('[data-testid="ai-score-badge"]'))[0];
+    const aiScoreTooltip = aiScoreBadge.injector.get(MatTooltip);
+    expect(aiScoreTooltip.disabled).toBeFalse();
+    expect(aiScoreTooltip.message).toBe(mockPage.items[0].ai_reason as string);
+
+    const statusBadge = fixture.debugElement.queryAll(By.css('[data-testid="status-badge"]'))[0];
+    const statusTooltip = statusBadge.injector.get(MatTooltip);
+    expect(statusTooltip.disabled).toBeTrue();
   });
 
   it('exibe indicador de loading enquanto a requisição está em andamento', () => {
