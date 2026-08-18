@@ -1,7 +1,7 @@
 issue: 208
 titulo: feat(discussão): avaliar desacoplar visibilidade no site público do requisito de rede social configurada
-etapa_atual: Aguardando aprovação do Gerente (Gate 2) — PR release #222 aberto
-ultimo_agente: lider-tecnico
+etapa_atual: Concluído — PR #222 mergeado em main (Gate 2 aprovado, Issue fechada)
+ultimo_agente: coordenador
 openspec_change: openspec/changes/issue-208-desacoplar-visibilidade-site-publico
 tech_stacks: [dotnet, angular]
 repos:
@@ -52,6 +52,12 @@ status_comment_id: ~
 | 14 | Code Review (PR #221, homologação) | code-review | sonnet | 120740 | 59 | 591s | **APROVADO.** Build/boot real, 454/454 backend + 140/140 dashboard. Validação E2E real: produto ML antes em Error reprocessado, virou Published, apareceu no site público — tudo sem nenhuma rede social configurada. Merge desenv→homolog via 249439e. |
 | 15 | QA (homolog) | qa | sonnet | 148529 | 94 | 978s | **APROVADO — 100% dos 20 critérios de aceite.** homolog sincronizado (249439e). Rebuild sem cache. 454/454 backend + 140/140 dashboard + 5/5 Playwright (website). Revalidou de ponta a ponta o produto ML real já Published (site público, `destinations` corretos, fila social vazia sem regressão). Não conseguiu disparar uma nova transição ao vivo (Claude API key não configurada no ambiente + política da sessão bloqueou mutação SQL direta) — compensado com revalidação completa do estado persistido + leitura dos testes dedicados (Theory 3 plataformas, não-retroatividade). Relatório: `relatorio-qa.md`. Comentário: https://github.com/DQM-BETA/omuletachou/issues/208#issuecomment-5334665276 |
 | 16 | Líder Técnico (PR release) | lider-tecnico | sonnet | 45384 | 12 | 106s | PR #222 (`homolog→main`, merge commit) criado, cobrindo Issue-pai #208 completa (Closes #208) + sub-issues #215/#216/#217 (todas CLOSED). Aguardando Gate 2 do Gerente. |
+| 17 | Coordenador (merge final) | coordenador | haiku | ~ | 2 | ~45s | PR #222 mergeado via `gh pr merge` (merge commit 841373...). Issue #208 fechada automaticamente (COMPLETED). Comentário de consolidação de custo postado. |
+
+**Totais (excluindo etapas 6-7 que falharam):**
+- Tokens consumidos: 1.782.760
+- Tempo de processamento: 4.538 segundos (aprox. 75 min 38 seg)
+- Tempo decorrido (criação a conclusão): 3 horas 59 minutos (2026-08-18 18:15:46 — 22:15:22)
 
 ## 📝 Notas
 
@@ -86,5 +92,5 @@ status_comment_id: ~
   - `/code-review` (plugin Anthropic) não postou comentários/reviews no PR #221 (nenhum achado de alta confiança) — nada a incorporar.
   - PR #221 mesclado `desenv→homolog` via merge commit (commit `249439e`), conforme exigido para promoções entre branches de longa vida.
 - **QA (2026-08-18) — APROVADO, 100% dos 20 critérios de aceite.** `homolog` sincronizado no commit `249439e`, rebuild sem cache. 454/454 backend + 140/140 dashboard + 5/5 Playwright website. Validação end-to-end real do produto ML `5e910e71-0d33-4d02-ae6e-03ff4172623f` (Error→Published→visível no site público) revalidada de ponta a ponta, `GET /api/settings` confirmou nenhuma rede social qualificada. Relatório completo: `relatorio-qa.md`. Comentário na Issue: https://github.com/DQM-BETA/omuletachou/issues/208#issuecomment-5334665276
-- **PR de release (2026-08-18):** PR #222 (`homolog→main`, merge commit — NUNCA squash) criado, `Closes #208`. Descreve a mudança de regra de negócio, as 3 sub-issues (#215/#216/#217, todas CLOSED), e a validação real do QA. Referencia PR #221 (homologação) e `relatorio-qa.md`. **Não mesclado** — aguardando Gate 2 (aprovação humana do Gerente).
-- **Próximo passo:** GATE 2 — aprovação do Gerente para merge `homolog→main` no PR #222.
+- **PR de release (2026-08-18):** PR #222 (`homolog→main`, merge commit — NUNCA squash) criado, `Closes #208`. Descreve a mudança de regra de negócio, as 3 sub-issues (#215/#216/#217, todas CLOSED), e a validação real do QA. Referencia PR #221 (homologação) e `relatorio-qa.md`.
+- **CONCLUSÃO (2026-08-18):** PR #222 mergeado em `main` via `gh pr merge --merge` (merge commit `841373...`). Issue #208 fechada automaticamente como COMPLETED. Consolidação de custo postada como comentário na Issue. Demanda concluída.
