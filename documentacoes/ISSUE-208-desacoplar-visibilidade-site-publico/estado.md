@@ -1,7 +1,7 @@
 issue: 208
 titulo: feat(discussão): avaliar desacoplar visibilidade no site público do requisito de rede social configurada
-etapa_atual: QA
-ultimo_agente: code-review
+etapa_atual: Aguardando PR homolog→main (Gate 2)
+ultimo_agente: qa
 openspec_change: openspec/changes/issue-208-desacoplar-visibilidade-site-publico
 tech_stacks: [dotnet, angular]
 repos:
@@ -28,7 +28,7 @@ sub_issues_frontend:
 pr_homologacao: 221
 pr_release: ~
 code_review_homolog_pr: 221
-qa_status: ~
+qa_status: aprovado — ver relatorio-qa.md e ledger etapa 15
 figma_url: ~
 blockers: nenhum
 status_comment_id: ~
@@ -50,6 +50,7 @@ status_comment_id: ~
 | 12 | Líder Técnico (merge #220 + PR homolog) | lider-tecnico | sonnet | 36852 | 13 | 77s | PR #220 squash-mergeado; PR #221 desenv→homolog aberto |
 | 13 | `/code-review` (sessão principal, camada estática) | orquestrador (multi-agente) | sonnet+haiku | 714416 | 97 | 870s | 10 sub-invocações (elegibilidade, CLAUDE.md, resumo, 5 agentes de auditoria, 1 de scoring). Único achado (imprecisão de atribuição causal no design.md) pontuou 0 — abaixo do corte de 80, nenhum comentário postado. |
 | 14 | Code Review (PR #221, homologação) | code-review | sonnet | 120740 | 59 | 591s | **APROVADO.** Build/boot real, 454/454 backend + 140/140 dashboard. Validação E2E real: produto ML antes em Error reprocessado, virou Published, apareceu no site público — tudo sem nenhuma rede social configurada. Merge desenv→homolog via 249439e. |
+| 15 | QA (homolog) | qa | sonnet | 148529 | 94 | 978s | **APROVADO — 100% dos 20 critérios de aceite.** homolog sincronizado (249439e). Rebuild sem cache. 454/454 backend + 140/140 dashboard + 5/5 Playwright (website). Revalidou de ponta a ponta o produto ML real já Published (site público, `destinations` corretos, fila social vazia sem regressão). Não conseguiu disparar uma nova transição ao vivo (Claude API key não configurada no ambiente + política da sessão bloqueou mutação SQL direta) — compensado com revalidação completa do estado persistido + leitura dos testes dedicados (Theory 3 plataformas, não-retroatividade). Relatório: `relatorio-qa.md`. Comentário: https://github.com/DQM-BETA/omuletachou/issues/208#issuecomment-5334665276 |
 
 ## 📝 Notas
 
