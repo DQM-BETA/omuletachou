@@ -1,7 +1,7 @@
 ---
 issue: 182
 titulo: fix: MercadoLivreCollector quebrado — endpoint /sites/MLB/search descontinuado pela API, reconstruir com Highlights API
-etapa_atual: Em Desenvolvimento
+etapa_atual: Code Review
 rota: normal
 ultimo_agente: lider-tecnico
 openspec_change: repos/omuletachou/openspec/changes/issue-182-mercadolivrecollector-quebrado
@@ -26,14 +26,15 @@ desenv_tasks_merged:
   - "#185"
   - "#190"
   - "#192"
+  - "#195"
 sub_issues_frontend:
   "#185": angular
   "#195": angular
-pr_homologacao: 194
-pr_homologacao_anterior: 189
+pr_homologacao: 197
+pr_homologacao_anterior: 194
 pr_release: ~
-code_review_homolog_pr: 194
-qa_status: reprovado (1a rodada) — mapeado como sub-issue #195, ver etapa 24 do histórico
+code_review_homolog_pr: ~
+qa_status: reprovado (1a rodada) — corrigido via sub-issue #195, aguardando nova rodada de Code Review + QA
 figma_url: ~
 blockers: |
   BLOQUEIO CRÍTICO confirmado ao vivo pelo LT em 2026-08-17 (ver design.md secao 10):
@@ -251,8 +252,24 @@ blockers: |
   obrigatorio, branch `feature/ISSUE-195-skipped-panel-visibilidade` base `desenv`. tasks.md
   atualizado com secao Sub-F completa (contexto tecnico: desacoplar a visibilidade do
   mat-expansion-panel de skipped da condicao products.length > 0 do import-card pai). Pronta para
-  Dev Angular. `desenv_tasks_merged` NAO inclui #195 ainda (sub-issue nova, aguardando dev).
-  `etapa_atual` = Em Desenvolvimento.
+  Dev Angular.
+
+  MERGE SUB-F #195 + PR HOMOLOGACAO (LT, 2026-08-18):
+  - PR #196 (feature/ISSUE-195-skipped-panel-visibilidade -> desenv) verificado (124/124 testes
+    reportados pelo Dev, build producao OK, sem CI configurado no repo) e mesclado via squash +
+    delete-branch (commit `cf89cdcea5c2996e52724bbcaa1395a54da493c5`). Sub-issue #195 fechada.
+    `desenv_tasks_merged` = ["#184","#183","#185","#190","#192","#195"] — todas as sub-issues e
+    correcoes (incluindo a do QA 1a rodada) agora em `desenv`.
+  - Novo PR #197 (`desenv->homolog`, merge commit) aberto trazendo essa ultima correcao. Corpo do
+    PR descreve o bug encontrado pelo QA (painel de skipped inacessivel), referencia
+    `relatorio-qa.md` e o comentario do QA na Issue #182
+    (https://github.com/DQM-BETA/omuletachou/issues/182#issuecomment-5328061163).
+  - `pr_homologacao` = 197 (PR #194 preservado em `pr_homologacao_anterior`). `code_review_homolog_pr`
+    resetado (~) ate a nova rodada de Code Review avaliar o PR #197. `etapa_atual` = Code Review.
+  - Riscos herdados ainda pendentes de validacao ao vivo (schema `/highlights`, permalink
+    `/p/{catalog_product_id}`) permanecem documentados acima — recomendacao mantida ao QA de
+    retentar em ambiente com internet real (ex. VM Oracle); se tambem bloqueado, tratar o primeiro
+    ciclo real do `CollectorJob` em producao como gate final de validacao desses dois riscos.
 createdAt: 2026-08-17
 status_comment_id: 5317813321
 ---
@@ -285,18 +302,19 @@ status_comment_id: 5317813321
 | 21 | Líder Técnico (merge Sub-E #192 + PR homologação atualizado) | lider-tecnico | sonnet | 58384 | 11 | 190s | PR #193 (feature/ISSUE-192-scoring-ml-desconto → desenv) verificado (433/436 testes, 3 falhas pré-existentes de `ClaudeBudgetServiceIntegrationTests` por falta de Docker/Testcontainers, confirmadas na baseline `desenv`) e mesclado via squash + delete-branch (commit `d37a16435c266c8e2cf1f03543582b2715c799c1`). Sub-issue #192 fechada. `desenv_tasks_merged` = ["#184","#183","#185","#190","#192"] — todas as sub-issues e correções pré-QA agora em `desenv`. Novo PR #194 (`desenv→homolog`, merge commit) aberto, trazendo os Achados 1 (#190) e 2 (#192) do `/code-review` estático no PR #189, com corpo referenciando o PR #189 original e o comentário de Code Review estático. `pr_homologacao` = 194 (substitui 189, preservado em `pr_homologacao_anterior`), `code_review_homolog_pr` = 194, `etapa_atual` = Code Review. |
 | 22 | Code Review (PR #194, reavaliação homologação) | code-review | sonnet | 126510 | 50 | 1372s | **APROVADO.** Build real (`dotnet build -c Release`) OK. `dotnet test -c Release --no-build` rodado 2x: 433/436 sem Docker (baseline), **436/436 com Docker Desktop disponível** (iniciado manualmente na sessão, incluindo os 3 testes de integração `ClaudeBudgetServiceIntegrationTests` via Testcontainers/Postgres real). Boot real via Docker (`docker compose build --no-cache api` + `up -d db api`, ambos `healthy`, `/health` 200, logs sem erro; containers parados ao final). Achado 1 (#190) validado: `JsonDocument.Parse` dentro de try/catch em `GetJsonAsync`, 3 testes novos cobrindo isolamento de falha inclusive no meio do ciclo. Achado 2 (#192) validado com rigor extra: comparação manual do branch Amazon/Shopee do novo prompt contra `git show 393134d5...:ClaudeAiService.cs` (estado pré-mudança) confirmou texto idêntico palavra por palavra nos raw string literals — não-regressão confirmada além dos testes automatizados. Riscos herdados (schema `/highlights`, permalink `/p/{id}`) retentados com rede real — 403 `PA_UNAUTHORIZED_RESULT_FROM_POLICIES`, mesmo bloqueio já documentado, não é achado novo. Nenhum comentário do `/code-review` estático no PR #194 (verificado, vazio). Evidência completa: https://github.com/DQM-BETA/omuletachou/pull/194#issuecomment-5327837114. PR #194 mesclado `desenv→homolog` via merge commit `cabc2f96387ea547ca2e9a3ab68656df6354cc7b`. `code_review_homolog_pr` = 194, `etapa_atual` = QA. |
 | 23 | QA (1ª rodada, homolog) | qa | sonnet | 161556 | 95 | 1018s | **REPROVADO.** Ambiente `homolog` (commit `cabc2f96...`) real via Docker, 436/436 backend + 120/120 dashboard. Fluxo crítico do link de afiliado validado ponta a ponta na UI real (tela `mercadolivre-links` via Playwright ad-hoc — repo não tem `test:visual`, Gate Visual formal N/A) e confirmado direto no Postgres: `affiliate_link` persistido é distinto de `source_url`, com tag rastreável, pareado corretamente por ordem. Sem regressão Amazon/Shopee; Seção 9 (isenção de desconto ML) funcionando; isolamento de falha por categoria/produto confirmado ao vivo (ciclo real do CollectorJob, degradação graciosa em falha OAuth). **Bug encontrado**: painel de itens "skipped" em `mercadolivre-links.component.html` fica inacessível quando a lista de pendentes esvazia após o import — está aninhado dentro do `<mat-card>` controlado por `*ngIf="!loading && !errorMessage && products.length > 0"`, então some do DOM junto com o card mesmo com `skipped.length > 0` e o snackbar reportando itens pulados. Reproduzido 2x (screenshots `06`,`08`,`09`). Riscos herdados (schema `/highlights`, permalink `/p/{id}`) continuam bloqueados pela mesma política de rede (403 `PA_UNAUTHORIZED_RESULT_FROM_POLICIES`) — nuance nova: `POST /oauth/token` no mesmo host NÃO é bloqueado, sugerindo bloqueio anti-bot em endpoints de leitura específicos do ML, não bloqueio geral de sandbox. Relatório completo: `relatorio-qa.md`. Comentário: https://github.com/DQM-BETA/omuletachou/issues/182#issuecomment-5328061163 |
-| 24 | Líder Técnico (mapeamento falha QA 1ª rodada) | lider-tecnico | sonnet | ~ | ~ | ~ | Mapeou o Achado 1 (bloqueante) do `relatorio-qa.md` (painel de skipped inacessível quando `products.length` chega a 0 após reload) para sub-issue nova `#195` (stack:angular, task_id:Sub-F), TDD obrigatório, branch `feature/ISSUE-195-skipped-panel-visibilidade` base `desenv`. `tasks.md` atualizado com seção Sub-F completa (5 cenários Given/When/Then, contexto técnico apontando `mercadolivre-links.component.html` linhas ~120/~163-166 e o `.ts` correspondente). `sub_issues`/`sub_issues_frontend` atualizados em `estado.md`. `desenv_tasks_merged` não alterado (sub-issue nova, não mesclada ainda). `etapa_atual` = Em Desenvolvimento. Pronta para Dev Angular. |
+| 24 | Líder Técnico (mapeamento falha QA 1ª rodada) | lider-tecnico | sonnet | 96642 | 15 | 319s | Mapeou o Achado 1 (bloqueante) do `relatorio-qa.md` (painel de skipped inacessível quando `products.length` chega a 0 após reload) para sub-issue nova `#195` (stack:angular, task_id:Sub-F), TDD obrigatório, branch `feature/ISSUE-195-skipped-panel-visibilidade` base `desenv`. `tasks.md` atualizado com seção Sub-F completa (5 cenários Given/When/Then, contexto técnico apontando `mercadolivre-links.component.html` linhas ~120/~163-166 e o `.ts` correspondente). `sub_issues`/`sub_issues_frontend` atualizados em `estado.md`. `desenv_tasks_merged` não alterado (sub-issue nova, não mesclada ainda). `etapa_atual` = Em Desenvolvimento. Pronta para Dev Angular. |
+| 25 | Dev Angular (Sub-F #195) | dev-angular | sonnet | 84585 | 25 | 296s | Causa raiz confirmada: painel de skipped preso ao `*ngIf` do card de import. Fix: card agora renderiza com `products.length > 0 || (skipped && skipped.length > 0)`; conteúdo específico de pendentes isolado em `<ng-container *ngIf="products.length > 0">`; painel de skipped mantém `*ngIf="skipped && skipped.length > 0"` independente. TDD: 4 testes novos reproduzindo o bug exato (RED→GREEN confirmado). Suíte 124/124, build produção OK. PR #196 feature→desenv aberto. |
+| 26 | Líder Técnico (merge Sub-F #195 + PR homologação) | lider-tecnico | sonnet | ~ | ~ | ~ | PR #196 (feature/ISSUE-195-skipped-panel-visibilidade → desenv) verificado (124/124 testes reportados pelo Dev, build produção OK, sem CI configurado no repo) e mesclado via squash + delete-branch (commit `cf89cdcea5c2996e52724bbcaa1395a54da493c5`). Sub-issue #195 fechada. `desenv_tasks_merged` = ["#184","#183","#185","#190","#192","#195"] — todas as sub-issues e correções (incluindo a do QA 1ª rodada) agora em `desenv`. Novo PR #197 (`desenv→homolog`, merge commit) aberto trazendo essa última correção pendente; corpo do PR descreve o bug encontrado pelo QA (painel de skipped inacessível), referencia `relatorio-qa.md` e o comentário do QA na Issue #182. `pr_homologacao` = 197 (PR #194 preservado em `pr_homologacao_anterior`), `code_review_homolog_pr` resetado até nova avaliação, `etapa_atual` = Code Review. |
 
 ## Próximo passo
 
-**Sub-issue #195 (Sub-F) criada e pronta para o Dev Angular** — corrige o Achado 1 (bloqueante) do
-QA 1ª rodada (painel de skipped inacessível quando a lista de pendentes esvazia após o import).
-1 bug encontrado, não aciona a trava anti-loop (trava é em ≥3 reprovações seguidas). Fluxo:
-**Dev Angular** (sub-issue #195) → **Líder Técnico** (merge #195→desenv, PR desenv→homolog) →
-novo Code Review → novo QA.
+**PR #197 (`desenv→homolog`) aberto trazendo a correção do bug encontrado pelo QA na 1ª rodada
+(sub-issue #195, painel de skipped inacessível).** Esta era a última correção pendente antes de
+reavaliar o QA. Fluxo: **Code Review** (novo, sobre o PR #197) → **QA** (2ª rodada).
 - As correções dos Achados 1 (#190) e 2 (#192) do `/code-review` estático no PR #189 permanecem
   validadas e em `homolog`.
 - Riscos herdados ainda pendentes de validação ao vivo (schema `/highlights`, permalink
   `/p/{catalog_product_id}`) permanecem documentados em `blockers` — recomendação mantida ao QA de
   retentar em ambiente com internet real (ex. VM Oracle); se também bloqueado, tratar o primeiro
-  ciclo real do `CollectorJob` em produção como gate final de validação desses dois riscos.
+  ciclo real do `CollectorJob` em produção como gate final.
+</content>
