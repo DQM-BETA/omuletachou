@@ -175,3 +175,95 @@ posterior à Fase 2 do PM) — critério de aceite funcional está na especifica
 - **Layout/composição visual da tela**: revisar com UX/UI antes de implementar (a sessão principal
   spawna o UX/UI antes desta sub-issue) — este documento define o contrato funcional/de dados, não
   o desenho visual.
+
+## Sub-D — Fix: isolamento de falha em `GetJsonAsync` (achado do `/code-review` estático, PR #189) — `stack:dotnet`
+
+> Adicionada após o merge do PR #189 (`desenv→homolog`). Achado 1 do comentário
+> https://github.com/DQM-BETA/omuletachou/pull/189#issuecomment-5319794063 — sub-issue #190.
+> **Concluída** — PR #191 mesclado (squash) em `desenv`, commit `83e28241248000dfd859c03d170bf0dc017b732e`.
+
+### Critérios de aceite
+Ver #190 (CA 1-3, Given/When/Then completos no corpo da sub-issue).
+
+### O que fazer
+1. `JsonDocument.Parse(body)` em `GetJsonAsync` (linha ~409) roda fora do `try/catch` que envolve o
+   restante do método — mover para dentro do `try` (ou `try/catch` próprio), capturar `JsonException`
+   e relançar como `MercadoLivreApiException` (mesmo padrão já usado no método para falha de rede e
+   HTTP não-2xx).
+2. TDD obrigatório: teste que reproduz o bug primeiro (corpo malformado com HTTP 200, mock de
+   `HttpMessageHandler`), confirmar falha, corrigir, confirmar sucesso.
+3. Não alterar o contrato público do método.
+
+### Contexto técnico
+- Arquivo: `backend/src/AfiliadoBot.Infrastructure/Integrations/Platforms/MercadoLivreCollector.cs`
+  (`GetJsonAsync`, linhas ~388-410).
+- Testes: `backend/src/AfiliadoBot.Tests/Integrations/MercadoLivreCollectorTests.cs`.
+- Branch: `feature/ISSUE-190-json-parse-try-catch`, base `desenv`.
+
+## Sub-E — `ClaudeAiService`: isentar Mercado Livre do critério de desconto mínimo no scoring — `stack:dotnet`
+
+> Achado 2 do comentário `/code-review` estático no PR #189
+> (https://github.com/DQM-BETA/omuletachou/pull/189#issuecomment-5319794063). Decisão de negócio do
+> Gerente (Opção A, comentário
+> https://github.com/DQM-BETA/omuletachou/issues/182#issuecomment-5319915601), formalizada pelo PM
+> como adendo em `criterios-aceite.md` Seção 9 (cenários 9.1-9.5, commit `92854c3` já em `desenv`).
+> Sub-issue #192 criada.
+
+### Critérios de aceite
+`documentacoes/ISSUE-182-mercadolivrecollector-quebrado/criterios-aceite.md` Seção 9, cenários
+9.1-9.5:
+- **9.1** — o prompt não afirma/sugere "0% de desconto" para produto do Mercado Livre sem dado real
+  de desconto disponível (não enviar `DiscountPct = 0` como valor verificado); o dado é omitido ou
+  explicitamente marcado como indisponível, só para produtos de Mercado Livre.
+- **9.2** — a ausência de desconto real não reprova nem penaliza a nota do produto de Mercado Livre;
+  o produto pode ser aprovado (`Status == Queued`) mesmo sem atender ao critério de desconto mínimo
+  de 15%.
+- **9.3** — os demais 4 critérios (categoria, título/nome descritivo, preço final, prazo de entrega)
+  continuam avaliados e podem reprovar normalmente o produto de Mercado Livre — só o critério de
+  desconto mínimo é isentado para esta plataforma.
+- **9.4 (não-regressão)** — produtos de Amazon e Shopee continuam com o critério "desconto real
+  mínimo de 15%; preços inflados penalizam" aplicado integralmente, comportamento idêntico ao atual,
+  sem nenhuma alteração.
+- **9.5** — a isenção se aplica apenas à ausência do dado (documentar no código/PR que é uma
+  limitação de fonte de dados, não uma regra permanente — issue futura pode reavaliar se o Mercado
+  Livre passar a ter `DiscountPct` real).
+
+### O que fazer
+1. Em `ClaudeAiService.ScoreProductAsync`
+   (`backend/src/AfiliadoBot.Infrastructure/Services/ClaudeAiService.cs`, linhas ~35-86): montar o
+   `systemPrompt` e o `userMessage` condicionalmente ao `product.Platform`
+   (`AfiliadoBot.Domain.Enums.Platform.MercadoLivre`).
+   - Para `Platform.MercadoLivre`: **não** incluir a linha `Desconto real minimo de 15%; precos
+     inflados penalizam` na lista de critérios do `systemPrompt`, e **não** incluir a linha
+     `Desconto: {product.DiscountPct:F0}%` no `userMessage` (omitir o dado, não enviar `0%` como se
+     fosse real). Adicionar instrução explícita para a IA não penalizar ausência de desconto nesta
+     plataforma (ex.: "Para este produto (Mercado Livre) o dado de desconto não está disponível —
+     não penalize a ausência de desconto; avalie apenas os demais critérios").
+   - Para `Platform.Amazon`/`Platform.Shopee`: manter o `systemPrompt`/`userMessage` **exatamente**
+     como estão hoje (nenhuma alteração de comportamento — cenário 9.4).
+   - Não alterar `GenerateCaptionAsync` (linhas ~88-137) — o uso de `DiscountPct` ali é só texto de
+     legenda social, fora do escopo deste achado (critérios de aceite Seção 9 tratam só do scoring).
+   - Não alterar `Product.DiscountPct` (tipo `decimal`, não nullable) nem o `MercadoLivreCollector`
+     — o fallback `DiscountPct = 0` do collector continua existindo no banco (dado estrutural), a
+     mudança é só em como `ScoreProductAsync` monta o prompt a partir desse dado para esta
+     plataforma. Evita migration/mudança de schema fora do escopo deste achado.
+2. TDD obrigatório: escrever primeiro os testes que reproduzem os cenários 9.1-9.4 (RED — mock de
+   `IAnthropicClientWrapper.CompleteAsync`, capturar o `systemPrompt`/`userMessage` efetivamente
+   enviado e asserir que a string de desconto ML não contém `0%`/`DiscountPct` como valor real, e que
+   Amazon/Shopee mantêm a string de critério de desconto inalterada), depois implementar (GREEN).
+   Seguir o padrão de mock já usado em `ClaudeAiServiceTests.cs`.
+3. Não alterar o contrato público de `IAiService.ScoreProductAsync` (assinatura, `ProductScore`
+   retornado).
+
+### Contexto técnico
+- Arquivo: `backend/src/AfiliadoBot.Infrastructure/Services/ClaudeAiService.cs` (`ScoreProductAsync`,
+  linhas ~35-86; constrói `systemPrompt`/`userMessage` por chamada, dentro do loop de retry).
+- Enum: `backend/src/AfiliadoBot.Domain/Enums/Platform.cs` (`Amazon`, `MercadoLivre`, `Shopee`).
+- Entidade (não alterar): `backend/src/AfiliadoBot.Domain/Entities/Product.cs` (`DiscountPct`,
+  `decimal`, não nullable, linha 15).
+- Testes: `backend/src/AfiliadoBot.Tests/Services/ClaudeAiServiceTests.cs` (seguir os mocks/padrões
+  já usados no arquivo para `IAnthropicClientWrapper`).
+- Critérios de aceite completos: `documentacoes/ISSUE-182-mercadolivrecollector-quebrado/criterios-aceite.md`
+  Seção 9 (cenários 9.1-9.5).
+- Repo: `repos/omuletachou`. Stack: ASP.NET Core 8 / xUnit + Moq + FluentAssertions.
+- Branch: `feature/ISSUE-192-scoring-ml-desconto`, base `desenv`.

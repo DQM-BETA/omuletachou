@@ -34,17 +34,42 @@ public class ClaudeAiService : IAiService
 
     public async Task<ProductScore> ScoreProductAsync(Product product, CancellationToken ct = default)
     {
-        const string systemPrompt = """
-            Voce e um avaliador de produtos afiliados. Avalie o produto com base nos seguintes criterios:
-            - Desconto real minimo de 15%; precos inflados penalizam
-            - Categorias preferidas: eletronicos, casa/cozinha, beleza, brinquedos, moda
-            - Titulo sem nome descritivo (so codigo de modelo) penaliza
-            - Preco final acima de R$ 2.000 penaliza
-            - Prazo de entrega longo penaliza
+        // Achado 2 do /code-review estatico no PR #189 (decisao do Gerente — Opcao A,
+        // criterios-aceite.md Secao 9): a Highlights API do Mercado Livre nao expoe preco
+        // original/desconto, e o MercadoLivreCollector seta DiscountPct = 0 como fallback
+        // estrutural (nao um valor real). Enviar esse "0%" ao prompt como se fosse um dado
+        // verificado reprovaria sistematicamente produtos de Mercado Livre por um dado que nao
+        // existe. Por isso, apenas para Platform.MercadoLivre: omite a linha de desconto do
+        // prompt e instrui a IA a nao penalizar a ausencia do dado. Amazon/Shopee mantem o
+        // criterio de desconto minimo de 15% integralmente (cenario 9.4 — sem regressao).
+        // Cenario 9.5: se uma fonte futura passar a fornecer DiscountPct real para o Mercado
+        // Livre, esta isencao (e nao o criterio em si) deve ser reavaliada em issue futura.
+        bool isMercadoLivre = product.Platform == Platform.MercadoLivre;
 
-            Responda APENAS com JSON no formato: {"score": <0-10>, "reason": "<texto curto>"}
-            Nao inclua nenhum texto adicional antes ou depois do JSON.
-            """;
+        string systemPrompt = isMercadoLivre
+            ? """
+                Voce e um avaliador de produtos afiliados. Avalie o produto com base nos seguintes criterios:
+                - Categorias preferidas: eletronicos, casa/cozinha, beleza, brinquedos, moda
+                - Titulo sem nome descritivo (so codigo de modelo) penaliza
+                - Preco final acima de R$ 2.000 penaliza
+                - Prazo de entrega longo penaliza
+
+                Para este produto (Mercado Livre) o dado de desconto nao esta disponivel — nao penalize a ausencia de desconto; avalie apenas os demais criterios.
+
+                Responda APENAS com JSON no formato: {"score": <0-10>, "reason": "<texto curto>"}
+                Nao inclua nenhum texto adicional antes ou depois do JSON.
+                """
+            : """
+                Voce e um avaliador de produtos afiliados. Avalie o produto com base nos seguintes criterios:
+                - Desconto real minimo de 15%; precos inflados penalizam
+                - Categorias preferidas: eletronicos, casa/cozinha, beleza, brinquedos, moda
+                - Titulo sem nome descritivo (so codigo de modelo) penaliza
+                - Preco final acima de R$ 2.000 penaliza
+                - Prazo de entrega longo penaliza
+
+                Responda APENAS com JSON no formato: {"score": <0-10>, "reason": "<texto curto>"}
+                Nao inclua nenhum texto adicional antes ou depois do JSON.
+                """;
 
         Exception? lastException = null;
         int[] delays = { 1000, 2000, 4000 };
@@ -56,15 +81,24 @@ public class ClaudeAiService : IAiService
                 if (attempt > 0)
                     await Task.Delay(delays[attempt - 1], ct);
 
-                var userMessage = $"""
-                    Produto para avaliar:
-                    Titulo: {product.Title}
-                    Preco de venda: R$ {product.SalePrice:F2}
-                    Preco original: R$ {product.OriginalPrice:F2}
-                    Desconto: {product.DiscountPct:F0}%
-                    Categoria: {product.Category}
-                    Plataforma: {product.Platform}
-                    """;
+                var userMessage = isMercadoLivre
+                    ? $"""
+                        Produto para avaliar:
+                        Titulo: {product.Title}
+                        Preco de venda: R$ {product.SalePrice:F2}
+                        Preco original: R$ {product.OriginalPrice:F2}
+                        Categoria: {product.Category}
+                        Plataforma: {product.Platform}
+                        """
+                    : $"""
+                        Produto para avaliar:
+                        Titulo: {product.Title}
+                        Preco de venda: R$ {product.SalePrice:F2}
+                        Preco original: R$ {product.OriginalPrice:F2}
+                        Desconto: {product.DiscountPct:F0}%
+                        Categoria: {product.Category}
+                        Plataforma: {product.Platform}
+                        """;
 
                 var response = await _client.CompleteAsync(systemPrompt, userMessage, ct);
                 var (score, reason) = ParseScoreResponse(response.Text);

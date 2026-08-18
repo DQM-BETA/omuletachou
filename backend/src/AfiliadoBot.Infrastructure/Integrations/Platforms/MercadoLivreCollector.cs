@@ -382,8 +382,10 @@ public class MercadoLivreCollector : IPlatformCollector
 
     /// <summary>
     /// Chamada HTTP GET autenticada que devolve o corpo parseado como JSON. Falha de
-    /// rede/cancelamento ou resposta HTTP nao-2xx viram <see cref="MercadoLivreApiException"/>,
-    /// para o chamador decidir o isolamento de falha (por categoria ou por produto).
+    /// rede/cancelamento, resposta HTTP nao-2xx ou corpo 200 com JSON malformado viram
+    /// <see cref="MercadoLivreApiException"/> (Issue #190 — <see cref="JsonException"/> do parse
+    /// tambem precisa cair no mesmo tipo, senao escapa do try/catch dos chamadores e quebra o
+    /// isolamento de falha por categoria/produto), para o chamador decidir o isolamento de falha.
     /// </summary>
     private async Task<JsonDocument> GetJsonAsync(string url, string accessToken, CancellationToken ct)
     {
@@ -406,7 +408,15 @@ public class MercadoLivreCollector : IPlatformCollector
         }
 
         var body = await response.Content.ReadAsStringAsync(ct);
-        return JsonDocument.Parse(body);
+
+        try
+        {
+            return JsonDocument.Parse(body);
+        }
+        catch (JsonException ex)
+        {
+            throw new MercadoLivreApiException($"Corpo JSON malformado em {url}.", ex);
+        }
     }
 
     /// <summary>
