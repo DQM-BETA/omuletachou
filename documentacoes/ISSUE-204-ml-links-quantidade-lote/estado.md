@@ -50,4 +50,4 @@ status_comment_id: ~
 | 2 | Merge PR205 + PR206 | lider-tecnico | sonnet | 33339 | 14 | 72s |
 | 3 | Code Review (PR #206, homologação) | code-review | sonnet | 98546 | 62 | 520s | Aprovado, ver Notas para evidência completa |
 | 4 | QA (homolog) | qa | sonnet | 86286 | 40 | 502s | **APROVADO.** homolog sincronizado (fast-forward, commit `c95a0ce...`). 129/129 testes, cobertura ≥80% em todas as métricas. Validação real com N=3 (valor arbitrário, provando ausência de hardcode) via import real, confirmado no Postgres: pareamento correto, produto fora do lote intocado. Pendentes 109→106 (efeito colateral esperado da validação ao vivo, mesma prática do CR). E2E N/A (sem Playwright no dashboard). Achado informativo não-bloqueante já registrado pelo CR (MaxPageSize=100). Relatório: `relatorio-qa.md`. Comentário: https://github.com/DQM-BETA/omuletachou/issues/204#issuecomment-5331958841
-| 5 | PR release (homolog→main) | lider-tecnico | sonnet | pendente | pendente | pendente |
+| 5 | PR release (homolog→main) | lider-tecnico | sonnet | 41392 | 10 | 81s |
