@@ -97,14 +97,14 @@
 **Cenário 7.3 — Achado de defeito na geração do link é tratado como problema separado**
 - Given a validação end-to-end revela que `EnsureAffiliateLinkAsync`/`affiliate-tools/links` não está de fato gerando um link com tag de afiliado válida
 - When esse achado ocorre durante o desenvolvimento ou QA desta issue
-- Then o achado é documentado e reportado (ex. `.claude/melhorias/` ou nova Issue), sem que a correção desse componente (fora do escopo original desta issue, que é a coleta) seja feita silenciamente dentro desta issue sem sinalização
+- Then o achado é documentado e reportado (ex. `.claude/melhorias/` ou nova Issue), sem que a correção desse componente (fora do escopo original desta issue, que é a coleta) seja feita silenciosamente dentro desta issue sem sinalização
 
 ## 8. Sem regressão no restante do pipeline
 
-**Cenário 8.1 — Scoring inalterado**
-- Given um produto de Mercado Livre coletado pelo novo fluxo
+**Cenário 8.1 — Scoring inalterado (demais plataformas)**
+- Given um produto de Amazon ou Shopee coletado normalmente
 - When `ScoreProductAsync` processa o produto
-- Then o comportamento de scoring é idêntico ao aplicado a produtos de Amazon/Shopee, sem lógica especial introduzida para Mercado Livre
+- Then o comportamento de scoring é idêntico ao já existente, sem nenhuma alteração introduzida por esta issue para essas plataformas
 
 **Cenário 8.2 — Categorização (Issue #167) inalterada**
 - Given um produto de Mercado Livre coletado pelo novo fluxo
@@ -120,3 +120,34 @@
 - Given o deploy da correção do `MercadoLivreCollector`
 - When um ciclo completo do `CollectorJob` roda para as 3 plataformas
 - Then `AmazonCollector` e `ShopeeCollector` continuam funcionando exatamente como antes desta issue, sem nenhuma alteração de comportamento ou regressão
+
+## 9. Adendo (2026-08-17) — Isenção do Mercado Livre do critério de desconto mínimo no scoring de IA
+
+**Origem:** achado do `/code-review` estático no PR #189 (Achado 2) — a Highlights API (única fonte disponível para o Mercado Livre desde a Issue #182/Gate 1.5) não expõe preço original/desconto em nenhum dos endpoints usados (`/products/{id}`, `/products/{id}/items`). O `MercadoLivreCollector` seta `DiscountPct = 0` como fallback, o que colide com o critério fixo de `ClaudeAiService.ScoreProductAsync` ("Desconto real mínimo de 15%; preços inflados penalizam") e reprova sistematicamente quase todo produto do Mercado Livre. Decisão do Gerente (comentário [#issuecomment-5319915601](https://github.com/DQM-BETA/omuletachou/issues/182#issuecomment-5319915601)): **Opção A** — isentar o Mercado Livre do critério de desconto mínimo no scoring de IA.
+
+**Cenário 9.1 — Produto do Mercado Livre não é penalizado pela ausência de dado de desconto**
+- Given um produto do Mercado Livre coletado pelo novo fluxo, cujo `DiscountPct` real não está disponível na fonte de dados (Highlights API)
+- When `ScoreProductAsync` monta o prompt de avaliação para esse produto
+- Then o prompt não afirma nem sugere que o produto tem "0% de desconto" (não deve enviar `DiscountPct = 0` como se fosse um valor real/verificado) — o dado de desconto é omitido ou explicitamente marcado como indisponível apenas para produtos de Mercado Livre
+
+**Cenário 9.2 — Critério de desconto mínimo não é aplicado a produtos do Mercado Livre**
+- Given um produto do Mercado Livre sem dado de desconto real disponível
+- When a IA avalia o produto contra os critérios de scoring
+- Then a ausência de desconto (ou desconto não informado) não é motivo de reprovação nem de penalização de nota para esse produto — o produto pode ser aprovado (`Status == Queued`) mesmo sem atender ao critério de desconto mínimo de 15%
+
+**Cenário 9.3 — Demais 4 critérios continuam aplicados normalmente ao Mercado Livre**
+- Given um produto do Mercado Livre em avaliação de scoring
+- When `ScoreProductAsync` roda
+- Then os critérios de categoria, título/nome descritivo, preço final e prazo de entrega continuam sendo avaliados e podem reprovar o produto normalmente — apenas o critério de desconto mínimo é isentado para esta plataforma
+
+**Cenário 9.4 — Amazon e Shopee continuam exigindo o desconto mínimo de 15% (sem regressão)**
+- Given um produto de Amazon ou Shopee em avaliação de scoring, com dado de desconto real disponível
+- When `ScoreProductAsync` roda
+- Then o critério "desconto real mínimo de 15%; preços inflados penalizam" continua sendo aplicado integralmente, exatamente como antes desta mudança — nenhuma alteração de comportamento para essas duas plataformas
+
+**Cenário 9.5 — Se o Mercado Livre passar a ter dado de desconto real no futuro**
+- Given uma fonte de dados futura (fora do escopo desta issue) passe a fornecer `DiscountPct` real para produtos do Mercado Livre
+- When esse dado estiver disponível e confiável
+- Then a isenção desta issue se aplica apenas à ausência do dado — não impede que uma issue futura reavalie a aplicação do critério de desconto mínimo ao Mercado Livre quando (e se) o dado real existir
+
+**Definição de pronto do adendo:** `ClaudeAiService.ScoreProductAsync`/montagem do prompt tratam a ausência de desconto real do Mercado Livre sem enviar um falso `0%`; os 4 demais critérios permanecem inalterados para todas as plataformas; Amazon/Shopee mantêm o critério de desconto mínimo sem nenhuma mudança de comportamento (cenário 9.4 validado como não-regressão).
