@@ -575,6 +575,50 @@ public class MercadoLivreCollectorTests
     }
 
     [Fact]
+    public async Task CollectAsync_TruncaSlug_QuandoTituloGeraSlugMaiorQue300Caracteres()
+    {
+        // Issue #199: titulo real do Mercado Livre (confirmado ao vivo) longo o suficiente para
+        // gerar um slug > 300 caracteres (coluna "slug" e varchar(300), ProductConfiguration).
+        // Antes do fix, isso fazia o InMemory/EF aceitar o valor mas o Postgres real rejeitar o
+        // INSERT — e como SaveChangesAsync roda uma unica vez ao final do loop duplo de categorias
+        // em CollectAsync, a falha derrubava o ciclo inteiro (nenhum produto salvo, nem os que ja
+        // tinham slug valido). O slug final deve caber em 300 caracteres preservando o sufixo do
+        // externalId intacto (necessario para unicidade).
+        const string tituloLongo =
+            "Kit Robo Aspirador De Po Inteligente Wifi Mapeamento A Laser Passa Pano Esfrega " +
+            "Chao Base De Autolimpeza Autoesvaziamento Compativel Com Alexa Google Assistente " +
+            "App Controle Remoto Bivolt 110v 220v Original Com Garantia Estendida De 12 Meses " +
+            "Frete Gratis Para Todo Brasil Novo Lacrado Envio Rapido Promocao Imperdivel Compre Ja";
+
+        tituloLongo.Length.Should().BeGreaterThan(300); // precondicao do cenario reproduzido
+
+        using var db = CreateInMemoryContext();
+        await SeedCredentialsAsync(db);
+        await SeedTokenAsync(db, "token-valido", DateTime.UtcNow.AddHours(1));
+        var aiMock = CreateAiServiceMock();
+
+        var httpClient = CreateMercadoLivreClient(
+            ($"/highlights/MLB/category/{EletrodomesticosCategoryId}",
+                JsonResponse(HttpStatusCode.OK, HighlightsWithOneProduct("MLB88888888"))),
+            ("/products/MLB88888888/items",
+                JsonResponse(HttpStatusCode.OK, ItemsResponse(899.90m))),
+            ("/products/MLB88888888",
+                JsonResponse(HttpStatusCode.OK, ProductResponse(
+                    "MLB88888888", tituloLongo, "https://http2.mlstatic.com/robo-aspirador.jpg"))));
+
+        var collector = new MercadoLivreCollector(httpClient, db, aiMock.Object, NullLogger<MercadoLivreCollector>.Instance);
+
+        var result = (await collector.CollectAsync()).ToList();
+
+        result.Should().ContainSingle();
+        result[0].Slug.Length.Should().BeLessOrEqualTo(300);
+        result[0].Slug.Should().EndWith("-mlb88888888"); // sufixo do externalId preservado intacto
+
+        var saved = await db.Products.SingleAsync(p => p.ExternalId == "MLB88888888");
+        saved.Slug.Length.Should().BeLessOrEqualTo(300);
+    }
+
+    [Fact]
     public async Task CollectAsync_UpsertUnico_QuandoMesmoProdutoAparecEmDuasCategoriasNoMesmoCiclo()
     {
         // O mesmo catalog_product_id pode aparecer nos Highlights de mais de uma categoria interna
