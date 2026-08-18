@@ -1,9 +1,9 @@
 ---
 issue: 182
 titulo: fix: MercadoLivreCollector quebrado — endpoint /sites/MLB/search descontinuado pela API, reconstruir com Highlights API
-etapa_atual: Code Review
+etapa_atual: QA
 rota: normal
-ultimo_agente: lider-tecnico
+ultimo_agente: code-review
 openspec_change: repos/omuletachou/openspec/changes/issue-182-mercadolivrecollector-quebrado
 tech_stacks:
   - dotnet
@@ -199,6 +199,46 @@ blockers: |
   `pr_homologacao` = 194 (PR #189 preservado em `pr_homologacao_anterior` para historico — ja
   estava mesclado, nao precisa ser refeito). QA segue pausado ate o Code Review reavaliar o PR
   #194.
+
+  RESOLUCAO CODE REVIEW — PR #194 APROVADO e mesclado (2026-08-18, desenv->homolog, merge commit
+  cabc2f96387ea547ca2e9a3ab68656df6354cc7b):
+  - Build real (`dotnet build -c Release`) OK. `dotnet test -c Release --no-build` rodado 2x:
+    433/436 sem Docker (3 falhas de Testcontainers, igual ao relatado pelo Dev/LT) e **436/436
+    com Docker Desktop disponivel** (precisou ser iniciado manualmente no host, estava parado no
+    inicio da sessao), confirmando ao vivo os 3 testes de integracao
+    `ClaudeBudgetServiceIntegrationTests` contra Postgres real via Testcontainers.
+  - Boot real via Docker: `docker compose build --no-cache api` + `docker compose up -d db api`
+    -> ambos `healthy` -> `GET /health` 200 -> logs confirmam migrations aplicadas e Hangfire
+    iniciado sem erros. Containers parados ao final da verificacao (`docker compose stop`).
+  - Achado 1 (#190) validado: `JsonDocument.Parse` dentro de try/catch proprio em `GetJsonAsync`,
+    convertendo `JsonException` -> `MercadoLivreApiException` (mesmo tipo capturado pelos
+    chamadores). 3 testes novos exercitam `CollectAsync` completo (HttpMessageHandler mockado +
+    DbContext in-memory), incluindo o cenario de JSON malformado no MEIO do ciclo confirmando que
+    `SaveChangesAsync` (unico, ao final) preserva os produtos validos.
+  - Achado 2 (#192) validado com rigor extra pedido pela sessao principal: comparei o branch
+    `else` (Amazon/Shopee) do novo `ScoreProductAsync` contra
+    `git show 393134d5f869ec1b16769cfd32a26cb155025bea:.../ClaudeAiService.cs` (estado do PR #189
+    ANTES desta mudanca) — texto de conteudo dos raw string literals (`systemPrompt` e
+    `userMessage`) identico palavra por palavra; diferenca de indentacao visual no source nao
+    afeta o conteudo stripado pelo C# (determinado pela coluna do delimitador de fechamento
+    `"""`). Prompt do Mercado Livre confirmado omitindo a linha de desconto + instrucao explicita
+    de nao penalizar ausencia do dado (cenarios 9.1-9.3). Cenario 9.4 (nao-regressao Amazon/
+    Shopee) confirmado por teste `[Theory]` dedicado, alem da comparacao manual acima.
+  - Riscos herdados (schema `/highlights`, permalink `/p/{catalog_product_id}`) RETENTADOS mais
+    uma vez com acesso de rede real deste ambiente: `curl api.mercadolibre.com/sites/MLB/categories`
+    (direto e de dentro do container `afiliado_api`) e `curl mercadolivre.com.br/p/MLB16855791`
+    -> AMBOS 403 `PA_UNAUTHORIZED_RESULT_FROM_POLICIES`. Mesmo bloqueio de politica de rede ja
+    documentado pelo Dev/LT/CR anteriores (nao e resposta do Mercado Livre, nao e achado novo).
+    Continua nao confirmado ao vivo por nenhum agente. Recomendacao mantida ao QA: retentar em
+    ambiente com internet real (ex. VM Oracle) e, se tambem bloqueado, tratar o primeiro ciclo
+    real do `CollectorJob` em producao como gate final.
+  - Nenhum comentario do `/code-review` estatico foi postado no PR #194 (verificado via
+    `gh api repos/DQM-BETA/omuletachou/issues/194/comments` — vazio); nao houve achado adicional a
+    incorporar.
+  - Evidencia completa postada como comentario no PR:
+    https://github.com/DQM-BETA/omuletachou/pull/194#issuecomment-5327837114
+  - PR #194 mesclado `desenv->homolog` via merge commit `cabc2f96387ea547ca2e9a3ab68656df6354cc7b`.
+    `code_review_homolog_pr` = 194, `etapa_atual` = QA.
 createdAt: 2026-08-17
 status_comment_id: 5317813321
 ---
@@ -228,18 +268,17 @@ status_comment_id: 5317813321
 | 18 | PM (Fase 2 — revisão de requisitos, Achado 2) | pm-analista-negocios | sonnet | ~ | ~ | ~ | **Agente falhou por limite de gasto mensal antes de devolver o HANDOFF final** (trabalho já feito recuperado do working tree e commitado pela sessão principal, sem custo real registrado). Gerente decidiu Opção A (isentar Mercado Livre do critério de desconto mínimo no scoring de IA, comentário https://github.com/DQM-BETA/omuletachou/issues/182#issuecomment-5319915601). Formalizado como adendo Seção 9 (cenários 9.1-9.5) em `criterios-aceite.md`: prompt de `ClaudeAiService.ScoreProductAsync` não deve enviar `DiscountPct=0` como sinal real para ML (omitir quando indisponível), ausência de desconto não reprova/penaliza, demais 4 critérios inalterados, Amazon/Shopee sem regressão (cenário 9.4). Resumo postado como comentário na Issue #182. Sem ambiguidade arquitetural (mudança pontual, já compreendida em `ClaudeAiService.cs`) — encaminhado direto ao LT, sem Arquiteto. |
 | 19 | Líder Técnico (merge Sub-D #190 + mapeamento Sub-E/#192) | lider-tecnico | sonnet | 108435 | 31 | 391s | **Tarefa 1**: PR #191 (feature/ISSUE-190-json-parse-try-catch → desenv) mesclado via squash (commit `83e28241248000dfd859c03d170bf0dc017b732e`, 430/430 testes reportados pelo Dev). Sub-issue #190 fechada. `desenv_tasks_merged` = ["#184","#183","#185","#190"]. **Tarefa 2**: sub-issue #192 criada (stack:dotnet, task_id:Sub-E) mapeando o Achado 2 (já decidido pelo Gerente, Opção A, formalizado pelo PM na Seção 9 de `criterios-aceite.md`, commit `92854c3`) — isentar Mercado Livre do critério de desconto mínimo em `ClaudeAiService.ScoreProductAsync`, TDD obrigatório, branch `feature/ISSUE-192-scoring-ml-desconto` base `desenv`. `tasks.md` atualizado com seção Sub-E completa (contexto técnico, CA 9.1-9.5). Sub-issue pronta para Dev, não spawnado (decisão da sessão principal). |
 | 20 | Dev .NET (Sub-E #192) | dev-dotnet | sonnet | 76552 | 26 | 308s | `ClaudeAiService.ScoreProductAsync` ajustado — prompt condicional por `product.Platform`: Mercado Livre omite a linha de desconto mínimo (systemPrompt) e `Desconto: X%` (userMessage), com instrução explícita para não penalizar ausência de dado; Amazon/Shopee mantidos byte-a-byte idênticos (não-regressão, cenário 9.4). TDD: 5 testes novos (cenários 9.1-9.4, incluindo `[Theory]` de não-regressão p/ Amazon/Shopee), RED→GREEN confirmado. Suíte 433/436 (3 falhas pré-existentes de integração com Testcontainers/Docker, confirmadas também na baseline `desenv` sem a mudança). PR #193 feature→desenv aberto. |
-| 21 | Líder Técnico (merge Sub-E #192 + PR homologação atualizado) | lider-tecnico | sonnet | ~ | ~ | ~ | PR #193 (feature/ISSUE-192-scoring-ml-desconto → desenv) verificado (433/436 testes, 3 falhas pré-existentes de `ClaudeBudgetServiceIntegrationTests` por falta de Docker/Testcontainers, confirmadas na baseline `desenv`) e mesclado via squash + delete-branch (commit `d37a16435c266c8e2cf1f03543582b2715c799c1`). Sub-issue #192 fechada. `desenv_tasks_merged` = ["#184","#183","#185","#190","#192"] — todas as sub-issues e correções pré-QA agora em `desenv`. Novo PR #194 (`desenv→homolog`, merge commit) aberto, trazendo os Achados 1 (#190) e 2 (#192) do `/code-review` estático no PR #189, com corpo referenciando o PR #189 original e o comentário de Code Review estático. `pr_homologacao` = 194 (substitui 189, preservado em `pr_homologacao_anterior`), `code_review_homolog_pr` = 194, `etapa_atual` = Code Review. |
+| 21 | Líder Técnico (merge Sub-E #192 + PR homologação atualizado) | lider-tecnico | sonnet | 58384 | 11 | 190s | PR #193 (feature/ISSUE-192-scoring-ml-desconto → desenv) verificado (433/436 testes, 3 falhas pré-existentes de `ClaudeBudgetServiceIntegrationTests` por falta de Docker/Testcontainers, confirmadas na baseline `desenv`) e mesclado via squash + delete-branch (commit `d37a16435c266c8e2cf1f03543582b2715c799c1`). Sub-issue #192 fechada. `desenv_tasks_merged` = ["#184","#183","#185","#190","#192"] — todas as sub-issues e correções pré-QA agora em `desenv`. Novo PR #194 (`desenv→homolog`, merge commit) aberto, trazendo os Achados 1 (#190) e 2 (#192) do `/code-review` estático no PR #189, com corpo referenciando o PR #189 original e o comentário de Code Review estático. `pr_homologacao` = 194 (substitui 189, preservado em `pr_homologacao_anterior`), `code_review_homolog_pr` = 194, `etapa_atual` = Code Review. |
+| 22 | Code Review (PR #194, reavaliação homologação) | code-review | sonnet | ~ | ~ | ~ | **APROVADO.** Build real (`dotnet build -c Release`) OK. `dotnet test -c Release --no-build` rodado 2x: 433/436 sem Docker (baseline), **436/436 com Docker Desktop disponível** (iniciado manualmente na sessão, incluindo os 3 testes de integração `ClaudeBudgetServiceIntegrationTests` via Testcontainers/Postgres real). Boot real via Docker (`docker compose build --no-cache api` + `up -d db api`, ambos `healthy`, `/health` 200, logs sem erro; containers parados ao final). Achado 1 (#190) validado: `JsonDocument.Parse` dentro de try/catch em `GetJsonAsync`, 3 testes novos cobrindo isolamento de falha inclusive no meio do ciclo. Achado 2 (#192) validado com rigor extra: comparação manual do branch Amazon/Shopee do novo prompt contra `git show 393134d5...:ClaudeAiService.cs` (estado pré-mudança) confirmou texto idêntico palavra por palavra nos raw string literals — não-regressão confirmada além dos testes automatizados. Riscos herdados (schema `/highlights`, permalink `/p/{id}`) retentados com rede real — 403 `PA_UNAUTHORIZED_RESULT_FROM_POLICIES`, mesmo bloqueio já documentado, não é achado novo. Nenhum comentário do `/code-review` estático no PR #194 (verificado, vazio). Evidência completa: https://github.com/DQM-BETA/omuletachou/pull/194#issuecomment-5327837114. PR #194 mesclado `desenv→homolog` via merge commit `cabc2f96387ea547ca2e9a3ab68656df6354cc7b`. `code_review_homolog_pr` = 194, `etapa_atual` = QA. |
 
 ## Próximo passo
 
-PR #194 (`desenv→homolog`) aberto e pronto para reavaliação do **Code Review**:
-- Os dois achados do `/code-review` estático no PR #189 (JsonException fora do try/catch em
-  `GetJsonAsync`, e `DiscountPct=0` fixo colidindo com o critério de scoring de IA para ML) foram
-  corrigidos (#190 e #192) e mesclados em `desenv`.
-- Após a reavaliação do Code Review (`/code-review` estático + agente Code Review completo,
-  incluindo build/boot/testes real), se aprovado, o merge `desenv→homolog` libera o **QA**, que
-  segue pausado desde a correção pré-QA.
+PR #194 (`desenv→homolog`) reavaliado e **aprovado** pelo Code Review — mesclado via merge commit
+`cabc2f96387ea547ca2e9a3ab68656df6354cc7b`. Próximo passo: **QA**.
+- As correções dos Achados 1 (#190) e 2 (#192) do `/code-review` estático no PR #189 foram
+  validadas (build/boot/testes reais + comparação byte-a-byte do prompt Amazon/Shopee) e estão em
+  `homolog`.
 - Riscos herdados ainda pendentes de validação ao vivo (schema `/highlights`, permalink
-  `/p/{catalog_product_id}`) permanecem documentados em `blockers` — recomendação ao QA de
-  retentar em ambiente com internet real.
-</content>
+  `/p/{catalog_product_id}`) permanecem documentados em `blockers` — recomendação mantida ao QA de
+  retentar em ambiente com internet real (ex. VM Oracle); se também bloqueado, tratar o primeiro
+  ciclo real do `CollectorJob` em produção como gate final de validação desses dois riscos.
