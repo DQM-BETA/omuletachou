@@ -1,8 +1,8 @@
 ---
 issue: 210
 titulo: fix: tooltip de motivo do erro aparece ao passar o mouse no AI Score, não no Status
-etapa_atual: Code Review
-ultimo_agente: lt
+etapa_atual: QA
+ultimo_agente: code-review
 openspec_change: ~
 tech_stacks:
   - angular
@@ -16,7 +16,7 @@ desenv_tasks_merged: []
 sub_issues_frontend: {}
 pr_homologacao: 213
 pr_release: ~
-code_review_homolog_pr: ~
+code_review_homolog_pr: 213
 qa_status: ~
 figma_url: ~
 blockers: nenhum
@@ -39,7 +39,14 @@ Componente da tela de produtos no dashboard (provavelmente `dashboard/src/app/pa
 PR #211 (`feature/ISSUE-210-fix-tooltip-erro` → `desenv`) mesclado via squash em 2026-08-18 (commit `d82825a`). Testes reportados pelo Dev: 131/131.
 
 ## PR de homologação
-PR #213 (`desenv` → `homolog`) aberto em 2026-08-18. Aguardando Code Review + QA + Gate 2.
+PR #213 (`desenv` → `homolog`) aberto em 2026-08-18.
+
+## Code Review (2026-08-18): APROVADO
+PR #213 mesclado `desenv→homolog` via merge commit `adfcfea5ae7202f20553782968218d37d4d10cfd`. Evidência completa no comentário do PR (https://github.com/DQM-BETA/omuletachou/pull/213#issuecomment-5332589071). Resumo específico da Issue #210:
+- Produtos reais com `status=Error` e `ai_reason` preenchido confirmados via `GET /api/products?status=Error` contra o Postgres real (ex.: `920cc7b3-...`, "Nenhuma rede social habilitada com credenciais validas para publicar este produto.").
+- **Validação em browser real (Chromium via Playwright)**, logado com usuário seed, contra a app servida pelo container Docker (build `--no-cache`): hover no `[data-testid="status-badge"]` de um produto `Error` real → tooltip visível com o texto exato de `ai_reason`. Hover no `[data-testid="ai-score-badge"]` do mesmo produto → tooltip **não** aparece (`matTooltipDisabled` ativo quando `status==='Error'`). Screenshots capturados.
+- Suíte Karma completa (compartilhada com Issue #209): 134/134 verdes, incluindo os 2 specs dedicados (`CA-B6`/`CA-B7`) que cobrem exatamente a troca de tooltip entre badges.
+- `etapa_atual` → QA. Apto a seguir.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Ferramentas | Tempo (s) |

@@ -1,8 +1,8 @@
 ---
 issue: 209
 titulo: fix: cabeçalho/logo do dashboard não está renderizando corretamente
-etapa_atual: Code Review
-ultimo_agente: lt
+etapa_atual: QA
+ultimo_agente: code-review
 openspec_change: ~
 tech_stacks:
   - angular
@@ -16,7 +16,7 @@ desenv_tasks_merged: []
 sub_issues_frontend: {}
 pr_homologacao: 213
 pr_release: ~
-code_review_homolog_pr: ~
+code_review_homolog_pr: 213
 qa_status: ~
 figma_url: ~
 blockers: nenhum
@@ -45,9 +45,16 @@ Em viewport padrão (desktop, ~1280x800) o bug não é visualmente perceptível.
 PR #212 (`feature/ISSUE-209-fix-cabecalho-dashboard` → `desenv`) mesclado via squash em 2026-08-18 (commit `08ce80f`). Testes reportados pelo Dev: 132/132.
 
 ## PR de homologação
-PR #213 (`desenv` → `homolog`) — compartilhado com a Issue #210 (mesmo par de branches `desenv`→`homolog`, não é possível abrir dois PRs para o mesmo head/base; o corpo do PR foi atualizado para cobrir ambas as issues). Aguardando Code Review + QA + Gate 2.
+PR #213 (`desenv` → `homolog`) — compartilhado com a Issue #210 (mesmo par de branches `desenv`→`homolog`, não é possível abrir dois PRs para o mesmo head/base; o corpo do PR foi atualizado para cobrir ambas as issues).
 
 **Nota para o QA:** o bug só é reproduzível de forma determinística em viewport muito baixo (ex. altura 350px) + sidenav rolado — não aparece em viewport desktop padrão. Detalhes no corpo do PR #213.
+
+## Code Review (2026-08-18): APROVADO
+PR #213 mesclado `desenv→homolog` via merge commit `adfcfea5ae7202f20553782968218d37d4d10cfd`. Evidência completa no comentário do PR (https://github.com/DQM-BETA/omuletachou/pull/213#issuecomment-5332589071). Resumo específico da Issue #209:
+- `docker compose build --no-cache api dashboard` + boot real (`db`/`api` healthy, `dashboard` up); confirmado que o bundle servido contém `shell-toolbar-logo` (código novo, não stale).
+- **Validação em browser real (Chromium via Playwright)** logado com usuário seed, contra a app servida pelo container: viewport 1280×350 com `mat-nav-list` rolado até o fim → `.shell-toolbar` manteve `boundingBox {x:0,y:0,width:239,height:64}` (fixo no topo, não cortado) e `[data-testid="shell-logo"]` renderizou texto completo "omuletachou". Screenshots capturados (antes: cenário reproduzido; depois: header intacto). Viewport desktop padrão (1280×800) também validado sem regressão.
+- Suíte Karma completa (compartilhada com Issue #210): 134/134 verdes.
+- `etapa_atual` → QA. Apto a seguir.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Ferramentas | Tempo (s) |
