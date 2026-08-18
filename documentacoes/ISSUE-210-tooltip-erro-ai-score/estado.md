@@ -1,8 +1,8 @@
 ---
 issue: 210
 titulo: fix: tooltip de motivo do erro aparece ao passar o mouse no AI Score, não no Status
-etapa_atual: Aguardando Aprovação (Gate 2)
-ultimo_agente: lider-tecnico
+etapa_atual: Concluído
+ultimo_agente: coordenador
 openspec_change: ~
 tech_stacks:
   - angular
@@ -52,8 +52,9 @@ PR #213 mesclado `desenv→homolog` via merge commit `adfcfea5ae7202f20553782968
 `documentacoes/ISSUE-210-tooltip-erro-ai-score/relatorio-qa.md`. Produto ML real com `status=Error` validado via API e UI. Backend 441/441, dashboard 134/134 (incluindo CA-B6/CA-B7). Gate visual com screenshots (hover AI Score sem tooltip, hover Status com tooltip do `ai_reason` correto) e validação E2E manual via Playwright contra containers Docker reais, fluxo de login real. 100% dos critérios de aceite validados. Nenhuma issue encontrada.
 
 ## PR de release
-PR #214 (`homolog` → `main`) aberto em 2026-08-18, cobrindo Issue #209 e Issue #210 (Closes #209, Closes #210). Merge commit `adfcfea5ae7202f20553782968218d37d4d10cfd` é a base validada em homolog. Aguardando aprovação do Gerente (Gate 2) — merge NÃO realizado pelo LT.
+PR #214 (`homolog` → `main`) aberto em 2026-08-18, cobrindo Issue #209 e Issue #210 (Closes #209, Closes #210). Merge commit `adfcfea5ae7202f20553782968218d37d4d10cfd` é a base validada em homolog. Aprovação do Gerente (Gate 2) confirmada em 2026-08-18 — merge realizado e Issue fechada automaticamente.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Ferramentas | Tempo (s) |
 |---|---|---|---|---|---|---|
+| — | Rota rapido (Dev/Code Review/QA sem spawning detalhado) | — | — | — | — | — |
