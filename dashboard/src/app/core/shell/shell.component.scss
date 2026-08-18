@@ -4,6 +4,41 @@
 
 .shell-sidenav {
   width: 240px;
+  // Layout em coluna: o cabeçalho (logo) fica fixo no topo (flex: 0 0 auto) e a
+  // navegação ocupa o restante com scroll próprio — evita que o cabeçalho seja
+  // arrastado/recortado pelo scroll do conteúdo (Issue #209).
+  display: flex;
+  flex-direction: column;
+}
+
+// Cabeçalho/logo do shell — reforça explicitamente altura, box model e
+// alinhamento vertical em vez de depender só das custom properties internas
+// do tema Material (frágil a variações de métrica de fonte/zoom/DPI que
+// causavam o texto "omuletachou" cortado/sobreposto ao limite superior da
+// barra azul — Issue #209).
+.shell-toolbar {
+  flex: 0 0 auto;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  height: 64px;
+  display: flex;
+  align-items: center;
+}
+
+.shell-toolbar-logo {
+  display: block;
+  width: 100%;
+  line-height: normal;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.shell-nav-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
 }
 
 .shell-content {

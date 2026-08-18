@@ -42,4 +42,38 @@ describe('ShellComponent', () => {
     button.click();
     expect(authServiceStub.logout).toHaveBeenCalled();
   });
+
+  describe('cabeçalho/logo (Issue #209)', () => {
+    it('exibe o texto "omuletachou" dentro de um elemento de logo dedicado', () => {
+      const compiled = fixture.nativeElement as HTMLElement;
+      const logo = compiled.querySelector('[data-testid="shell-logo"]') as HTMLElement;
+      expect(logo).toBeTruthy();
+      expect(logo.textContent?.trim()).toBe('omuletachou');
+    });
+
+    it('mantém o cabeçalho fixo (sticky) no topo da barra lateral, fora da área de scroll da navegação', () => {
+      const compiled = fixture.nativeElement as HTMLElement;
+      const toolbar = compiled.querySelector('.shell-toolbar') as HTMLElement;
+      const navList = compiled.querySelector('.shell-nav-list') as HTMLElement;
+      expect(toolbar).toBeTruthy();
+      expect(navList).toBeTruthy();
+
+      const toolbarStyle = getComputedStyle(toolbar);
+      expect(toolbarStyle.position).toBe('sticky');
+      expect(toolbarStyle.top).toBe('0px');
+      expect(toolbarStyle.boxSizing).toBe('border-box');
+
+      const navListStyle = getComputedStyle(navList);
+      expect(navListStyle.overflowY).toBe('auto');
+    });
+
+    it('protege o texto do logo contra recorte/overflow (sem quebra de linha, com ellipsis)', () => {
+      const compiled = fixture.nativeElement as HTMLElement;
+      const logo = compiled.querySelector('.shell-toolbar-logo') as HTMLElement;
+      const logoStyle = getComputedStyle(logo);
+      expect(logoStyle.whiteSpace).toBe('nowrap');
+      expect(logoStyle.overflow).toBe('hidden');
+      expect(logoStyle.textOverflow).toBe('ellipsis');
+    });
+  });
 });
