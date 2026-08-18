@@ -1,7 +1,7 @@
 ---
 issue: 182
 titulo: fix: MercadoLivreCollector quebrado — endpoint /sites/MLB/search descontinuado pela API, reconstruir com Highlights API
-etapa_atual: Em Desenvolvimento (aguardando PR homolog→main — Gate 2)
+etapa_atual: Aguardando Aprovação (Gate 2 — PR release #198 homolog→main aberto, aguardando Gerente)
 rota: normal
 ultimo_agente: lider-tecnico
 openspec_change: repos/omuletachou/openspec/changes/issue-182-mercadolivrecollector-quebrado
@@ -32,7 +32,7 @@ sub_issues_frontend:
   "#195": angular
 pr_homologacao: 197
 pr_homologacao_anterior: 194
-pr_release: ~
+pr_release: 198
 code_review_homolog_pr: 197
 qa_status: aprovado (2a rodada) — ver etapa 28 do histórico
 figma_url: ~
@@ -270,6 +270,16 @@ blockers: |
     `/p/{catalog_product_id}`) permanecem documentados acima — recomendacao mantida ao QA de
     retentar em ambiente com internet real (ex. VM Oracle); se tambem bloqueado, tratar o primeiro
     ciclo real do `CollectorJob` em producao como gate final de validacao desses dois riscos.
+
+  PR RELEASE (LT, 2026-08-18) — QA aprovou 2a rodada. PR #198 (`homolog->main`, merge commit,
+  NUNCA squash) aberto. Corpo do PR resume a Issue-pai #182 completa (reconstrucao do
+  MercadoLivreCollector via Highlights API, fluxo semi-manual de link de afiliado — Gate 1.5,
+  nova tela do dashboard, e as 3 correcoes pos-CR/QA #190/#192/#195), referenciando os PRs de
+  homologacao #189/#194/#197 e relatorio-qa.md. `pr_release` = 198, `etapa_atual` = Aguardando
+  Aprovacao (GATE 2: Gerente). Riscos herdados ainda pendentes de validacao ao vivo (schema
+  `/highlights`, permalink `/p/{catalog_product_id}`) permanecem documentados acima como
+  pendencia de monitoramento pos-deploy, nao bloqueadores do release. PR NAO mesclado — merge
+  final e bookkeeping do Coordenador apos aprovacao humana do Gerente.
 createdAt: 2026-08-17
 status_comment_id: 5317813321
 ---
@@ -306,18 +316,19 @@ status_comment_id: 5317813321
 | 25 | Dev Angular (Sub-F #195) | dev-angular | sonnet | 84585 | 25 | 296s | Causa raiz confirmada: painel de skipped preso ao `*ngIf` do card de import. Fix: card agora renderiza com `products.length > 0 || (skipped && skipped.length > 0)`; conteúdo específico de pendentes isolado em `<ng-container *ngIf="products.length > 0">`; painel de skipped mantém `*ngIf="skipped && skipped.length > 0"` independente. TDD: 4 testes novos reproduzindo o bug exato (RED→GREEN confirmado). Suíte 124/124, build produção OK. PR #196 feature→desenv aberto. |
 | 26 | Líder Técnico (merge Sub-F #195 + PR homologação) | lider-tecnico | sonnet | 68665 | 15 | 245s | PR #196 (feature/ISSUE-195-skipped-panel-visibilidade → desenv) verificado (124/124 testes reportados pelo Dev, build produção OK, sem CI configurado no repo) e mesclado via squash + delete-branch (commit `cf89cdcea5c2996e52724bbcaa1395a54da493c5`). Sub-issue #195 fechada. `desenv_tasks_merged` = ["#184","#183","#185","#190","#192","#195"] — todas as sub-issues e correções (incluindo a do QA 1ª rodada) agora em `desenv`. Novo PR #197 (`desenv→homolog`, merge commit) aberto trazendo essa última correção pendente; corpo do PR descreve o bug encontrado pelo QA (painel de skipped inacessível), referencia `relatorio-qa.md` e o comentário do QA na Issue #182. `pr_homologacao` = 197 (PR #194 preservado em `pr_homologacao_anterior`), `code_review_homolog_pr` resetado até nova avaliação, `etapa_atual` = Code Review. |
 | 27 | Code Review (PR #197, reavaliação homologação — correção pós-QA #195) | code-review | sonnet | 129151 | 66 | 516s | **APROVADO.** Build real: `dotnet build -c Release` OK (backend intocado neste PR). `dotnet test -c Release --no-build`: **436/436** ✅ (Docker Desktop disponível, inclui os 3 testes de integração via Testcontainers/Postgres real). `npx ng test --watch=false --browsers=ChromeHeadless` (dashboard): **124/124** ✅ (inclui os 4 testes novos do bug #195). `npx ng build` produção OK. Boot real via Docker (`docker compose build --no-cache api dashboard` + `up -d db api dashboard`, todos `healthy`/`Up`, `/health` 200, dashboard 200). **Reprodução ao vivo do cenário exato do QA**: seed de 2 produtos `AwaitingAffiliateLink` no Postgres, login real, colei 2 links, simulei a mesma condição de corrida (1 produto virou `Pending` no banco antes do clique em Importar) — backend importou 1 (`Queued`, `affiliate_link` real e distinto do `source_url`, confirmado no Postgres) e pulou 1. Resultado no DOM: `import-card` renderizou (antes do fix seria removido do DOM), `skipped-panel` visível com o item e motivo corretos, expansão via clique funcionando. **Não-regressão do estado vazio**: reload com 0 pendentes/0 skipped em memória → `import-card` não renderiza, mensagem de vazio exibida normalmente (sem card quebrado). Screenshots em `cr197-04-after-import-dom.png`/`cr197-05-panel-expanded.png`/`cr197-06-fully-empty-state.png` (anexados ao comentário do PR, não commitados no repo). Sem achados do `/code-review` estático no PR #197 (0 comentários, 0 reviews — verificado). Sem `.first()`/`.nth()` em specs E2E (dashboard não tem Playwright/`test:visual`, N/A). Conformidade com `especificacao-tecnica.md` §3.6 preservada (fix é aditivo, não altera contrato funcional). Evidência completa: https://github.com/DQM-BETA/omuletachou/pull/197#issuecomment-5328328425. PR #197 mesclado `desenv→homolog` via merge commit `f4088a82daeec9a266ee00b78ac946e0e49643df`. `code_review_homolog_pr` = 197, `etapa_atual` = QA. |
-
 | 28 | QA (2ª rodada, homolog) | qa | sonnet | 105284 | 59 | 550s | **APROVADO.** `homolog` sincronizado no commit `f4088a82...`. Suíte completa: 436/436 backend (Testcontainers/Docker real) + 124/124 dashboard + `tsc --noEmit` limpo. Reproduziu ao vivo o cenário exato do relatório da 1ª rodada (2 produtos ML seedados, condição de corrida forçando 1 skip, import esvaziando `products`) — confirmado: painel de skipped permanece visível e funcional, coexistindo com o estado vazio. Confirmado no Postgres: produto importado com `affiliate_link` real distinto do `source_url`; produto pulado preservado sem link. Revalidação rápida sem regressão: fluxo ponta a ponta do link de afiliado, isenção de desconto ML (Seção 9, arquivo fora do diff do PR #197), isolamento de falha por item, Amazon/Shopee intactos. Riscos herdados (schema `/highlights`, permalink `/p/{id}`) continuam bloqueados por `PA_UNAUTHORIZED_RESULT_FROM_POLICIES` — reafirmados como pendência de monitoramento em produção, não bloqueador. Relatório atualizado: `relatorio-qa.md`. Comentário: https://github.com/DQM-BETA/omuletachou/issues/182#issuecomment-5328446549 |
+| 29 | Líder Técnico (PR release homolog→main) | lider-tecnico | sonnet | ~ | ~ | ~ | QA aprovou (2ª rodada), todas as 6 sub-issues mescladas e validadas em `homolog` (commit `f4088a82daeec9a266ee00b78ac946e0e49643df`). PR #198 (`homolog→main`, merge commit, NUNCA squash) aberto. Corpo do PR resume a Issue-pai #182 completa (reconstrução do MercadoLivreCollector via Highlights API, fluxo semi-manual de link de afiliado — Gate 1.5, nova tela do dashboard, e as 3 correções pós-CR/QA #190/#192/#195), referenciando os PRs de homologação #189/#194/#197 e `relatorio-qa.md`. `pr_release` = 198, `etapa_atual` = Aguardando Aprovação (GATE 2: Gerente). PR NÃO mesclado — aguarda aprovação humana. |
 
 ## Próximo passo
 
-**QA aprovou (2ª rodada).** Todas as sub-issues (#183, #184, #185, #190, #192, #195) mescladas e
-validadas em `homolog`. Próximo passo: **Líder Técnico** abre o PR `homolog→main` (merge commit,
-NUNCA squash) → **GATE 2: Gerente** (aprovação humana obrigatória antes do merge final).
+**PR de release aberto.** PR #198 (`homolog→main`, merge commit) criado, cobrindo a Issue-pai #182
+completa (todas as 6 sub-issues #183/#184/#185/#190/#192/#195). Próximo passo: **GATE 2: Gerente**
+— aprovação humana obrigatória antes do merge final. Após aprovação, o **Coordenador** faz o merge
+`homolog→main` e fecha a Issue #182; o card no Kanban permanece em Em Desenvolvimento até o
+**Gerente** arrastar manualmente para ✅ Concluído.
 - As correções dos Achados 1 (#190) e 2 (#192) do `/code-review` estático no PR #189 permanecem
-  validadas e em `homolog`.
+  validadas e em `homolog`/agora em `main` (pendente do merge).
 - Riscos herdados ainda pendentes de validação ao vivo (schema `/highlights`, permalink
-  `/p/{catalog_product_id}`) permanecem documentados em `blockers` — recomendação mantida ao QA de
-  retentar em ambiente com internet real (ex. VM Oracle); se também bloqueado, tratar o primeiro
-  ciclo real do `CollectorJob` em produção como gate final.
-</content>
+  `/p/{catalog_product_id}`) permanecem documentados em `blockers` — recomendação de monitorar o
+  primeiro ciclo real do `CollectorJob` em produção (contagem de produtos coletados / logs
+  Hangfire) como gate final desses dois riscos após o deploy.
