@@ -1,8 +1,8 @@
 ---
 issue: 210
 titulo: fix: tooltip de motivo do erro aparece ao passar o mouse no AI Score, não no Status
-etapa_atual: QA
-ultimo_agente: code-review
+etapa_atual: Aguardando Aprovação (Gate 2)
+ultimo_agente: lider-tecnico
 openspec_change: ~
 tech_stacks:
   - angular
@@ -15,9 +15,9 @@ sub_issues: []
 desenv_tasks_merged: []
 sub_issues_frontend: {}
 pr_homologacao: 213
-pr_release: ~
+pr_release: 214
 code_review_homolog_pr: 213
-qa_status: ~
+qa_status: aprovado
 figma_url: ~
 blockers: nenhum
 status_comment_id: 5332289407
@@ -33,7 +33,7 @@ Componente da tela de produtos no dashboard (provavelmente `dashboard/src/app/pa
 - [x] Dev reproduz ao vivo (`ng serve` ou via container em `localhost:8081`, logado)
 - [x] Tooltip do motivo do erro movido para a coluna Status (ex.: badge "Error")
 - [x] Comportamento mantido (mostrar `ai_reason` ao passar o mouse) no elemento correto
-- [ ] QA valida a mudança de posição do tooltip
+- [x] QA valida a mudança de posição do tooltip
 
 ## Merge feature→desenv
 PR #211 (`feature/ISSUE-210-fix-tooltip-erro` → `desenv`) mesclado via squash em 2026-08-18 (commit `d82825a`). Testes reportados pelo Dev: 131/131.
@@ -47,6 +47,12 @@ PR #213 mesclado `desenv→homolog` via merge commit `adfcfea5ae7202f20553782968
 - **Validação em browser real (Chromium via Playwright)**, logado com usuário seed, contra a app servida pelo container Docker (build `--no-cache`): hover no `[data-testid="status-badge"]` de um produto `Error` real → tooltip visível com o texto exato de `ai_reason`. Hover no `[data-testid="ai-score-badge"]` do mesmo produto → tooltip **não** aparece (`matTooltipDisabled` ativo quando `status==='Error'`). Screenshots capturados.
 - Suíte Karma completa (compartilhada com Issue #209): 134/134 verdes, incluindo os 2 specs dedicados (`CA-B6`/`CA-B7`) que cobrem exatamente a troca de tooltip entre badges.
 - `etapa_atual` → QA. Apto a seguir.
+
+## QA (2026-08-18): APROVADO
+`documentacoes/ISSUE-210-tooltip-erro-ai-score/relatorio-qa.md`. Produto ML real com `status=Error` validado via API e UI. Backend 441/441, dashboard 134/134 (incluindo CA-B6/CA-B7). Gate visual com screenshots (hover AI Score sem tooltip, hover Status com tooltip do `ai_reason` correto) e validação E2E manual via Playwright contra containers Docker reais, fluxo de login real. 100% dos critérios de aceite validados. Nenhuma issue encontrada.
+
+## PR de release
+PR #214 (`homolog` → `main`) aberto em 2026-08-18, cobrindo Issue #209 e Issue #210 (Closes #209, Closes #210). Merge commit `adfcfea5ae7202f20553782968218d37d4d10cfd` é a base validada em homolog. Aguardando aprovação do Gerente (Gate 2) — merge NÃO realizado pelo LT.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Ferramentas | Tempo (s) |

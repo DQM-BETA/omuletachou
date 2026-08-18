@@ -1,8 +1,8 @@
 ---
 issue: 209
 titulo: fix: cabeçalho/logo do dashboard não está renderizando corretamente
-etapa_atual: QA
-ultimo_agente: code-review
+etapa_atual: Aguardando Aprovação (Gate 2)
+ultimo_agente: lider-tecnico
 openspec_change: ~
 tech_stacks:
   - angular
@@ -15,9 +15,9 @@ sub_issues: []
 desenv_tasks_merged: []
 sub_issues_frontend: {}
 pr_homologacao: 213
-pr_release: ~
+pr_release: 214
 code_review_homolog_pr: 213
-qa_status: ~
+qa_status: aprovado
 figma_url: ~
 blockers: nenhum
 status_comment_id: 5332288701
@@ -33,7 +33,7 @@ Na tela `Products` (e possivelmente em todas as telas, já que é parte do shell
 - [x] Dev reproduz ao vivo (`ng serve`, build de produção estático e container Docker real em `localhost:8081`, logado)
 - [x] CSS do cabeçalho/logo inspecionado e corrigido no posicionamento/recorte
 - [x] Screenshot antes/depois anexado ao PR
-- [ ] QA valida visualmente em múltiplas resoluções
+- [x] QA valida visualmente em múltiplas resoluções
 
 ## Resultado da investigação
 Em viewport padrão (desktop, ~1280x800) o bug não é visualmente perceptível. Reproduzido de forma determinística simulando viewport baixo (1280x350) + scroll do sidenav: o `mat-toolbar` (cabeçalho "omuletachou") era filho direto do `mat-sidenav`, na mesma área de scroll do `mat-nav-list` — quando o conteúdo do menu excede a altura da janela (janelas baixas, ou a lista crescendo como na Issue #185, hoje com 7 itens) e o sidenav rola, o cabeçalho é arrastado para fora da área visível, cortando/sobrepondo o texto no limite superior da barra azul.
@@ -55,6 +55,12 @@ PR #213 mesclado `desenv→homolog` via merge commit `adfcfea5ae7202f20553782968
 - **Validação em browser real (Chromium via Playwright)** logado com usuário seed, contra a app servida pelo container: viewport 1280×350 com `mat-nav-list` rolado até o fim → `.shell-toolbar` manteve `boundingBox {x:0,y:0,width:239,height:64}` (fixo no topo, não cortado) e `[data-testid="shell-logo"]` renderizou texto completo "omuletachou". Screenshots capturados (antes: cenário reproduzido; depois: header intacto). Viewport desktop padrão (1280×800) também validado sem regressão.
 - Suíte Karma completa (compartilhada com Issue #210): 134/134 verdes.
 - `etapa_atual` → QA. Apto a seguir.
+
+## QA (2026-08-18): APROVADO
+`documentacoes/ISSUE-209-cabecalho-logo-dashboard/relatorio-qa.md`. Backend 441/441, dashboard 134/134, gate visual com screenshots (viewport 1280x800 e 1280x350 antes/depois do scroll) e validação E2E manual via Playwright contra containers Docker reais. 100% dos critérios de aceite validados. Nenhuma issue encontrada.
+
+## PR de release
+PR #214 (`homolog` → `main`) aberto em 2026-08-18, cobrindo Issue #209 e Issue #210 (Closes #209, Closes #210). Merge commit `adfcfea5ae7202f20553782968218d37d4d10cfd` é a base validada em homolog. Aguardando aprovação do Gerente (Gate 2) — merge NÃO realizado pelo LT.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Ferramentas | Tempo (s) |
