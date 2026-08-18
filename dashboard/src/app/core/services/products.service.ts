@@ -27,6 +27,16 @@ export interface ProductListItem {
   ai_score?: number | null;
   ai_reason?: string | null;
   sourceUrl?: string | null;
+  destinations?: PublicationDestination[];
+}
+
+/**
+ * Um destino de publicacao (site ou rede social) de um produto, com o status agregado naquele
+ * destino (Issue #208/T-03, contrato definido em ProductDtos.cs/PublicationDestinationDto).
+ */
+export interface PublicationDestination {
+  destination: string;
+  status: string;
 }
 
 export interface ProductDetail extends ProductListItem {

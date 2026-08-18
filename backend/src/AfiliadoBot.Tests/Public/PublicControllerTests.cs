@@ -473,4 +473,56 @@ public class PublicControllerTests : IClassFixture<CustomWebApplicationFactory>
 
         body.GetProperty("pageSize").GetInt32().Should().Be(100);
     }
+
+    [Fact]
+    public async Task GetDeals_ProdutoPublicadoSemNenhumaPublicationQueue_Aparece_CA22()
+    {
+        // Issue #208, CA 2.2/CA 7.1: produto Published sem nenhuma rede social qualificada
+        // (nenhuma linha em PublicationQueue) continua visivel no site publico normalmente —
+        // a visibilidade do site nao depende mais de rede social configurada.
+        var client = _factory.CreateClient();
+        var categoria = $"cat-sem-fila-{Guid.NewGuid():N}";
+        var product = await SeedPublishedProductAsync(category: categoria);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            (await db.PublicationQueues.Where(q => q.ProductId == product.Id).AnyAsync())
+                .Should().BeFalse("o produto seed deste teste nao deve ter nenhuma entrada de PublicationQueue");
+        }
+
+        var response = await client.GetAsync($"/api/public/deals?category={categoria}");
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        body.GetProperty("items").GetArrayLength().Should().Be(1);
+        body.GetProperty("items")[0].GetProperty("title").GetString().Should().Be(product.Title);
+    }
+
+    [Fact]
+    public async Task GetDeals_ProdutoPublicadoComPublicationQueueFailed_ContinuaAparecendo_CA23()
+    {
+        // Issue #208, CA 2.3: falha de publicacao em uma rede social nao afeta a visibilidade
+        // do produto no site — PublicationQueue e um efeito colateral independente de Status
+        // do Product.
+        var client = _factory.CreateClient();
+        var categoria = $"cat-fila-failed-{Guid.NewGuid():N}";
+        var product = await SeedPublishedProductAsync(category: categoria);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var entry = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow, "Legenda");
+            entry.RegisterAttempt(success: false, errorMessage: "falha simulada de publicacao");
+            db.PublicationQueues.Add(entry);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync($"/api/public/deals?category={categoria}");
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        body.GetProperty("items").GetArrayLength().Should().Be(1);
+        body.GetProperty("items")[0].GetProperty("title").GetString().Should().Be(product.Title);
+    }
 }

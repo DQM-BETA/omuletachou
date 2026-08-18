@@ -13,7 +13,21 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { ProductsService, ProductListItem, Platform, ProductStatus } from '../../core/services/products.service';
+import {
+  ProductsService,
+  ProductListItem,
+  Platform,
+  ProductStatus,
+  PublicationDestination,
+} from '../../core/services/products.service';
+
+/** Traducao dos status agregados de destino para o rotulo exibido no tooltip (Issue #208/T-03). */
+const DESTINATION_STATUS_LABELS: Record<string, string> = {
+  Published: 'Publicado',
+  Pending: 'Pendente',
+  Failed: 'Erro',
+  NotApplicable: 'Não aplicável',
+};
 
 @Component({
   selector: 'app-products',
@@ -120,6 +134,19 @@ export class ProductsComponent implements OnInit {
     this.pageIndex = event.pageIndex;
     this.pageSize = event.pageSize;
     this.load();
+  }
+
+  /**
+   * Monta a string do tooltip da badge de Status para produtos Published, listando o status de
+   * cada destino (site + redes sociais) — Issue #208/T-03, especificacao-tecnica.md §3. Retorna
+   * string vazia quando não há destinations (payload antigo/mock incompleto), fazendo o
+   * [matTooltipDisabled] cair de volta no comportamento sem tooltip.
+   */
+  buildDestinationsTooltip(destinations: PublicationDestination[] | null | undefined): string {
+    if (!destinations || destinations.length === 0) return '';
+    return destinations
+      .map(d => `${d.destination}: ${DESTINATION_STATUS_LABELS[d.status] ?? d.status}`)
+      .join(' · ');
   }
 
   aiScoreClass(score: number | null | undefined): string {

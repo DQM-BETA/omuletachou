@@ -103,6 +103,13 @@ public class Product
             : ProductStatus.Rejected;
     }
 
+    /// <summary>
+    /// Marca o produto como publicado no site (visivel em GET /api/public/deals).
+    /// A partir da Issue #208, Published e exclusivamente sobre visibilidade no site publico,
+    /// independente de qualquer rede social configurada/qualificada — a fila de publicacao
+    /// social (<see cref="PublicationQueue"/>) e um efeito colateral opcional do processamento,
+    /// nao uma condicao para o produto aparecer no site.
+    /// </summary>
     public void MarkAsPublished()
     {
         Status = ProductStatus.Published;
