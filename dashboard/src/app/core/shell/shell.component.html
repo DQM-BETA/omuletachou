@@ -1,7 +1,9 @@
 <mat-sidenav-container class="shell-container">
   <mat-sidenav mode="side" opened class="shell-sidenav">
-    <mat-toolbar color="primary">omuletachou</mat-toolbar>
-    <mat-nav-list>
+    <mat-toolbar color="primary" class="shell-toolbar">
+      <span class="shell-toolbar-logo" data-testid="shell-logo">omuletachou</span>
+    </mat-toolbar>
+    <mat-nav-list class="shell-nav-list">
       <a
         mat-list-item
         *ngFor="let item of navItems"

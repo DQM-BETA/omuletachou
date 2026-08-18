@@ -64,6 +64,7 @@
           class="badge ai-score-badge"
           [ngClass]="aiScoreClass(product.ai_score)"
           [matTooltip]="product.ai_reason || 'Sem justificativa'"
+          [matTooltipDisabled]="product.status === 'Error'"
           data-testid="ai-score-badge"
         >
           {{ product.ai_score ?? '—' }}
@@ -74,7 +75,15 @@
     <ng-container matColumnDef="status">
       <th mat-header-cell *matHeaderCellDef>Status</th>
       <td mat-cell *matCellDef="let product">
-        <span class="badge status-badge" [attr.data-status]="product.status">{{ product.status }}</span>
+        <span
+          class="badge status-badge"
+          [attr.data-status]="product.status"
+          [matTooltip]="product.ai_reason || 'Motivo não informado'"
+          [matTooltipDisabled]="product.status !== 'Error' || !product.ai_reason"
+          data-testid="status-badge"
+        >
+          {{ product.status }}
+        </span>
       </td>
     </ng-container>
 
