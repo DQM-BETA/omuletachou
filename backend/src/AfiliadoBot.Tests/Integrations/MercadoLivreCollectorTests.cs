@@ -79,6 +79,11 @@ public class MercadoLivreCollectorTests
 
     private const string EmptyItemsResponse = """{ "results": [] }""";
 
+    // Corpo JSON malformado (HTTP 200) — usado para reproduzir a Issue #190: GetJsonAsync deve
+    // converter o JsonException de JsonDocument.Parse em MercadoLivreApiException, igual as demais
+    // falhas do metodo, preservando o isolamento de falha por categoria/produto.
+    private const string MalformedJsonBody = "{ isso nao e json valido ";
+
     private static AfiliadoBotDbContext CreateInMemoryContext()
     {
         var options = new DbContextOptionsBuilder<AfiliadoBotDbContext>()
@@ -332,6 +337,112 @@ public class MercadoLivreCollectorTests
 
         result.Should().ContainSingle();
         result[0].ExternalId.Should().Be("MLB22222222");
+    }
+
+    [Fact]
+    public async Task CollectAsync_PulaCategoria_QuandoHighlightsRetornaJsonMalformado_DemaisCategoriasContinuam()
+    {
+        // Issue #190 CA1: HTTP 200 com corpo JSON malformado em /highlights/MLB/category/{id} deve
+        // virar MercadoLivreApiException (nao JsonException nao tratada) — categoria e pulada, as
+        // demais categorias continuam sendo processadas sem excecao propagar para fora de
+        // CollectAsync.
+        using var db = CreateInMemoryContext();
+        await SeedCredentialsAsync(db);
+        await SeedTokenAsync(db, "token-valido", DateTime.UtcNow.AddHours(1));
+        var aiMock = CreateAiServiceMock();
+
+        var httpClient = CreateMercadoLivreClient(
+            ($"/highlights/MLB/category/{EletrodomesticosCategoryId}",
+                JsonResponse(HttpStatusCode.OK, MalformedJsonBody)),
+            ($"/highlights/MLB/category/{ClimatizacaoCategoryId}",
+                JsonResponse(HttpStatusCode.OK, HighlightsWithOneProduct("MLB50000001"))),
+            ("/products/MLB50000001/items",
+                JsonResponse(HttpStatusCode.OK, ItemsResponse(89.90m))),
+            ("/products/MLB50000001",
+                JsonResponse(HttpStatusCode.OK, ProductResponse(
+                    "MLB50000001", "Umidificador XPTO", "https://http2.mlstatic.com/umidificador.jpg"))));
+
+        var collector = new MercadoLivreCollector(httpClient, db, aiMock.Object, NullLogger<MercadoLivreCollector>.Instance);
+
+        IEnumerable<Product>? result = null;
+        var act = async () => result = await collector.CollectAsync();
+
+        await act.Should().NotThrowAsync();
+        result.Should().NotBeNull();
+        result!.Should().ContainSingle(p => p.ExternalId == "MLB50000001");
+    }
+
+    [Fact]
+    public async Task CollectAsync_PulaProduto_QuandoProdutoRetornaJsonMalformado_DemaisProdutosContinuam()
+    {
+        // Issue #190 CA2: HTTP 200 com corpo JSON malformado em /products/{id} deve virar
+        // MercadoLivreApiException — produto e pulado (ResolveAndUpsertAsync ja captura
+        // MercadoLivreApiException), os demais produtos dos Highlights da mesma categoria continuam
+        // sendo resolvidos.
+        using var db = CreateInMemoryContext();
+        await SeedCredentialsAsync(db);
+        await SeedTokenAsync(db, "token-valido", DateTime.UtcNow.AddHours(1));
+        var aiMock = CreateAiServiceMock();
+
+        var httpClient = CreateMercadoLivreClient(
+            ($"/highlights/MLB/category/{EletrodomesticosCategoryId}",
+                JsonResponse(HttpStatusCode.OK, HighlightsWithTwoProducts("MLB60000001", "MLB60000002"))),
+            ("/products/MLB60000001", JsonResponse(HttpStatusCode.OK, MalformedJsonBody)),
+            ("/products/MLB60000002/items",
+                JsonResponse(HttpStatusCode.OK, ItemsResponse(129.90m))),
+            ("/products/MLB60000002",
+                JsonResponse(HttpStatusCode.OK, ProductResponse(
+                    "MLB60000002", "Liquidificador XPTO", "https://http2.mlstatic.com/liquidificador.jpg"))));
+
+        var collector = new MercadoLivreCollector(httpClient, db, aiMock.Object, NullLogger<MercadoLivreCollector>.Instance);
+
+        IEnumerable<Product>? result = null;
+        var act = async () => result = await collector.CollectAsync();
+
+        await act.Should().NotThrowAsync();
+        result.Should().NotBeNull();
+        result!.Should().ContainSingle(p => p.ExternalId == "MLB60000002");
+    }
+
+    [Fact]
+    public async Task CollectAsync_SalvaProdutosValidos_QuandoUmProdutoTemJsonMalformadoNoMeioDoCiclo()
+    {
+        // Issue #190 CA3: ciclo com produtos validos antes e depois de um produto com corpo
+        // malformado — SaveChangesAsync (unico, ao final do ciclo) deve persistir todos os validos,
+        // sem perder o ciclo inteiro por causa do JsonException do produto com problema.
+        using var db = CreateInMemoryContext();
+        await SeedCredentialsAsync(db);
+        await SeedTokenAsync(db, "token-valido", DateTime.UtcNow.AddHours(1));
+        var aiMock = CreateAiServiceMock();
+
+        var httpClient = CreateMercadoLivreClient(
+            ($"/highlights/MLB/category/{EletrodomesticosCategoryId}",
+                JsonResponse(HttpStatusCode.OK, HighlightsWithOneProduct("MLB70000001"))),
+            ("/products/MLB70000001/items",
+                JsonResponse(HttpStatusCode.OK, ItemsResponse(59.90m))),
+            ("/products/MLB70000001",
+                JsonResponse(HttpStatusCode.OK, ProductResponse(
+                    "MLB70000001", "Torradeira XPTO", "https://http2.mlstatic.com/torradeira.jpg"))),
+            ($"/highlights/MLB/category/{ClimatizacaoCategoryId}",
+                JsonResponse(HttpStatusCode.OK, HighlightsWithOneProduct("MLB70000002"))),
+            ("/products/MLB70000002", JsonResponse(HttpStatusCode.OK, MalformedJsonBody)),
+            ($"/highlights/MLB/category/{CasaECozinhaCategoryId}",
+                JsonResponse(HttpStatusCode.OK, HighlightsWithOneProduct("MLB70000003"))),
+            ("/products/MLB70000003/items",
+                JsonResponse(HttpStatusCode.OK, ItemsResponse(199.90m))),
+            ("/products/MLB70000003",
+                JsonResponse(HttpStatusCode.OK, ProductResponse(
+                    "MLB70000003", "Panela Eletrica XPTO", "https://http2.mlstatic.com/panela.jpg"))));
+
+        var collector = new MercadoLivreCollector(httpClient, db, aiMock.Object, NullLogger<MercadoLivreCollector>.Instance);
+
+        var result = (await collector.CollectAsync()).ToList();
+
+        result.Should().HaveCount(2);
+        result.Select(p => p.ExternalId).Should().BeEquivalentTo(new[] { "MLB70000001", "MLB70000003" });
+
+        var savedIds = await db.Products.Select(p => p.ExternalId).ToListAsync();
+        savedIds.Should().BeEquivalentTo(new[] { "MLB70000001", "MLB70000003" });
     }
 
     [Fact]
