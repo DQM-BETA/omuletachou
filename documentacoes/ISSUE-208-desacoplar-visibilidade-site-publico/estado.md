@@ -1,6 +1,6 @@
 issue: 208
 titulo: feat(discussão): avaliar desacoplar visibilidade no site público do requisito de rede social configurada
-etapa_atual: Em Desenvolvimento
+etapa_atual: Code Review
 ultimo_agente: lider-tecnico
 openspec_change: openspec/changes/issue-208-desacoplar-visibilidade-site-publico
 tech_stacks: [dotnet, angular]
@@ -22,10 +22,10 @@ sub_issues:
     titulo: "Sub: Dashboard — tooltip de destinos na coluna Status"
     stack: stack:angular
     task_id: T-03
-desenv_tasks_merged: [215, 216]
+desenv_tasks_merged: [215, 216, 217]
 sub_issues_frontend:
   217: stack:angular
-pr_homologacao: ~
+pr_homologacao: 221
 pr_release: ~
 code_review_homolog_pr: ~
 qa_status: ~
@@ -57,4 +57,6 @@ status_comment_id: ~
   - 3 sub-issues criadas: #215 (T-01, backend `ProcessorJob`), #216 (T-02, backend API `Destinations`), #217 (T-03, frontend tooltip dashboard).
 - Merge sub-issue #215 (T-01) em 2026-08-18: PR #219 squash-mergeado em `desenv` (commit `4e5dbba`), confirmado no remoto. Testes reportados pelo Dev: 448/448. Sub-issue #215 fechada.
 - Merge sub-issue #216 (T-02) em 2026-08-18: PR #218 squash-mergeado em `desenv` (commit `32c8b16`), confirmado no remoto. Testes reportados pelo Dev: 447/447. Sub-issue #216 fechada.
-- **Próximo passo:** falta a sub-issue #217 (T-03, Angular, dashboard) — depende do contrato de API (`Destinations` em `ProductListItemDto`) recém-mesclado pela T-02. **Não abrir PR desenv→homolog ainda.** Só criar o PR de promoção após o Dev Angular mesclar #217 (`desenv_tasks_merged` terá as 3 sub-issues: [215, 216, 217]).
+- Merge sub-issue #217 (T-03) em 2026-08-18: PR #220 squash-mergeado em `desenv` (commit `6a38043`), confirmado no remoto via `git log --oneline -1 origin/desenv`. Testes reportados pelo Dev: 140/140. Sub-issue #217 fechada.
+- **Todas as 3 sub-issues da Issue-pai #208 mescladas em `desenv`.** PR #221 (`desenv→homolog`, merge commit — NUNCA squash) criado em 2026-08-18, cobrindo T-01/T-02/T-03 (site publica independente de rede social + campo `Destinations` agregado + tooltip no dashboard). Referencia sub-issues #215/#216/#217 e PRs #219/#218/#220.
+- **Próximo passo:** Code Review (análise `/code-review` + agente Code Review) no PR #221. PR #221 **não deve ser mesclado** até Code Review + QA + Gate 2 do Gerente.
