@@ -177,6 +177,106 @@ describe('ProductsComponent', () => {
     expect(statusTooltip.disabled).toBeTrue();
   });
 
+  it('T-03/CA-4.2 — buildDestinationsTooltip() monta a string traduzida a partir dos destinos', () => {
+    const tooltip = component.buildDestinationsTooltip([
+      { destination: 'Site', status: 'Published' },
+      { destination: 'Telegram', status: 'Published' },
+      { destination: 'Youtube', status: 'NotApplicable' },
+      { destination: 'Instagram', status: 'NotApplicable' },
+      { destination: 'TikTok', status: 'NotApplicable' },
+      { destination: 'Facebook', status: 'Pending' },
+    ]);
+
+    expect(tooltip).toBe(
+      'Site: Publicado · Telegram: Publicado · Youtube: Não aplicável · Instagram: Não aplicável · TikTok: Não aplicável · Facebook: Pendente'
+    );
+  });
+
+  it('T-03/CA-4.2 — buildDestinationsTooltip() traduz status Failed para "Erro"', () => {
+    const tooltip = component.buildDestinationsTooltip([{ destination: 'Telegram', status: 'Failed' }]);
+    expect(tooltip).toBe('Telegram: Erro');
+  });
+
+  it('T-03/CA-4.2 — buildDestinationsTooltip() retorna string vazia quando destinations é undefined/vazio', () => {
+    expect(component.buildDestinationsTooltip(undefined)).toBe('');
+    expect(component.buildDestinationsTooltip([])).toBe('');
+  });
+
+  it('T-03/CA-4.2 — badge de Status = Published exibe tooltip com os destinos reais', () => {
+    const publishedProduct: ProductListItem = {
+      id: 'p4',
+      title: 'Produto publicado no site e no Telegram',
+      salePrice: 89.9,
+      originalPrice: 129.9,
+      discountPct: 30,
+      status: 'Published',
+      platform: 'Amazon',
+      slug: 'produto-publicado',
+      category: 'eletronicos',
+      createdAt: '2026-07-17T10:00:00Z',
+      ai_score: 8,
+      ai_reason: 'Boa relação custo-benefício',
+      destinations: [
+        { destination: 'Site', status: 'Published' },
+        { destination: 'Telegram', status: 'Published' },
+        { destination: 'Youtube', status: 'NotApplicable' },
+        { destination: 'Instagram', status: 'NotApplicable' },
+        { destination: 'TikTok', status: 'NotApplicable' },
+        { destination: 'Facebook', status: 'Pending' },
+      ],
+    };
+
+    component.filterForm.patchValue({ status: 'Published' });
+    component.applyFilters();
+
+    const req = httpMock.expectOne(r => r.url === '/api/products' && r.params.get('status') === 'Published');
+    req.flush({ ...mockPage, items: [publishedProduct], totalItems: 1 });
+    fixture.detectChanges();
+
+    const statusBadge = fixture.debugElement.query(By.css('[data-testid="status-badge"]'));
+    const statusTooltip = statusBadge.injector.get(MatTooltip);
+    expect(statusTooltip.disabled).toBeFalse();
+    expect(statusTooltip.message).toBe(
+      'Site: Publicado · Telegram: Publicado · Youtube: Não aplicável · Instagram: Não aplicável · TikTok: Não aplicável · Facebook: Pendente'
+    );
+  });
+
+  it('T-03/CA-4.2 — badge de Status != Published continua usando o tooltip de ai_reason (comportamento existente não regride)', () => {
+    // mockPage.items[0] tem status Pending, sem destinations — comportamento do CA-B7 preservado.
+    const statusBadge = fixture.debugElement.queryAll(By.css('[data-testid="status-badge"]'))[0];
+    const statusTooltip = statusBadge.injector.get(MatTooltip);
+    expect(statusTooltip.disabled).toBeTrue();
+  });
+
+  it('T-03/CA-4.2 — produto Published sem destinations (payload antigo) não quebra e não exibe tooltip', () => {
+    const publishedNoDestinations: ProductListItem = {
+      id: 'p5',
+      title: 'Produto publicado sem campo destinations (payload antigo)',
+      salePrice: 49.9,
+      originalPrice: 59.9,
+      discountPct: 16,
+      status: 'Published',
+      platform: 'Shopee',
+      slug: 'produto-publicado-sem-destinations',
+      category: 'eletronicos',
+      createdAt: '2026-07-16T10:00:00Z',
+      ai_score: 7,
+      ai_reason: null,
+    };
+
+    component.filterForm.patchValue({ status: 'Published' });
+    component.applyFilters();
+
+    const req = httpMock.expectOne(r => r.url === '/api/products' && r.params.get('status') === 'Published');
+    req.flush({ ...mockPage, items: [publishedNoDestinations], totalItems: 1 });
+
+    expect(() => fixture.detectChanges()).not.toThrow();
+
+    const statusBadge = fixture.debugElement.query(By.css('[data-testid="status-badge"]'));
+    const statusTooltip = statusBadge.injector.get(MatTooltip);
+    expect(statusTooltip.disabled).toBeTrue();
+  });
+
   it('exibe indicador de loading enquanto a requisição está em andamento', () => {
     component.pageIndex = 1;
     component.load();
