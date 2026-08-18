@@ -78,8 +78,16 @@
         <span
           class="badge status-badge"
           [attr.data-status]="product.status"
-          [matTooltip]="product.ai_reason || 'Motivo não informado'"
-          [matTooltipDisabled]="product.status !== 'Error' || !product.ai_reason"
+          [matTooltip]="
+            product.status === 'Published'
+              ? buildDestinationsTooltip(product.destinations)
+              : product.ai_reason || 'Motivo não informado'
+          "
+          [matTooltipDisabled]="
+            product.status === 'Published'
+              ? !buildDestinationsTooltip(product.destinations)
+              : product.status !== 'Error' || !product.ai_reason
+          "
           data-testid="status-badge"
         >
           {{ product.status }}
