@@ -19,19 +19,22 @@ sub_issues:
   - "#185 (stack:angular, task_id:Sub-C) — Dashboard: tela de importação de links de afiliado"
   - "#190 (stack:dotnet, task_id:Sub-D) — Fix isolamento de falha em GetJsonAsync (JsonDocument.Parse fora do try/catch), achado do /code-review estático no PR #189"
   - "#192 (stack:dotnet, task_id:Sub-E) — Isentar Mercado Livre do critério de desconto mínimo no scoring de IA (ClaudeAiService.ScoreProductAsync), Achado 2 do /code-review estático no PR #189, decisão de negócio do Gerente Opção A"
+  - "#195 (stack:angular, task_id:Sub-F) — Fix: painel de skipped inacessível quando lista de pendentes esvazia (mercadolivre-links.component.html), Achado 1 (bloqueante) do QA 1ª rodada"
 desenv_tasks_merged:
   - "#184"
   - "#183"
   - "#185"
   - "#190"
   - "#192"
+  - "#195"
 sub_issues_frontend:
   "#185": angular
-pr_homologacao: 194
-pr_homologacao_anterior: 189
+  "#195": angular
+pr_homologacao: 197
+pr_homologacao_anterior: 194
 pr_release: ~
-code_review_homolog_pr: 194
-qa_status: ~
+code_review_homolog_pr: ~
+qa_status: reprovado (1a rodada) — corrigido via sub-issue #195, aguardando nova rodada de Code Review + QA
 figma_url: ~
 blockers: |
   BLOQUEIO CRÍTICO confirmado ao vivo pelo LT em 2026-08-17 (ver design.md secao 10):
@@ -199,6 +202,74 @@ blockers: |
   `pr_homologacao` = 194 (PR #189 preservado em `pr_homologacao_anterior` para historico — ja
   estava mesclado, nao precisa ser refeito). QA segue pausado ate o Code Review reavaliar o PR
   #194.
+
+  RESOLUCAO CODE REVIEW — PR #194 APROVADO e mesclado (2026-08-18, desenv->homolog, merge commit
+  cabc2f96387ea547ca2e9a3ab68656df6354cc7b):
+  - Build real (`dotnet build -c Release`) OK. `dotnet test -c Release --no-build` rodado 2x:
+    433/436 sem Docker (3 falhas de Testcontainers, igual ao relatado pelo Dev/LT) e **436/436
+    com Docker Desktop disponivel** (precisou ser iniciado manualmente no host, estava parado no
+    inicio da sessao), confirmando ao vivo os 3 testes de integracao
+    `ClaudeBudgetServiceIntegrationTests` contra Postgres real via Testcontainers.
+  - Boot real via Docker: `docker compose build --no-cache api` + `docker compose up -d db api`
+    -> ambos `healthy` -> `GET /health` 200 -> logs confirmam migrations aplicadas e Hangfire
+    iniciado sem erros. Containers parados ao final da verificacao (`docker compose stop`).
+  - Achado 1 (#190) validado: `JsonDocument.Parse` dentro de try/catch proprio em `GetJsonAsync`,
+    convertendo `JsonException` -> `MercadoLivreApiException` (mesmo tipo capturado pelos
+    chamadores). 3 testes novos exercitam `CollectAsync` completo (HttpMessageHandler mockado +
+    DbContext in-memory), incluindo o cenario de JSON malformado no MEIO do ciclo confirmando que
+    `SaveChangesAsync` (unico, ao final) preserva os produtos validos.
+  - Achado 2 (#192) validado com rigor extra pedido pela sessao principal: comparei o branch
+    `else` (Amazon/Shopee) do novo `ScoreProductAsync` contra
+    `git show 393134d5f869ec1b16769cfd32a26cb155025bea:.../ClaudeAiService.cs` (estado do PR #189
+    ANTES desta mudanca) — texto de conteudo dos raw string literals (`systemPrompt` e
+    `userMessage`) identico palavra por palavra; diferenca de indentacao visual no source nao
+    afeta o conteudo stripado pelo C# (determinado pela coluna do delimitador de fechamento
+    `"""`). Prompt do Mercado Livre confirmado omitindo a linha de desconto + instrucao explicita
+    de nao penalizar ausencia do dado (cenarios 9.1-9.3). Cenario 9.4 (nao-regressao Amazon/
+    Shopee) confirmado por teste `[Theory]` dedicado, alem da comparacao manual acima.
+  - Riscos herdados (schema `/highlights`, permalink `/p/{catalog_product_id}`) RETENTADOS mais
+    uma vez com acesso de rede real deste ambiente: `curl api.mercadolibre.com/sites/MLB/categories`
+    (direto e de dentro do container `afiliado_api`) e `curl mercadolivre.com.br/p/MLB16855791`
+    -> AMBOS 403 `PA_UNAUTHORIZED_RESULT_FROM_POLICIES`. Mesmo bloqueio de politica de rede ja
+    documentado pelo Dev/LT/CR anteriores (nao e resposta do Mercado Livre, nao e achado novo).
+    Continua nao confirmado ao vivo por nenhum agente. Recomendacao mantida ao QA: retentar em
+    ambiente com internet real (ex. VM Oracle) e, se tambem bloqueado, tratar o primeiro ciclo
+    real do `CollectorJob` em producao como gate final.
+  - Nenhum comentario do `/code-review` estatico foi postado no PR #194 (verificado via
+    `gh api repos/DQM-BETA/omuletachou/issues/194/comments` — vazio); nao houve achado adicional a
+    incorporar.
+  - Evidencia completa postada como comentario no PR:
+    https://github.com/DQM-BETA/omuletachou/pull/194#issuecomment-5327837114
+  - PR #194 mesclado `desenv->homolog` via merge commit `cabc2f96387ea547ca2e9a3ab68656df6354cc7b`.
+    `code_review_homolog_pr` = 194, `etapa_atual` = QA.
+
+  QA REPROVOU (1a rodada, 2026-08-18) — ver etapa 23 do historico. Bug: painel de itens "skipped"
+  em mercadolivre-links.component.html fica inacessivel quando a lista de pendentes esvazia apos
+  o import (aninhado dentro do *ngIf de products.length > 0 do card pai). Relatorio completo em
+  relatorio-qa.md, screenshots em screenshots/. Nao aciona a trava anti-loop (1a reprovacao).
+
+  MAPEAMENTO LT (2026-08-18) — sub-issue #195 criada (stack:angular, task_id:Sub-F), TDD
+  obrigatorio, branch `feature/ISSUE-195-skipped-panel-visibilidade` base `desenv`. tasks.md
+  atualizado com secao Sub-F completa (contexto tecnico: desacoplar a visibilidade do
+  mat-expansion-panel de skipped da condicao products.length > 0 do import-card pai). Pronta para
+  Dev Angular.
+
+  MERGE SUB-F #195 + PR HOMOLOGACAO (LT, 2026-08-18):
+  - PR #196 (feature/ISSUE-195-skipped-panel-visibilidade -> desenv) verificado (124/124 testes
+    reportados pelo Dev, build producao OK, sem CI configurado no repo) e mesclado via squash +
+    delete-branch (commit `cf89cdcea5c2996e52724bbcaa1395a54da493c5`). Sub-issue #195 fechada.
+    `desenv_tasks_merged` = ["#184","#183","#185","#190","#192","#195"] — todas as sub-issues e
+    correcoes (incluindo a do QA 1a rodada) agora em `desenv`.
+  - Novo PR #197 (`desenv->homolog`, merge commit) aberto trazendo essa ultima correcao. Corpo do
+    PR descreve o bug encontrado pelo QA (painel de skipped inacessivel), referencia
+    `relatorio-qa.md` e o comentario do QA na Issue #182
+    (https://github.com/DQM-BETA/omuletachou/issues/182#issuecomment-5328061163).
+  - `pr_homologacao` = 197 (PR #194 preservado em `pr_homologacao_anterior`). `code_review_homolog_pr`
+    resetado (~) ate a nova rodada de Code Review avaliar o PR #197. `etapa_atual` = Code Review.
+  - Riscos herdados ainda pendentes de validacao ao vivo (schema `/highlights`, permalink
+    `/p/{catalog_product_id}`) permanecem documentados acima — recomendacao mantida ao QA de
+    retentar em ambiente com internet real (ex. VM Oracle); se tambem bloqueado, tratar o primeiro
+    ciclo real do `CollectorJob` em producao como gate final de validacao desses dois riscos.
 createdAt: 2026-08-17
 status_comment_id: 5317813321
 ---
@@ -228,18 +299,22 @@ status_comment_id: 5317813321
 | 18 | PM (Fase 2 — revisão de requisitos, Achado 2) | pm-analista-negocios | sonnet | ~ | ~ | ~ | **Agente falhou por limite de gasto mensal antes de devolver o HANDOFF final** (trabalho já feito recuperado do working tree e commitado pela sessão principal, sem custo real registrado). Gerente decidiu Opção A (isentar Mercado Livre do critério de desconto mínimo no scoring de IA, comentário https://github.com/DQM-BETA/omuletachou/issues/182#issuecomment-5319915601). Formalizado como adendo Seção 9 (cenários 9.1-9.5) em `criterios-aceite.md`: prompt de `ClaudeAiService.ScoreProductAsync` não deve enviar `DiscountPct=0` como sinal real para ML (omitir quando indisponível), ausência de desconto não reprova/penaliza, demais 4 critérios inalterados, Amazon/Shopee sem regressão (cenário 9.4). Resumo postado como comentário na Issue #182. Sem ambiguidade arquitetural (mudança pontual, já compreendida em `ClaudeAiService.cs`) — encaminhado direto ao LT, sem Arquiteto. |
 | 19 | Líder Técnico (merge Sub-D #190 + mapeamento Sub-E/#192) | lider-tecnico | sonnet | 108435 | 31 | 391s | **Tarefa 1**: PR #191 (feature/ISSUE-190-json-parse-try-catch → desenv) mesclado via squash (commit `83e28241248000dfd859c03d170bf0dc017b732e`, 430/430 testes reportados pelo Dev). Sub-issue #190 fechada. `desenv_tasks_merged` = ["#184","#183","#185","#190"]. **Tarefa 2**: sub-issue #192 criada (stack:dotnet, task_id:Sub-E) mapeando o Achado 2 (já decidido pelo Gerente, Opção A, formalizado pelo PM na Seção 9 de `criterios-aceite.md`, commit `92854c3`) — isentar Mercado Livre do critério de desconto mínimo em `ClaudeAiService.ScoreProductAsync`, TDD obrigatório, branch `feature/ISSUE-192-scoring-ml-desconto` base `desenv`. `tasks.md` atualizado com seção Sub-E completa (contexto técnico, CA 9.1-9.5). Sub-issue pronta para Dev, não spawnado (decisão da sessão principal). |
 | 20 | Dev .NET (Sub-E #192) | dev-dotnet | sonnet | 76552 | 26 | 308s | `ClaudeAiService.ScoreProductAsync` ajustado — prompt condicional por `product.Platform`: Mercado Livre omite a linha de desconto mínimo (systemPrompt) e `Desconto: X%` (userMessage), com instrução explícita para não penalizar ausência de dado; Amazon/Shopee mantidos byte-a-byte idênticos (não-regressão, cenário 9.4). TDD: 5 testes novos (cenários 9.1-9.4, incluindo `[Theory]` de não-regressão p/ Amazon/Shopee), RED→GREEN confirmado. Suíte 433/436 (3 falhas pré-existentes de integração com Testcontainers/Docker, confirmadas também na baseline `desenv` sem a mudança). PR #193 feature→desenv aberto. |
-| 21 | Líder Técnico (merge Sub-E #192 + PR homologação atualizado) | lider-tecnico | sonnet | ~ | ~ | ~ | PR #193 (feature/ISSUE-192-scoring-ml-desconto → desenv) verificado (433/436 testes, 3 falhas pré-existentes de `ClaudeBudgetServiceIntegrationTests` por falta de Docker/Testcontainers, confirmadas na baseline `desenv`) e mesclado via squash + delete-branch (commit `d37a16435c266c8e2cf1f03543582b2715c799c1`). Sub-issue #192 fechada. `desenv_tasks_merged` = ["#184","#183","#185","#190","#192"] — todas as sub-issues e correções pré-QA agora em `desenv`. Novo PR #194 (`desenv→homolog`, merge commit) aberto, trazendo os Achados 1 (#190) e 2 (#192) do `/code-review` estático no PR #189, com corpo referenciando o PR #189 original e o comentário de Code Review estático. `pr_homologacao` = 194 (substitui 189, preservado em `pr_homologacao_anterior`), `code_review_homolog_pr` = 194, `etapa_atual` = Code Review. |
+| 21 | Líder Técnico (merge Sub-E #192 + PR homologação atualizado) | lider-tecnico | sonnet | 58384 | 11 | 190s | PR #193 (feature/ISSUE-192-scoring-ml-desconto → desenv) verificado (433/436 testes, 3 falhas pré-existentes de `ClaudeBudgetServiceIntegrationTests` por falta de Docker/Testcontainers, confirmadas na baseline `desenv`) e mesclado via squash + delete-branch (commit `d37a16435c266c8e2cf1f03543582b2715c799c1`). Sub-issue #192 fechada. `desenv_tasks_merged` = ["#184","#183","#185","#190","#192"] — todas as sub-issues e correções pré-QA agora em `desenv`. Novo PR #194 (`desenv→homolog`, merge commit) aberto, trazendo os Achados 1 (#190) e 2 (#192) do `/code-review` estático no PR #189, com corpo referenciando o PR #189 original e o comentário de Code Review estático. `pr_homologacao` = 194 (substitui 189, preservado em `pr_homologacao_anterior`), `code_review_homolog_pr` = 194, `etapa_atual` = Code Review. |
+| 22 | Code Review (PR #194, reavaliação homologação) | code-review | sonnet | 126510 | 50 | 1372s | **APROVADO.** Build real (`dotnet build -c Release`) OK. `dotnet test -c Release --no-build` rodado 2x: 433/436 sem Docker (baseline), **436/436 com Docker Desktop disponível** (iniciado manualmente na sessão, incluindo os 3 testes de integração `ClaudeBudgetServiceIntegrationTests` via Testcontainers/Postgres real). Boot real via Docker (`docker compose build --no-cache api` + `up -d db api`, ambos `healthy`, `/health` 200, logs sem erro; containers parados ao final). Achado 1 (#190) validado: `JsonDocument.Parse` dentro de try/catch em `GetJsonAsync`, 3 testes novos cobrindo isolamento de falha inclusive no meio do ciclo. Achado 2 (#192) validado com rigor extra: comparação manual do branch Amazon/Shopee do novo prompt contra `git show 393134d5...:ClaudeAiService.cs` (estado pré-mudança) confirmou texto idêntico palavra por palavra nos raw string literals — não-regressão confirmada além dos testes automatizados. Riscos herdados (schema `/highlights`, permalink `/p/{id}`) retentados com rede real — 403 `PA_UNAUTHORIZED_RESULT_FROM_POLICIES`, mesmo bloqueio já documentado, não é achado novo. Nenhum comentário do `/code-review` estático no PR #194 (verificado, vazio). Evidência completa: https://github.com/DQM-BETA/omuletachou/pull/194#issuecomment-5327837114. PR #194 mesclado `desenv→homolog` via merge commit `cabc2f96387ea547ca2e9a3ab68656df6354cc7b`. `code_review_homolog_pr` = 194, `etapa_atual` = QA. |
+| 23 | QA (1ª rodada, homolog) | qa | sonnet | 161556 | 95 | 1018s | **REPROVADO.** Ambiente `homolog` (commit `cabc2f96...`) real via Docker, 436/436 backend + 120/120 dashboard. Fluxo crítico do link de afiliado validado ponta a ponta na UI real (tela `mercadolivre-links` via Playwright ad-hoc — repo não tem `test:visual`, Gate Visual formal N/A) e confirmado direto no Postgres: `affiliate_link` persistido é distinto de `source_url`, com tag rastreável, pareado corretamente por ordem. Sem regressão Amazon/Shopee; Seção 9 (isenção de desconto ML) funcionando; isolamento de falha por categoria/produto confirmado ao vivo (ciclo real do CollectorJob, degradação graciosa em falha OAuth). **Bug encontrado**: painel de itens "skipped" em `mercadolivre-links.component.html` fica inacessível quando a lista de pendentes esvazia após o import — está aninhado dentro do `<mat-card>` controlado por `*ngIf="!loading && !errorMessage && products.length > 0"`, então some do DOM junto com o card mesmo com `skipped.length > 0` e o snackbar reportando itens pulados. Reproduzido 2x (screenshots `06`,`08`,`09`). Riscos herdados (schema `/highlights`, permalink `/p/{id}`) continuam bloqueados pela mesma política de rede (403 `PA_UNAUTHORIZED_RESULT_FROM_POLICIES`) — nuance nova: `POST /oauth/token` no mesmo host NÃO é bloqueado, sugerindo bloqueio anti-bot em endpoints de leitura específicos do ML, não bloqueio geral de sandbox. Relatório completo: `relatorio-qa.md`. Comentário: https://github.com/DQM-BETA/omuletachou/issues/182#issuecomment-5328061163 |
+| 24 | Líder Técnico (mapeamento falha QA 1ª rodada) | lider-tecnico | sonnet | 96642 | 15 | 319s | Mapeou o Achado 1 (bloqueante) do `relatorio-qa.md` (painel de skipped inacessível quando `products.length` chega a 0 após reload) para sub-issue nova `#195` (stack:angular, task_id:Sub-F), TDD obrigatório, branch `feature/ISSUE-195-skipped-panel-visibilidade` base `desenv`. `tasks.md` atualizado com seção Sub-F completa (5 cenários Given/When/Then, contexto técnico apontando `mercadolivre-links.component.html` linhas ~120/~163-166 e o `.ts` correspondente). `sub_issues`/`sub_issues_frontend` atualizados em `estado.md`. `desenv_tasks_merged` não alterado (sub-issue nova, não mesclada ainda). `etapa_atual` = Em Desenvolvimento. Pronta para Dev Angular. |
+| 25 | Dev Angular (Sub-F #195) | dev-angular | sonnet | 84585 | 25 | 296s | Causa raiz confirmada: painel de skipped preso ao `*ngIf` do card de import. Fix: card agora renderiza com `products.length > 0 || (skipped && skipped.length > 0)`; conteúdo específico de pendentes isolado em `<ng-container *ngIf="products.length > 0">`; painel de skipped mantém `*ngIf="skipped && skipped.length > 0"` independente. TDD: 4 testes novos reproduzindo o bug exato (RED→GREEN confirmado). Suíte 124/124, build produção OK. PR #196 feature→desenv aberto. |
+| 26 | Líder Técnico (merge Sub-F #195 + PR homologação) | lider-tecnico | sonnet | ~ | ~ | ~ | PR #196 (feature/ISSUE-195-skipped-panel-visibilidade → desenv) verificado (124/124 testes reportados pelo Dev, build produção OK, sem CI configurado no repo) e mesclado via squash + delete-branch (commit `cf89cdcea5c2996e52724bbcaa1395a54da493c5`). Sub-issue #195 fechada. `desenv_tasks_merged` = ["#184","#183","#185","#190","#192","#195"] — todas as sub-issues e correções (incluindo a do QA 1ª rodada) agora em `desenv`. Novo PR #197 (`desenv→homolog`, merge commit) aberto trazendo essa última correção pendente; corpo do PR descreve o bug encontrado pelo QA (painel de skipped inacessível), referencia `relatorio-qa.md` e o comentário do QA na Issue #182. `pr_homologacao` = 197 (PR #194 preservado em `pr_homologacao_anterior`), `code_review_homolog_pr` resetado até nova avaliação, `etapa_atual` = Code Review. |
 
 ## Próximo passo
 
-PR #194 (`desenv→homolog`) aberto e pronto para reavaliação do **Code Review**:
-- Os dois achados do `/code-review` estático no PR #189 (JsonException fora do try/catch em
-  `GetJsonAsync`, e `DiscountPct=0` fixo colidindo com o critério de scoring de IA para ML) foram
-  corrigidos (#190 e #192) e mesclados em `desenv`.
-- Após a reavaliação do Code Review (`/code-review` estático + agente Code Review completo,
-  incluindo build/boot/testes real), se aprovado, o merge `desenv→homolog` libera o **QA**, que
-  segue pausado desde a correção pré-QA.
+**PR #197 (`desenv→homolog`) aberto trazendo a correção do bug encontrado pelo QA na 1ª rodada
+(sub-issue #195, painel de skipped inacessível).** Esta era a última correção pendente antes de
+reavaliar o QA. Fluxo: **Code Review** (novo, sobre o PR #197) → **QA** (2ª rodada).
+- As correções dos Achados 1 (#190) e 2 (#192) do `/code-review` estático no PR #189 permanecem
+  validadas e em `homolog`.
 - Riscos herdados ainda pendentes de validação ao vivo (schema `/highlights`, permalink
-  `/p/{catalog_product_id}`) permanecem documentados em `blockers` — recomendação ao QA de
-  retentar em ambiente com internet real.
+  `/p/{catalog_product_id}`) permanecem documentados em `blockers` — recomendação mantida ao QA de
+  retentar em ambiente com internet real (ex. VM Oracle); se também bloqueado, tratar o primeiro
+  ciclo real do `CollectorJob` em produção como gate final.
 </content>
