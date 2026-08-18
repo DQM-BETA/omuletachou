@@ -20,6 +20,17 @@ public class ClaudeAiServiceTests
         category: "Eletronicos",
         platform: Platform.Amazon);
 
+    private static Product CreateProduct(Platform platform, decimal discountPct = 0m) => new Product(
+        title: "Fone de Ouvido Bluetooth XPTO",
+        description: "Fone de ouvido sem fio",
+        salePrice: 199.90m,
+        originalPrice: 199.90m,
+        discountPct: discountPct,
+        affiliateLink: "https://link.test/test",
+        slug: "fone-bluetooth-xpto",
+        category: "Eletronicos",
+        platform: platform);
+
     private static Mock<IClaudeBudgetService> CreateBudgetServiceMock(bool available = true)
     {
         var mock = new Mock<IClaudeBudgetService>();
@@ -287,5 +298,107 @@ public class ClaudeAiServiceTests
         result.Should().NotBeNull();
         result!.Category.Should().Be("Geral");
         result.Subcategory.Should().BeNull();
+    }
+
+    // ---- ScoreProductAsync — isencao do Mercado Livre do criterio de desconto minimo ----
+    // Achado 2 do /code-review estatico no PR #189, decisao do Gerente (Opcao A),
+    // criterios-aceite.md Secao 9 (cenarios 9.1-9.5).
+
+    private static (string systemPrompt, string userMessage) CaptureScorePrompt(
+        Mock<IAnthropicClientWrapper> mockWrapper, Product product, IClaudeBudgetService budgetService)
+    {
+        string? capturedSystem = null;
+        string? capturedUser = null;
+
+        mockWrapper
+            .Setup(w => w.CompleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, CancellationToken>((sys, user, _) =>
+            {
+                capturedSystem = sys;
+                capturedUser = user;
+            })
+            .ReturnsAsync(new ClaudeCompletionResult("{\"score\": 8, \"reason\": \"ok\"}", 100, 20));
+
+        var service = new ClaudeAiService(mockWrapper.Object, budgetService, minScore: 6, minScoreFallback: 5);
+        service.ScoreProductAsync(product).GetAwaiter().GetResult();
+
+        return (capturedSystem!, capturedUser!);
+    }
+
+    [Fact]
+    public void ScoreProductAsync_MercadoLivre_NaoEnviaDiscountPctZeroComoValorReal()
+    {
+        // Cenario 9.1: DiscountPct = 0 (fallback estrutural do MercadoLivreCollector — Highlights
+        // API nao expoe desconto) nao pode ser enviado ao prompt como se fosse um dado real.
+        var mockWrapper = new Mock<IAnthropicClientWrapper>();
+        var product = CreateProduct(Platform.MercadoLivre, discountPct: 0m);
+
+        var (systemPrompt, userMessage) = CaptureScorePrompt(mockWrapper, product, CreateBudgetServiceMock().Object);
+
+        userMessage.Should().NotContain("Desconto:");
+        userMessage.Should().NotContain("0%");
+        systemPrompt.Should().NotContain("Desconto real minimo de 15%; precos inflados penalizam");
+    }
+
+    [Fact]
+    public async Task ScoreProductAsync_MercadoLivre_AprovaMesmoSemAtenderCriterioDeDesconto()
+    {
+        // Cenario 9.2: ausencia de desconto real nao reprova nem penaliza o produto de ML — o
+        // score retornado pela IA (nao filtrado por DiscountPct no codigo) decide a aprovacao.
+        var mockWrapper = new Mock<IAnthropicClientWrapper>();
+        mockWrapper
+            .Setup(w => w.CompleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ClaudeCompletionResult("{\"score\": 9, \"reason\": \"Bom produto, sem dado de desconto\"}", 100, 20));
+
+        var service = new ClaudeAiService(mockWrapper.Object, CreateBudgetServiceMock().Object, minScore: 6, minScoreFallback: 5);
+        var product = CreateProduct(Platform.MercadoLivre, discountPct: 0m);
+
+        var result = await service.ScoreProductAsync(product);
+
+        result.Approve.Should().BeTrue();
+        result.Score.Should().Be(9);
+    }
+
+    [Fact]
+    public void ScoreProductAsync_MercadoLivre_InstruiIaANaoPenalizarAusenciaDeDesconto()
+    {
+        // Cenario 9.1: instrucao explicita para a IA nao penalizar a ausencia do dado.
+        var mockWrapper = new Mock<IAnthropicClientWrapper>();
+        var product = CreateProduct(Platform.MercadoLivre, discountPct: 0m);
+
+        var (systemPrompt, _) = CaptureScorePrompt(mockWrapper, product, CreateBudgetServiceMock().Object);
+
+        systemPrompt.Should().ContainEquivalentOf("nao penalize a ausencia de desconto", "o systemPrompt deve instruir explicitamente a IA a nao penalizar a ausencia de desconto do Mercado Livre");
+    }
+
+    [Fact]
+    public void ScoreProductAsync_MercadoLivre_Mantem4CriteriosRestantes()
+    {
+        // Cenario 9.3: categoria, titulo, preco final e prazo de entrega continuam avaliados.
+        var mockWrapper = new Mock<IAnthropicClientWrapper>();
+        var product = CreateProduct(Platform.MercadoLivre, discountPct: 0m);
+
+        var (systemPrompt, _) = CaptureScorePrompt(mockWrapper, product, CreateBudgetServiceMock().Object);
+
+        systemPrompt.Should().Contain("Categorias preferidas: eletronicos, casa/cozinha, beleza, brinquedos, moda");
+        systemPrompt.Should().Contain("Titulo sem nome descritivo (so codigo de modelo) penaliza");
+        systemPrompt.Should().Contain("Preco final acima de R$ 2.000 penaliza");
+        systemPrompt.Should().Contain("Prazo de entrega longo penaliza");
+    }
+
+    [Theory]
+    [InlineData(Platform.Amazon)]
+    [InlineData(Platform.Shopee)]
+    public void ScoreProductAsync_AmazonEShopee_MantemCriterioDeDescontoInalterado(Platform platform)
+    {
+        // Cenario 9.4 (nao-regressao): Amazon e Shopee continuam com o criterio de desconto
+        // minimo de 15% aplicado integralmente, comportamento identico ao anterior a esta issue.
+        var mockWrapper = new Mock<IAnthropicClientWrapper>();
+        var product = CreateProduct(platform, discountPct: 23m);
+
+        var (systemPrompt, userMessage) = CaptureScorePrompt(mockWrapper, product, CreateBudgetServiceMock().Object);
+
+        systemPrompt.Should().Contain("Desconto real minimo de 15%; precos inflados penalizam");
+        userMessage.Should().Contain($"Desconto: {product.DiscountPct:F0}%");
     }
 }
