@@ -64,6 +64,14 @@ export class MercadolivreLinksComponent implements OnInit, OnDestroy {
   panelExpanded = false;
   private productsAtLastImport: ProductListItem[] = [];
 
+  /**
+   * Quantidade de produtos pendentes trabalhados por vez ("lote"). A ferramenta oficial do
+   * Mercado Livre (Gerador de produtos recomendados) hoje aceita no maximo ~30 URLs por vez,
+   * mas esse limite pode mudar — por isso o valor e configuravel pelo operador, com 30 apenas
+   * como sugestao inicial (nao hardcoded na logica).
+   */
+  private _batchSize = 30;
+
   isMobile = false;
   isTablet = false;
   private breakpointSub?: Subscription;
@@ -95,6 +103,20 @@ export class MercadolivreLinksComponent implements OnInit, OnDestroy {
     return this.isTablet ? this.displayedColumnsTablet : this.displayedColumnsDesktop;
   }
 
+  get batchSize(): number {
+    return this._batchSize;
+  }
+
+  set batchSize(value: number) {
+    const parsed = Number(value);
+    this._batchSize = Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+  }
+
+  /** Subconjunto de `products` (no máximo `batchSize` itens) que o operador está trabalhando agora. */
+  get displayedProducts(): ProductListItem[] {
+    return this.products.slice(0, this.batchSize);
+  }
+
   load(): void {
     this.loading = true;
     this.errorMessage = null;
@@ -123,11 +145,11 @@ export class MercadolivreLinksComponent implements OnInit, OnDestroy {
   }
 
   get pasteMismatch(): boolean {
-    return this.pasteCount !== this.products.length;
+    return this.pasteCount !== this.displayedProducts.length;
   }
 
   get pasteCounterMessage(): string {
-    const total = this.products.length;
+    const total = this.displayedProducts.length;
     const count = this.pasteCount;
 
     if (count === 0) {
@@ -153,11 +175,13 @@ export class MercadolivreLinksComponent implements OnInit, OnDestroy {
   }
 
   get canImport(): boolean {
-    return !this.importing && this.products.length > 0 && this.pasteCount > 0 && !this.pasteMismatch;
+    return (
+      !this.importing && this.displayedProducts.length > 0 && this.pasteCount > 0 && !this.pasteMismatch
+    );
   }
 
   copyUrls(): void {
-    const text = this.products.map((p) => p.sourceUrl ?? '').join('\n');
+    const text = this.displayedProducts.map((p) => p.sourceUrl ?? '').join('\n');
     navigator.clipboard.writeText(text).then(
       () => {
         this.copied = true;
@@ -181,10 +205,10 @@ export class MercadolivreLinksComponent implements OnInit, OnDestroy {
     this.importing = true;
     this.skipped = null;
     this.panelExpanded = false;
-    this.productsAtLastImport = [...this.products];
+    this.productsAtLastImport = [...this.displayedProducts];
 
     const lines = this.pasteLines;
-    const items: AffiliateLinkImportItem[] = this.products.map((product, index) => ({
+    const items: AffiliateLinkImportItem[] = this.displayedProducts.map((product, index) => ({
       productId: product.id,
       affiliateLink: lines[index],
     }));
