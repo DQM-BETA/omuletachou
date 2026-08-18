@@ -1,17 +1,30 @@
 issue: 208
 titulo: feat(discussão): avaliar desacoplar visibilidade no site público do requisito de rede social configurada
-etapa_atual: Refinamento Técnico — PM Fase 2 concluída, aguardando Arquiteto (ambiguidade de modelagem de domínio)
-ultimo_agente: pm-analista-negocios
+etapa_atual: Em Desenvolvimento
+ultimo_agente: lider-tecnico
 openspec_change: openspec/changes/issue-208-desacoplar-visibilidade-site-publico
-tech_stacks: []
+tech_stacks: [dotnet, angular]
 repos:
   omuletachou: ~
 repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-208-desacoplar-visibilidade-site-publico
 openspec_path: repos/omuletachou/openspec/changes/issue-208-desacoplar-visibilidade-site-publico
-sub_issues: []
+sub_issues:
+  - number: 215
+    titulo: "Sub: ProcessorJob publica no site independente de rede social qualificada"
+    stack: stack:dotnet
+    task_id: T-01
+  - number: 216
+    titulo: "Sub: API do dashboard — campo Destinations agregado em ProductListItemDto"
+    stack: stack:dotnet
+    task_id: T-02
+  - number: 217
+    titulo: "Sub: Dashboard — tooltip de destinos na coluna Status"
+    stack: stack:angular
+    task_id: T-03
 desenv_tasks_merged: []
-sub_issues_frontend: {}
+sub_issues_frontend:
+  217: stack:angular
 pr_homologacao: ~
 pr_release: ~
 code_review_homolog_pr: ~
@@ -33,4 +46,12 @@ status_comment_id: ~
   5. Sem exceções de bloqueio adicionais; regra nova vale só para produtos novos/atualizados quando uma rede social futura for configurada (sem retroatividade).
   6. Sem urgência, rota normal.
 - PM Fase 2 concluída em 2026-08-18: `proposal.md` e `criterios-aceite.md` escritos incorporando as decisões do Gate 1
-- Ambiguidade arquitetural identificada: modelagem do "status por destino" no domínio (hoje `Product`/`ProductStatus` tem campo `Status` único), nome de campos/enum novos, como `ProcessorJob` deve separar a decisão "publicar no site" de "enfileirar publicação social", como a tooltip do dashboard deve agregar os dados de status por destino, e critério técnico para evitar retroatividade em rede social configurada no futuro → encaminhado ao Arquiteto antes do refinamento técnico do LT
+- Ambiguidade arquitetural identificada: modelagem do "status por destino" no domínio → encaminhado ao Arquiteto
+- Arquiteto concluiu `design.md` em 2026-08-18: sem novo campo/tabela — `Product.Status == Published` passa a ser incondicional (só depende de aprovação + link de afiliado válido); `PublicationQueue` já existente vira fonte de verdade para o tooltip via campo aditivo `Destinations` em `ProductListItemDto`
+- Refinamento técnico do LT concluído em 2026-08-18:
+  - Confirmações ao vivo contra o código real (registradas em `especificacao-tecnica.md` §0): nomes/casing de `ProcessorJob`/`Product`/`PublicationQueue`/`ProductListItemDto`/enums conferem 100% com o design; serialização JSON já é camelCase por padrão (sem config custom) — confirma `destinations` sem `[JsonPropertyName]`.
+  - Decisão de observabilidade do LT: adicionar `LogInformation` quando `queuedCount == 0` (produto publicado no site sem rede social qualificada) — não é warning, é comportamento esperado pós-fix.
+  - Reset de dados (proposal Cenário 5.1): confirmado que **não existe** rotina de reset/truncate no `deploy.sh` nem no runbook de deploy atual — é ação manual pontual do Gerente, fora do escopo de código desta issue. Registrado como item de checklist em `tasks.md` (não sub-issue de código).
+  - Decisão de formato do tooltip (delegada pelo Arquiteto): texto simples via `matTooltip`, mesmo padrão já usado nas colunas `aiScore`/`status` — não escalado para UX/UI (extensão pontual de tela existente, sem Issue de UI disparada).
+  - `especificacao-tecnica.md` e `tasks.md` escritos em `openspec/changes/issue-208-desacoplar-visibilidade-site-publico/`.
+  - 3 sub-issues criadas: #215 (T-01, backend `ProcessorJob`), #216 (T-02, backend API `Destinations`), #217 (T-03, frontend tooltip dashboard).
