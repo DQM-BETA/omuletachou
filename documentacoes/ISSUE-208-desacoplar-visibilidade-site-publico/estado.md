@@ -22,7 +22,7 @@ sub_issues:
     titulo: "Sub: Dashboard — tooltip de destinos na coluna Status"
     stack: stack:angular
     task_id: T-03
-desenv_tasks_merged: [215]
+desenv_tasks_merged: [215, 216]
 sub_issues_frontend:
   217: stack:angular
 pr_homologacao: ~
@@ -56,3 +56,5 @@ status_comment_id: ~
   - `especificacao-tecnica.md` e `tasks.md` escritos em `openspec/changes/issue-208-desacoplar-visibilidade-site-publico/`.
   - 3 sub-issues criadas: #215 (T-01, backend `ProcessorJob`), #216 (T-02, backend API `Destinations`), #217 (T-03, frontend tooltip dashboard).
 - Merge sub-issue #215 (T-01) em 2026-08-18: PR #219 squash-mergeado em `desenv` (commit `4e5dbba`), confirmado no remoto. Testes reportados pelo Dev: 448/448. Sub-issue #215 fechada.
+- Merge sub-issue #216 (T-02) em 2026-08-18: PR #218 squash-mergeado em `desenv` (commit `32c8b16`), confirmado no remoto. Testes reportados pelo Dev: 447/447. Sub-issue #216 fechada.
+- **Próximo passo:** falta a sub-issue #217 (T-03, Angular, dashboard) — depende do contrato de API (`Destinations` em `ProductListItemDto`) recém-mesclado pela T-02. **Não abrir PR desenv→homolog ainda.** Só criar o PR de promoção após o Dev Angular mesclar #217 (`desenv_tasks_merged` terá as 3 sub-issues: [215, 216, 217]).
