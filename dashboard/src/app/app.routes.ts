@@ -25,6 +25,13 @@ export const routes: Routes = [
           import('./pages/facebook-manual/facebook-manual.component').then(m => m.FacebookManualComponent),
       },
       {
+        path: 'mercadolivre-links',
+        loadComponent: () =>
+          import('./pages/mercadolivre-links/mercadolivre-links.component').then(
+            m => m.MercadolivreLinksComponent
+          ),
+      },
+      {
         path: 'settings',
         loadComponent: () => import('./pages/settings/settings.component').then(m => m.SettingsComponent),
       },

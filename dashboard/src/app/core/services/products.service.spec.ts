@@ -1,6 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { ProductsService, ProductListItem, ProductDetail } from './products.service';
+import {
+  ProductsService,
+  ProductListItem,
+  ProductDetail,
+  ImportAffiliateLinksResult,
+} from './products.service';
 import { PagedResult } from './paged-result.model';
 
 describe('ProductsService', () => {
@@ -123,5 +128,39 @@ describe('ProductsService', () => {
     const req = httpMock.expectOne('/api/products/1');
     expect(req.request.method).toBe('GET');
     req.flush(mock);
+  });
+
+  it('Issue #185 — listAwaitingAffiliateLink() chama GET /api/products?status=AwaitingAffiliateLink&pageSize=200', () => {
+    service.listAwaitingAffiliateLink().subscribe();
+
+    const req = httpMock.expectOne(
+      r =>
+        r.url === '/api/products' &&
+        r.params.get('status') === 'AwaitingAffiliateLink' &&
+        r.params.get('pageSize') === '200'
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush({ items: [], page: 1, pageSize: 200, totalItems: 0, totalPages: 0 });
+  });
+
+  it('Issue #185 — importAffiliateLinks() chama POST /api/products/affiliate-links/import com o body correto', () => {
+    const items = [
+      { productId: 'p1', affiliateLink: 'https://ml.com/afiliado/1' },
+      { productId: 'p2', affiliateLink: 'https://ml.com/afiliado/2' },
+    ];
+    const mockResult: ImportAffiliateLinksResult = {
+      imported: 1,
+      skipped: [{ productId: 'p2', reason: 'Link vazio' }],
+    };
+
+    let result: ImportAffiliateLinksResult | undefined;
+    service.importAffiliateLinks(items).subscribe(res => (result = res));
+
+    const req = httpMock.expectOne('/api/products/affiliate-links/import');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ items });
+    req.flush(mockResult);
+
+    expect(result).toEqual(mockResult);
   });
 });

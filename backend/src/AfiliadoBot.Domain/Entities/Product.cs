@@ -231,4 +231,29 @@ public class Product
         AffiliateLink = link;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    /// <summary>
+    /// Marca o produto ML como aguardando importacao manual do link de afiliado (Gate 1.5, Issue
+    /// #182/#184 — o endpoint affiliate-tools/links nao esta acessivel; fluxo passa a ser
+    /// semi-manual: operador cola o link gerado na ferramenta oficial do ML no dashboard).
+    /// </summary>
+    public void MarkAsAwaitingAffiliateLink()
+    {
+        Status = ProductStatus.AwaitingAffiliateLink;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Preenche o AffiliateLink importado manualmente pelo operador (Issue #182/#184) e devolve o
+    /// produto ao fluxo normal do ProcessorJob (Status = Queued, reprocessado na proxima execucao).
+    /// </summary>
+    public void ResolveAffiliateLink(string link)
+    {
+        if (string.IsNullOrWhiteSpace(link))
+            throw new ArgumentException("Link nao pode ser nulo ou vazio.", nameof(link));
+
+        AffiliateLink = link;
+        Status = ProductStatus.Queued;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
