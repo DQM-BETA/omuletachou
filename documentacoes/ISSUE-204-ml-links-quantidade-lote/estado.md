@@ -1,7 +1,7 @@
 issue: 204
 titulo: feat: permitir escolher a quantidade de produtos por lote na tela de importação de links ML (limite real da ferramenta oficial do ML)
-etapa_atual: Aguardando Gate 2 (Gerente) — PR release aberto
-ultimo_agente: lider-tecnico
+etapa_atual: Concluído
+ultimo_agente: coordenador
 openspec_change: ~
 tech_stacks:
   - angular
@@ -42,12 +42,15 @@ status_comment_id: ~
   - **Efeito colateral da validação ao vivo:** 2 dos 111 produtos reais (`920cc7b3-b1c2-46ff-9fd9-5b7c6aed9cb4`, `5e910e71-0d33-4d02-ae6e-03ff4172623f`) foram marcados como importados com link de afiliado de teste (`CR_TEST_BATCH_1`/`CR_TEST_BATCH_2`) no ambiente local durante a validação de integração — não revertido (não há endpoint de rollback; consistente com a prática já usada em CRs anteriores desta squad que disparam fluxos reais). QA deve estar ciente ao contar produtos pendentes.
   - `etapa_atual` → QA. Apto a seguir.
 - **PR release #207 (homolog→main) criado em 2026-08-18** pelo Líder Técnico. Corpo do PR descreve o limite real de 30 URLs/vez da ferramenta oficial do ML e a correção (campo de quantidade por lote editável), referencia PRs #205 e #206 e `relatorio-qa.md`. **NÃO mesclado — aguarda aprovação humana do Gerente (Gate 2).**
+- **MERGED (2026-08-18):** PR #207 (homolog→main) mesclado via merge commit `0f5a6e96db1ef69e227713c1c5638bec177e8a5a` após aprovação do Gerente (Gate 2). Issue #204 fechada como completed. Tabela consolidada de custo postada como comentário na Issue (281.002 tokens, 1.232s processamento, ~2h decorrido, rota rapido).
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Ferramentas | Tempo (s) |
 |---|-------|--------|--------|--------|------------|-----------|
 | 1 | Preparar Issue | coordenador | haiku | 21439 | 4 | 57s |
 | 2 | Merge PR205 + PR206 | lider-tecnico | sonnet | 33339 | 14 | 72s |
-| 3 | Code Review (PR #206, homologação) | code-review | sonnet | 98546 | 62 | 520s | Aprovado, ver Notas para evidência completa |
-| 4 | QA (homolog) | qa | sonnet | 86286 | 40 | 502s | **APROVADO.** homolog sincronizado (fast-forward, commit `c95a0ce...`). 129/129 testes, cobertura ≥80% em todas as métricas. Validação real com N=3 (valor arbitrário, provando ausência de hardcode) via import real, confirmado no Postgres: pareamento correto, produto fora do lote intocado. Pendentes 109→106 (efeito colateral esperado da validação ao vivo, mesma prática do CR). E2E N/A (sem Playwright no dashboard). Achado informativo não-bloqueante já registrado pelo CR (MaxPageSize=100). Relatório: `relatorio-qa.md`. Comentário: https://github.com/DQM-BETA/omuletachou/issues/204#issuecomment-5331958841
+| 3 | Code Review (PR #206, homologação) | code-review | sonnet | 98546 | 62 | 520s |
+| 4 | QA (homolog) | qa | sonnet | 86286 | 40 | 502s |
 | 5 | PR release (homolog→main) | lider-tecnico | sonnet | 41392 | 10 | 81s |
+
+**Totais:** 281.002 tokens · 1.232s processamento (~20,5 min) · ~2h decorrido (criação→merge 2026-08-18) · 130 tool_uses
