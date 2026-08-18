@@ -1,8 +1,8 @@
 ---
 issue: 210
 titulo: fix: tooltip de motivo do erro aparece ao passar o mouse no AI Score, não no Status
-etapa_atual: Backlog
-ultimo_agente: coordenador
+etapa_atual: Code Review
+ultimo_agente: lt
 openspec_change: ~
 tech_stacks:
   - angular
@@ -14,7 +14,7 @@ openspec_path: ~
 sub_issues: []
 desenv_tasks_merged: []
 sub_issues_frontend: {}
-pr_homologacao: ~
+pr_homologacao: 213
 pr_release: ~
 code_review_homolog_pr: ~
 qa_status: ~
@@ -30,10 +30,16 @@ Na tela `Products`, quando um produto está com Status = `Error`, a mensagem exp
 Componente da tela de produtos no dashboard (provavelmente `dashboard/src/app/pages/products/products.component.html`), procurar o binding do tooltip (`matTooltip` ou similar) e verificar em qual elemento/coluna ele está de fato anexado.
 
 ## Aceite
-- [ ] Dev reproduz ao vivo (`ng serve` ou via container em `localhost:8081`, logado)
-- [ ] Tooltip do motivo do erro movido para a coluna Status (ex.: badge "Error")
-- [ ] Comportamento mantido (mostrar `ai_reason` ao passar o mouse) no elemento correto
+- [x] Dev reproduz ao vivo (`ng serve` ou via container em `localhost:8081`, logado)
+- [x] Tooltip do motivo do erro movido para a coluna Status (ex.: badge "Error")
+- [x] Comportamento mantido (mostrar `ai_reason` ao passar o mouse) no elemento correto
 - [ ] QA valida a mudança de posição do tooltip
+
+## Merge feature→desenv
+PR #211 (`feature/ISSUE-210-fix-tooltip-erro` → `desenv`) mesclado via squash em 2026-08-18 (commit `d82825a`). Testes reportados pelo Dev: 131/131.
+
+## PR de homologação
+PR #213 (`desenv` → `homolog`) aberto em 2026-08-18. Aguardando Code Review + QA + Gate 2.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Ferramentas | Tempo (s) |
