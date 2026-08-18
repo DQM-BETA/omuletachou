@@ -56,6 +56,20 @@ describe('MercadolivreLinksComponent', () => {
     sourceUrl: 'https://www.mercadolivre.com.br/p/MLB456',
   };
 
+  const product3: ProductListItem = {
+    id: 'p3',
+    title: 'Cafeteira eletrica 220V',
+    salePrice: 149.9,
+    originalPrice: 199.9,
+    discountPct: 25,
+    status: 'AwaitingAffiliateLink',
+    platform: 'MercadoLivre',
+    slug: 'cafeteira-eletrica-220v',
+    category: 'Eletrodomesticos',
+    createdAt: '2026-08-03T10:00:00Z',
+    sourceUrl: 'https://www.mercadolivre.com.br/p/MLB789',
+  };
+
   function pagedResult(items: ProductListItem[]): PagedResult<ProductListItem> {
     return { items, page: 1, pageSize: 200, totalItems: items.length, totalPages: 1 };
   }
@@ -480,5 +494,114 @@ describe('MercadolivreLinksComponent', () => {
     expect(component.isMobile).toBeFalse();
     expect(component.isTablet).toBeFalse();
     expect(component.displayedColumns).toEqual(['index', 'title', 'category', 'sourceUrl']);
+  });
+
+  describe('quantidade por lote (ISSUE-204)', () => {
+    it('inicia com o valor padrao sugerido de 30 e nao limita a lista quando ha menos produtos que o lote', () => {
+      setup(pagedResult([product1, product2, product3]));
+      fixture.detectChanges();
+
+      expect(component.batchSize).toBe(30);
+      expect(component.displayedProducts.length).toBe(3);
+      expect(component.displayedProducts).toEqual([product1, product2, product3]);
+    });
+
+    it('reduzir a quantidade por lote via input limita a lista exibida e as URLs copiadas ao subconjunto', fakeAsync(() => {
+      setup(pagedResult([product1, product2, product3]));
+      fixture.detectChanges();
+      spyOn(navigator.clipboard, 'writeText').and.returnValue(Promise.resolve());
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const batchInput = compiled.querySelector('[data-testid="batch-size-input"]') as HTMLInputElement;
+      expect(batchInput).toBeTruthy();
+
+      batchInput.value = '2';
+      batchInput.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+
+      expect(component.batchSize).toBe(2);
+      expect(component.displayedProducts).toEqual([product1, product2]);
+
+      const rows = compiled.querySelectorAll('[data-testid="product-row"]');
+      expect(rows.length).toBe(2);
+
+      const summary = compiled.querySelector('[data-testid="batch-size-summary"]') as HTMLElement;
+      expect(summary.textContent).toContain('Exibindo 2 de 3 produtos pendentes.');
+
+      const copyButton = compiled.querySelector('[data-testid="copy-urls-button"]') as HTMLButtonElement;
+      expect(copyButton.textContent).toContain('Copiar URLs (2)');
+
+      copyButton.click();
+      tick();
+
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        'https://www.mercadolivre.com.br/p/MLB123\nhttps://www.mercadolivre.com.br/p/MLB456'
+      );
+
+      tick(2000);
+    }));
+
+    it('importa apenas os N produtos do lote atual (2 de 3) e preserva o produto fora do lote como pendente apos reload', () => {
+      setup(pagedResult([product1, product2, product3]));
+      fixture.detectChanges();
+
+      component.batchSize = 2;
+      fixture.detectChanges();
+
+      const result: ImportAffiliateLinksResult = { imported: 2, skipped: [] };
+      productsServiceSpy.importAffiliateLinks.and.returnValue(of(result));
+      // produto fora do lote atual (p3) continua pendente e volta no reload, intacto
+      productsServiceSpy.listAwaitingAffiliateLink.and.returnValue(of(pagedResult([product3])));
+
+      component.pastedText = 'https://ml.com/afiliado/1\nhttps://ml.com/afiliado/2';
+      fixture.detectChanges();
+
+      expect(component.canImport).toBeTrue();
+
+      component.import();
+      fixture.detectChanges();
+
+      expect(productsServiceSpy.importAffiliateLinks).toHaveBeenCalledWith([
+        { productId: 'p1', affiliateLink: 'https://ml.com/afiliado/1' },
+        { productId: 'p2', affiliateLink: 'https://ml.com/afiliado/2' },
+      ]);
+      expect(component.products).toEqual([product3]);
+      expect(component.displayedProducts).toEqual([product3]);
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const rows = compiled.querySelectorAll('[data-testid="product-row"]');
+      expect(rows.length).toBe(1);
+    });
+
+    it('pareamento de colagem considera apenas o subconjunto do lote (mismatch calculado contra N, nao contra o total de pendentes)', () => {
+      setup(pagedResult([product1, product2, product3]));
+      fixture.detectChanges();
+
+      component.batchSize = 2;
+      fixture.detectChanges();
+
+      // 2 linhas coladas == 2 produtos do lote atual -> sem mismatch, mesmo havendo 3 pendentes no total
+      component.pastedText = 'https://ml.com/afiliado/1\nhttps://ml.com/afiliado/2';
+      fixture.detectChanges();
+
+      expect(component.pasteMismatch).toBeFalse();
+      expect(component.canImport).toBeTrue();
+      expect(component.pasteCounterMessage).toContain('pronto para importar');
+    });
+
+    it('valor invalido/zero no campo de lote nao quebra o componente e oculta a lista/copia (nenhum produto no subconjunto)', () => {
+      setup(pagedResult([product1, product2, product3]));
+      fixture.detectChanges();
+
+      component.batchSize = 0;
+      fixture.detectChanges();
+
+      expect(component.displayedProducts).toEqual([]);
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('[data-testid="copy-urls-button"]')).toBeFalsy();
+      expect(compiled.querySelector('[data-testid="products-table"]')).toBeFalsy();
+      // produtos pendentes continuam intactos no estado (nao sao descartados)
+      expect(component.products.length).toBe(3);
+    });
   });
 });
