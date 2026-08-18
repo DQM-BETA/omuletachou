@@ -26,5 +26,7 @@ rota: rapido
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) | Notas |
 |---|---|---|---|---|---|---|---|
-| 1 | Preparação | Coordenador | Haiku | — | — | — | Issue criada, estado.md preparado |
-| 2 | Merge feature→desenv + PR desenv→homolog | Líder Técnico | Sonnet | — | — | — | PR #200 squash mergeado em desenv (437/437 testes, boot real Postgres validado); PR #201 (desenv→homolog, merge commit) aberto, não mesclado — aguarda Code Review/QA/Gate 2 |
+| 1 | Preparação | Coordenador | Haiku | 20665 | 8 | 70s | Issue criada, estado.md preparado |
+| 2 | Dev .NET (fix slug) | Dev .NET | Sonnet | 86383 | 53 | 395s | Truncagem do slug preservando sufixo do externalId. TDD RED→GREEN, 437/437 testes, boot real contra Postgres validado. PR #200 feature→desenv aberto. |
+| 3 | Merge feature→desenv + PR desenv→homolog | Líder Técnico | Sonnet | 30751 | 12 | 78s | PR #200 squash mergeado em desenv (437/437 testes, boot real Postgres validado); PR #201 (desenv→homolog, merge commit) aberto, não mesclado — aguarda Code Review/QA/Gate 2 |
+| 4 | Code Review (tentativa 1, inconclusiva) | Code Review | Sonnet | 57668 | 46 | 381s | Agente travou aguardando notificação de job em background que nunca chega para subagentes — não devolveu HANDOFF nem mesclou o PR. Sessão principal assumiu a validação ao vivo diretamente: disparou o coletor real contra a API do Mercado Livre e reproduziu o MESMO erro `varchar(300)` — mas descobriu que o container rodando ainda usava a imagem Docker anterior ao merge do fix (rebuild necessário). Após rebuild+restart, disparou de novo e encontrou um **segundo bug real, diferente**: `Product.UpdateAiResult`/`MarkAsError` gravam `AiReason` (também `varchar(300)`) sem truncar — a resposta real da IA (Claude, não mock) pode passar de 300 caracteres. Afeta as 3 plataformas (Amazon/Shopee/MercadoLivre), não só ML. Adicionando essa correção na mesma Issue antes de reacionar Code Review/QA. |
