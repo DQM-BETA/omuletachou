@@ -1,7 +1,7 @@
 issue: 204
 titulo: feat: permitir escolher a quantidade de produtos por lote na tela de importação de links ML (limite real da ferramenta oficial do ML)
-etapa_atual: Aguardando PR homolog→main (Gate 2)
-ultimo_agente: code-review
+etapa_atual: Aguardando Gate 2 (Gerente) — PR release aberto
+ultimo_agente: lider-tecnico
 openspec_change: ~
 tech_stacks:
   - angular
@@ -15,7 +15,7 @@ desenv_tasks_merged: []
 sub_issues_frontend: {}
 pr_feature: 205
 pr_homologacao: 206
-pr_release: ~
+pr_release: 207
 code_review_homolog_pr: 206
 qa_status: aprovado — ver relatorio-qa.md e ledger etapa 4
 figma_url: ~
@@ -41,6 +41,7 @@ status_comment_id: ~
   - Sem segredos commitados, sem violação OWASP identificável (campo numérico simples, sem superfície de injeção nova).
   - **Efeito colateral da validação ao vivo:** 2 dos 111 produtos reais (`920cc7b3-b1c2-46ff-9fd9-5b7c6aed9cb4`, `5e910e71-0d33-4d02-ae6e-03ff4172623f`) foram marcados como importados com link de afiliado de teste (`CR_TEST_BATCH_1`/`CR_TEST_BATCH_2`) no ambiente local durante a validação de integração — não revertido (não há endpoint de rollback; consistente com a prática já usada em CRs anteriores desta squad que disparam fluxos reais). QA deve estar ciente ao contar produtos pendentes.
   - `etapa_atual` → QA. Apto a seguir.
+- **PR release #207 (homolog→main) criado em 2026-08-18** pelo Líder Técnico. Corpo do PR descreve o limite real de 30 URLs/vez da ferramenta oficial do ML e a correção (campo de quantidade por lote editável), referencia PRs #205 e #206 e `relatorio-qa.md`. **NÃO mesclado — aguarda aprovação humana do Gerente (Gate 2).**
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Ferramentas | Tempo (s) |
@@ -49,3 +50,4 @@ status_comment_id: ~
 | 2 | Merge PR205 + PR206 | lider-tecnico | sonnet | 33339 | 14 | 72s |
 | 3 | Code Review (PR #206, homologação) | code-review | sonnet | 98546 | 62 | 520s | Aprovado, ver Notas para evidência completa |
 | 4 | QA (homolog) | qa | sonnet | 86286 | 40 | 502s | **APROVADO.** homolog sincronizado (fast-forward, commit `c95a0ce...`). 129/129 testes, cobertura ≥80% em todas as métricas. Validação real com N=3 (valor arbitrário, provando ausência de hardcode) via import real, confirmado no Postgres: pareamento correto, produto fora do lote intocado. Pendentes 109→106 (efeito colateral esperado da validação ao vivo, mesma prática do CR). E2E N/A (sem Playwright no dashboard). Achado informativo não-bloqueante já registrado pelo CR (MaxPageSize=100). Relatório: `relatorio-qa.md`. Comentário: https://github.com/DQM-BETA/omuletachou/issues/204#issuecomment-5331958841
+| 5 | PR release (homolog→main) | lider-tecnico | sonnet | pendente | pendente | pendente |
