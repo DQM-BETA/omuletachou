@@ -3,7 +3,7 @@ issue: 182
 titulo: fix: MercadoLivreCollector quebrado — endpoint /sites/MLB/search descontinuado pela API, reconstruir com Highlights API
 etapa_atual: Em Desenvolvimento
 rota: normal
-ultimo_agente: pm-analista-negocios
+ultimo_agente: lider-tecnico
 openspec_change: repos/omuletachou/openspec/changes/issue-182-mercadolivrecollector-quebrado
 tech_stacks:
   - dotnet
@@ -18,10 +18,12 @@ sub_issues:
   - "#184 (stack:dotnet, task_id:Sub-B) — Fluxo semi-manual de link de afiliado (domínio + API de importação)"
   - "#185 (stack:angular, task_id:Sub-C) — Dashboard: tela de importação de links de afiliado"
   - "#190 (stack:dotnet, task_id:Sub-D) — Fix isolamento de falha em GetJsonAsync (JsonDocument.Parse fora do try/catch), achado do /code-review estático no PR #189"
+  - "#192 (stack:dotnet, task_id:Sub-E) — Isentar Mercado Livre do critério de desconto mínimo no scoring de IA (ClaudeAiService.ScoreProductAsync), Achado 2 do /code-review estático no PR #189, decisão de negócio do Gerente Opção A"
 desenv_tasks_merged:
   - "#184"
   - "#183"
   - "#185"
+  - "#190"
 sub_issues_frontend:
   "#185": angular
 pr_homologacao: 189
@@ -149,47 +151,37 @@ blockers: |
     feature/ISSUE-190-json-parse-try-catch base desenv (fluxo padrao feature->desenv->homolog,
     apesar do codigo ja estar em homolog via PR #189 — LT abrira novo PR desenv->homolog so com
     esta correcao apos o merge do #190).
-  - ACHADO 2 (ESCALADO, nao decidido pelo LT) — `MercadoLivreCollector.UpsertProductAsync` seta
-    `OriginalPrice = SalePrice` / `DiscountPct = 0` para todo produto ML (Highlights API nao expoe
-    preco original/desconto em `/products/{id}` nem `/products/{id}/items` — fallback documentado
-    no codigo, nao bug de implementacao). Esse `DiscountPct = 0` alimenta o prompt fixo de
+    **RESOLVIDO 2026-08-18**: Dev implementou (TDD, 3 testes novos, 430/430 suite completa). PR
+    #191 mesclado via squash em `desenv` (commit `83e28241248000dfd859c03d170bf0dc017b732e`).
+    Sub-issue #190 fechada.
+  - ACHADO 2 (ESCALADO ao Gerente em 2026-08-17, DECIDIDO em 2026-08-17, mapeado como sub-issue
+    #192 em 2026-08-18) — `MercadoLivreCollector.UpsertProductAsync` seta `OriginalPrice =
+    SalePrice` / `DiscountPct = 0` para todo produto ML (Highlights API nao expoe preco
+    original/desconto em `/products/{id}` nem `/products/{id}/items` — fallback documentado no
+    codigo, nao bug de implementacao). Esse `DiscountPct = 0` alimenta o prompt fixo de
     `ClaudeAiService.ScoreProductAsync` ("Desconto real minimo de 15%; precos inflados
     penalizam", linha ~39) — 0% e indistinguivel para a IA de "produto sem desconto real",
     entao o esperado e reprovacao sistematica (ou score bem abaixo de minScore=6) de TODO
     produto Mercado Livre, zerando na pratica a aprovacao desse canal, mesmo com o collector
     funcionando mecanicamente. Nunca foi decidido deliberadamente em nenhuma fase anterior (PRD,
-    design.md, Gate 1.5) — efeito colateral descoberto agora pela revisao estatica.
-    ANALISE DO LT: avaliada alternativa tecnica (tornar DiscountPct nullable e omitir a linha do
-    prompt quando o dado nao esta disponivel, em vez de mandar 0% como se fosse valor verificado)
-    — mas toda alternativa avaliada produz o MESMO efeito pratico: isentar o canal Mercado Livre
-    do criterio de desconto minimo de 15% que se aplica as demais plataformas (Amazon/Shopee).
-    Isso e literalmente a decisao de negocio "produtos ML nao precisam de desconto minimo" citada
-    como exemplo de linha vermelha do mandato do LT — nao um bug a corrigir dentro do mandato
-    tecnico. NAO IMPLEMENTADO. Opcoes levantadas para o Gerente (via PM Fase 2, se precisar
-    refinar criterios-aceite.md):
-      (A) excluir ML do criterio de desconto minimo — enviar DiscountPct=null (omitir a linha do
-          prompt) so quando a plataforma nao tem esse dado, mantendo os outros 4 criterios de
-          scoring (categoria/titulo/preco/prazo) sem penalizar por ausencia de sinal;
-      (B) manter como esta (produtos ML sistematicamente reprovados/baixo score) ate existir fonte
-          de preco original para ML — pausa de fato esse canal;
-      (C) investigar fonte alternativa de preco de tabela/historico para ML (fora do escopo desta
-          issue, trabalho adicional nao estimado).
-    Analise completa postada como comentario na Issue #182:
-    https://github.com/DQM-BETA/omuletachou/issues/182#issuecomment-5319915601
-    SEM sub-issue criada para o Achado 2 ate a decisao do Gerente.
+    design.md, Gate 1.5) — efeito colateral descoberto pela revisao estatica.
+    DECISAO DO GERENTE (comentario
+    https://github.com/DQM-BETA/omuletachou/issues/182#issuecomment-5319915601): Opcao A —
+    isentar o Mercado Livre do criterio de desconto minimo no scoring de IA (enviar
+    DiscountPct=null/omitir a linha do prompt so quando a plataforma nao tem esse dado,
+    mantendo os outros 4 criterios de scoring sem penalizar por ausencia de sinal).
+    Formalizado pelo PM (Fase 2) como adendo Secao 9 (cenarios 9.1-9.5) em criterios-aceite.md,
+    commit `92854c3`, ja em `desenv`.
+    **MAPEADO 2026-08-18 (LT)**: sub-issue #192 criada (stack:dotnet, task_id:Sub-E), TDD
+    obrigatorio, branch `feature/ISSUE-192-scoring-ml-desconto` base `desenv`. tasks.md
+    atualizado com secao Sub-E completa (contexto tecnico: ClaudeAiService.ScoreProductAsync
+    monta systemPrompt/userMessage condicionalmente a product.Platform — omite criterio/dado de
+    desconto so para MercadoLivre, Amazon/Shopee inalterados). Pronta para Dev .NET.
 
-  RESOLUCAO ACHADO 2 (Gerente, 2026-08-17, comentario
-  https://github.com/DQM-BETA/omuletachou/issues/182#issuecomment-5319915601) — Opcao A escolhida:
-  isentar o Mercado Livre do criterio de desconto minimo no scoring de IA. Formalizado como adendo
-  (Secao 9, cenarios 9.1-9.5) em documentacoes/ISSUE-182-mercadolivrecollector-quebrado/criterios-aceite.md
-  pelo PM (Fase 2, revisao de requisitos): o prompt de ClaudeAiService.ScoreProductAsync nao deve
-  enviar DiscountPct=0 como sinal real para produtos de Mercado Livre (omitir o dado quando
-  indisponivel, nao fingir 0%); a auxencia de desconto nao reprova nem penaliza o produto; os
-  outros 4 criterios (categoria, titulo, preco final, prazo de entrega) continuam aplicados
-  normalmente ao ML; Amazon/Shopee mantêm o criterio de desconto minimo de 15% sem nenhuma mudanca
-  (nao regressao, cenario 9.4). Sem ambiguidade arquitetural (mudanca pontual, ja compreendida em
-  ClaudeAiService.cs) — encaminhado direto ao LT para mapear como sub-issue/tarefa (TDD obrigatorio,
-  mesmo padrao do Achado 1/#190), sem passar pelo Arquiteto.
+  PM FASE 2 (2026-08-17/18) — Agente falhou por limite de gasto mensal antes de devolver o
+  HANDOFF final; trabalho ja feito (adendo Secao 9 de criterios-aceite.md) recuperado do working
+  tree e commitado pela sessao principal (commit 92854c3), sem custo real registrado no ledger
+  para esta invocacao especifica.
 createdAt: 2026-08-17
 status_comment_id: 5317813321
 ---
@@ -217,18 +209,15 @@ status_comment_id: 5317813321
 | 16 | Líder Técnico (correção pré-QA, achados `/code-review` PR #189) | lider-tecnico | sonnet | 93207 | 16 | 343s | Gerente pediu correção dos 2 achados antes do QA. Achado 1 (JsonDocument.Parse fora do try/catch em GetJsonAsync, quebra isolamento de falha): sub-issue #190 criada (stack:dotnet), tasks.md atualizado (Sub-D), TDD obrigatório, branch feature/ISSUE-190-json-parse-try-catch base desenv. Achado 2 (DiscountPct=0 fixo para ML colide com critério "desconto mínimo 15%" do scoring de IA, reprova sistematicamente o canal ML): analisado, nenhuma correção técnica avaliada evita o efeito de isentar ML do critério — é decisão de negócio, não implementado. Análise completa postada na Issue #182 (comentário) e escalada, sugerindo PM Fase 2. `etapa_atual` = Em Desenvolvimento (sub-issue #190 pronta para Dev; Achado 2 aguardando decisão do Gerente). |
 | 17 | Dev .NET (Sub-D #190) | dev-dotnet | sonnet | 79794 | 25 | 296s | `GetJsonAsync` corrigido — `JsonDocument.Parse` movido para dentro de try/catch próprio, convertendo `JsonException` em `MercadoLivreApiException` (mesmo padrão das demais falhas do método). TDD: 3 testes novos confirmando isolamento por categoria/produto mesmo com JSON malformado no meio do ciclo (RED→GREEN confirmado). Suite completa 430/430. PR #191 feature→desenv aberto. |
 | 18 | PM (Fase 2 — revisão de requisitos, Achado 2) | pm-analista-negocios | sonnet | ~ | ~ | ~ | **Agente falhou por limite de gasto mensal antes de devolver o HANDOFF final** (trabalho já feito recuperado do working tree e commitado pela sessão principal, sem custo real registrado). Gerente decidiu Opção A (isentar Mercado Livre do critério de desconto mínimo no scoring de IA, comentário https://github.com/DQM-BETA/omuletachou/issues/182#issuecomment-5319915601). Formalizado como adendo Seção 9 (cenários 9.1-9.5) em `criterios-aceite.md`: prompt de `ClaudeAiService.ScoreProductAsync` não deve enviar `DiscountPct=0` como sinal real para ML (omitir quando indisponível), ausência de desconto não reprova/penaliza, demais 4 critérios inalterados, Amazon/Shopee sem regressão (cenário 9.4). Resumo postado como comentário na Issue #182. Sem ambiguidade arquitetural (mudança pontual, já compreendida em `ClaudeAiService.cs`) — encaminhado direto ao LT, sem Arquiteto. |
+| 19 | Líder Técnico (merge Sub-D #190 + mapeamento Sub-E/#192) | lider-tecnico | sonnet | ~ | ~ | ~ | **Tarefa 1**: PR #191 (feature/ISSUE-190-json-parse-try-catch → desenv) mesclado via squash (commit `83e28241248000dfd859c03d170bf0dc017b732e`, 430/430 testes reportados pelo Dev). Sub-issue #190 fechada. `desenv_tasks_merged` = ["#184","#183","#185","#190"]. **Tarefa 2**: sub-issue #192 criada (stack:dotnet, task_id:Sub-E) mapeando o Achado 2 (já decidido pelo Gerente, Opção A, formalizado pelo PM na Seção 9 de `criterios-aceite.md`, commit `92854c3`) — isentar Mercado Livre do critério de desconto mínimo em `ClaudeAiService.ScoreProductAsync`, TDD obrigatório, branch `feature/ISSUE-192-scoring-ml-desconto` base `desenv`. `tasks.md` atualizado com seção Sub-E completa (contexto técnico, CA 9.1-9.5). Sub-issue pronta para Dev, não spawnado (decisão da sessão principal). |
 
 ## Próximo passo
 
-Dois caminhos, ambos prontos para o Líder Técnico:
-1. **Achado 1 (sub-issue #190, stack:dotnet):** pronta para Dev .NET — fix isolado, TDD obrigatório,
-   branch `feature/ISSUE-190-json-parse-try-catch` base `desenv`. Após merge, LT abre novo PR
-   `desenv→homolog` trazendo só esta correção.
-2. **Achado 2 (DiscountPct=0 × critério de desconto mínimo do scoring de IA) — decidido:** Gerente
-   escolheu a Opção A (isentar Mercado Livre do critério de desconto mínimo). Critérios de aceite
-   formalizados na Seção 9 de `criterios-aceite.md` (cenários 9.1-9.5). Sem ambiguidade arquitetural
-   — LT deve mapear a mudança em `ClaudeAiService.cs` (montagem do prompt de `ScoreProductAsync`)
-   como sub-issue nova (TDD obrigatório, mesmo padrão do #190) e decidir se entra no mesmo PR
-   `desenv→homolog` do #190 ou em PR separado.
-
-QA continua pausado até as duas correções (Achado 1 + Achado 2) estarem mescladas em `homolog`.
+Falta só a **Sub-E (#192)** para fechar todas as correções pré-QA:
+- Sub-issue #192 pronta para Dev .NET (TDD obrigatório, branch `feature/ISSUE-192-scoring-ml-desconto`
+  base `desenv`), contexto técnico completo em `openspec/changes/issue-182-mercadolivrecollector-quebrado/tasks.md`
+  seção Sub-E.
+- Após o merge da Sub-E em `desenv`, o LT abre um novo PR `desenv→homolog` trazendo os dois fixes
+  (#190 já mesclado + #192) para reavaliação do Code Review, antes de liberar o QA (que segue
+  pausado até essa reavaliação — os 2 achados do `/code-review` estático precisam ser confirmados
+  corrigidos em `homolog` antes do QA rodar).
