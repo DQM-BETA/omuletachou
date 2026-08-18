@@ -604,4 +604,248 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
+
+    // Issue #208/T-02 — campo Destinations agregado (site + redes sociais) em ProductListItemDto.
+
+    private static JsonElement GetDestination(JsonElement item, string destination) =>
+        item.GetProperty("destinations")
+            .EnumerateArray()
+            .Single(d => d.GetProperty("destination").GetString() == destination);
+
+    private static bool HasDestination(JsonElement item, string destination) =>
+        item.GetProperty("destinations")
+            .EnumerateArray()
+            .Any(d => d.GetProperty("destination").GetString() == destination);
+
+    [Fact]
+    public async Task GetProducts_ProdutoPublicadoSemFilaSocial_DestinationsReflecteApenasSite()
+    {
+        // Produto Published sem nenhuma PublicationQueue: "Site" presente com status Published;
+        // cada rede social presente com status NotApplicable (nao como erro).
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var marker = Guid.NewGuid().ToString("N")[..8];
+        var product = NewProduct($"Produto Publicado Sem Fila {marker}", Platform.Amazon);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            product.MarkAsPublished();
+            db.Products.Add(product);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync("/api/products?pageSize=100");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var item = body.GetProperty("items").EnumerateArray()
+            .Single(i => i.GetProperty("id").GetGuid() == product.Id);
+
+        var destinations = item.GetProperty("destinations").EnumerateArray().ToList();
+        destinations.Should().HaveCount(1 + Enum.GetValues<SocialNetwork>().Length);
+
+        GetDestination(item, "Site").GetProperty("status").GetString().Should().Be("Published");
+        foreach (var network in Enum.GetValues<SocialNetwork>())
+        {
+            GetDestination(item, network.ToString()).GetProperty("status").GetString()
+                .Should().Be("NotApplicable");
+        }
+    }
+
+    [Fact]
+    public async Task GetProducts_ProdutoComRedesSociaisPublicadas_DestinationsIncluiSiteECadaRede()
+    {
+        // Produto Published com 1+ redes sociais publicadas com sucesso: Destinations inclui site
+        // + cada rede com status agregado a partir da PublicationQueue.
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var marker = Guid.NewGuid().ToString("N")[..8];
+        var product = NewProduct($"Produto Com Redes Publicadas {marker}", Platform.MercadoLivre);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            product.MarkAsPublished();
+            db.Products.Add(product);
+
+            var telegram = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow, "Legenda Telegram");
+            telegram.RegisterAttempt(success: true);
+
+            var instagram = new PublicationQueue(product.Id, SocialNetwork.Instagram, DateTime.UtcNow, "Legenda Instagram");
+            instagram.RegisterAttempt(success: true);
+
+            db.PublicationQueues.Add(telegram);
+            db.PublicationQueues.Add(instagram);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync("/api/products?pageSize=100");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var item = body.GetProperty("items").EnumerateArray()
+            .Single(i => i.GetProperty("id").GetGuid() == product.Id);
+
+        GetDestination(item, "Site").GetProperty("status").GetString().Should().Be("Published");
+        GetDestination(item, "Telegram").GetProperty("status").GetString().Should().Be("Published");
+        GetDestination(item, "Instagram").GetProperty("status").GetString().Should().Be("Published");
+        GetDestination(item, "TikTok").GetProperty("status").GetString().Should().Be("NotApplicable");
+        GetDestination(item, "Facebook").GetProperty("status").GetString().Should().Be("NotApplicable");
+        GetDestination(item, "Youtube").GetProperty("status").GetString().Should().Be("NotApplicable");
+    }
+
+    [Fact]
+    public async Task GetProducts_ProdutoSemNadaPublicado_DestinationsOmiteSiteETodasRedesNotApplicable()
+    {
+        // Produto sem nada publicado ainda (nao Published, sem fila social): Destinations omite
+        // "Site" e mostra NotApplicable para todas as redes.
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var marker = Guid.NewGuid().ToString("N")[..8];
+        var product = NewProduct($"Produto Sem Nada Publicado {marker}", Platform.Shopee);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            db.Products.Add(product);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync("/api/products?pageSize=100");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var item = body.GetProperty("items").EnumerateArray()
+            .Single(i => i.GetProperty("id").GetGuid() == product.Id);
+
+        var destinations = item.GetProperty("destinations").EnumerateArray().ToList();
+        destinations.Should().HaveCount(Enum.GetValues<SocialNetwork>().Length);
+        HasDestination(item, "Site").Should().BeFalse();
+
+        foreach (var network in Enum.GetValues<SocialNetwork>())
+        {
+            GetDestination(item, network.ToString()).GetProperty("status").GetString()
+                .Should().Be("NotApplicable");
+        }
+    }
+
+    [Fact]
+    public async Task GetProducts_ComPublicationQueuePendenteEFalha_DestinationsRefletePendingEFailed()
+    {
+        // Cobre Pending (Scheduled/ManualPending) e Failed por rede, cada um numa rede distinta.
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var marker = Guid.NewGuid().ToString("N")[..8];
+        var product = NewProduct($"Produto Pendente E Falho {marker}", Platform.Amazon);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            db.Products.Add(product);
+
+            var pending = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow, "Legenda Telegram");
+            // Scheduled e o status inicial do construtor — permanece Pending.
+
+            var failed = new PublicationQueue(product.Id, SocialNetwork.Facebook, DateTime.UtcNow, "Legenda Facebook");
+            failed.RegisterAttempt(success: false, errorMessage: "Erro simulado de publicacao");
+
+            db.PublicationQueues.Add(pending);
+            db.PublicationQueues.Add(failed);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync("/api/products?pageSize=100");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var item = body.GetProperty("items").EnumerateArray()
+            .Single(i => i.GetProperty("id").GetGuid() == product.Id);
+
+        GetDestination(item, "Telegram").GetProperty("status").GetString().Should().Be("Pending");
+        GetDestination(item, "Facebook").GetProperty("status").GetString().Should().Be("Failed");
+    }
+
+    [Fact]
+    public async Task GetProducts_ComMultiplasLinhasParaMesmaRede_UsaLinhaMaisRecentePorCreatedAt()
+    {
+        // Quando ha multiplas linhas de PublicationQueue para o mesmo (ProductId, SocialNetwork),
+        // Destinations deve refletir a mais recente por CreatedAt.
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var marker = Guid.NewGuid().ToString("N")[..8];
+        var product = NewProduct($"Produto Multiplas Linhas Mesma Rede {marker}", Platform.MercadoLivre);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            db.Products.Add(product);
+
+            var antiga = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddMinutes(-10), "Legenda antiga");
+            antiga.RegisterAttempt(success: false, errorMessage: "Falhou na primeira tentativa");
+
+            var recente = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow, "Legenda recente");
+            recente.RegisterAttempt(success: true);
+
+            db.PublicationQueues.Add(antiga);
+            db.PublicationQueues.Add(recente);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync("/api/products?pageSize=100");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var item = body.GetProperty("items").EnumerateArray()
+            .Single(i => i.GetProperty("id").GetGuid() == product.Id);
+
+        GetDestination(item, "Telegram").GetProperty("status").GetString().Should().Be("Published");
+    }
+
+    [Fact]
+    public async Task GetProducts_ComDestinations_NaoRegridePaginacaoFiltrosOrdenacao()
+    {
+        // Nao-regressao explicita: paginacao/filtros/ordenacao continuam funcionando com o novo
+        // campo Destinations presente no payload.
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var marker = Guid.NewGuid().ToString("N")[..8];
+        var matching = NewProduct($"Produto NaoRegressao Match {marker}", Platform.Amazon);
+        var wrongPlatform = NewProduct($"Produto NaoRegressao Wrong {marker}", Platform.Shopee);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            db.Products.Add(matching);
+            db.Products.Add(wrongPlatform);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync("/api/products?status=pending&platform=amazon&page=1&pageSize=5");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("page").GetInt32().Should().Be(1);
+        body.GetProperty("pageSize").GetInt32().Should().Be(5);
+
+        var items = body.GetProperty("items").EnumerateArray().ToList();
+        items.Should().Contain(i => i.GetProperty("id").GetGuid() == matching.Id);
+        items.Should().NotContain(i => i.GetProperty("id").GetGuid() == wrongPlatform.Id);
+
+        var matchingItem = items.Single(i => i.GetProperty("id").GetGuid() == matching.Id);
+        matchingItem.TryGetProperty("destinations", out var destinationsProp).Should().BeTrue();
+        destinationsProp.ValueKind.Should().Be(JsonValueKind.Array);
+    }
 }
