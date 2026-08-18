@@ -33,6 +33,24 @@ figma_url: ~
 blockers: nenhum
 status_comment_id: ~
 
+## Custo (ledger)
+| # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) | Notas |
+|---|---|---|---|---|---|---|---|
+| 1 | Preparação | coordenador | haiku | 20960 | 7 | 48s | Issue #208 criada no backlog |
+| 2 | PM Fase 1 | pm-analista-negocios | sonnet | 25772 | 5 | 60s | Levantamento postado, aguardando Gate 1 |
+| 3 | PM Fase 2 | pm-analista-negocios | sonnet | 46657 | 14 | 153s | PRD + criterios-aceite.md, ambiguidade arquitetural encaminhada |
+| 4 | Arquiteto | arquiteto-engenheiro | sonnet | 88525 | 26 | 200s | design.md — sem novo campo/tabela, reaproveita PublicationQueue |
+| 5 | Líder Técnico (refinamento) | lider-tecnico | sonnet | 113472 | 44 | 290s | especificacao-tecnica.md + tasks.md, 3 sub-issues criadas (#215/#216/#217) |
+| 6 | Dev .NET T-01 #215 (tentativa 1) | dev-dotnet | sonnet | ~ | ~ | ~ | Falhou por limite de gasto mensal do agente; edições incompletas descartadas (`git checkout --`) |
+| 7 | Dev .NET T-02 #216 (tentativa 1) | dev-dotnet | sonnet | ~ | ~ | ~ | Falhou por limite de gasto mensal do agente; edições incompletas descartadas |
+| 8 | Dev .NET T-01 #215 (retomada) | dev-dotnet | sonnet | 89328 | 47 | 291s | ProcessorJob.MarkAsPublished incondicional, 448/448 testes. PR #219. |
+| 9 | Dev .NET T-02 #216 (retomada) | dev-dotnet | sonnet | 85584 | 36 | 255s | Campo Destinations agregado, sem N+1, 447/447 testes. PR #218. |
+| 10 | Líder Técnico (merge #219 + #218) | lider-tecnico | sonnet | 43430 | 22 | 116s | Ambos squash-mergeados em desenv, sequencial |
+| 11 | Dev Angular T-03 #217 | dev-angular | sonnet | 102311 | 65 | 503s | Tooltip de destinos no badge Status, 140/140 testes. PR #220. |
+| 12 | Líder Técnico (merge #220 + PR homolog) | lider-tecnico | sonnet | 36852 | 13 | 77s | PR #220 squash-mergeado; PR #221 desenv→homolog aberto |
+| 13 | `/code-review` (sessão principal, camada estática) | orquestrador (multi-agente) | sonnet+haiku | 714416 | 97 | 870s | 10 sub-invocações (elegibilidade, CLAUDE.md, resumo, 5 agentes de auditoria, 1 de scoring). Único achado (imprecisão de atribuição causal no design.md) pontuou 0 — abaixo do corte de 80, nenhum comentário postado. |
+| 14 | Code Review (PR #221, homologação) | code-review | sonnet | 120740 | 59 | 591s | **APROVADO.** Build/boot real, 454/454 backend + 140/140 dashboard. Validação E2E real: produto ML antes em Error reprocessado, virou Published, apareceu no site público — tudo sem nenhuma rede social configurada. Merge desenv→homolog via 249439e. |
+
 ## 📝 Notas
 
 - Demanda de negócio registrada pelo Gerente após teste end-to-end em produção local (Issue #182/#199/#204)
