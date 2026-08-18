@@ -1,5 +1,6 @@
 using AfiliadoBot.Api.Common;
 using AfiliadoBot.Api.Products;
+using AfiliadoBot.Domain.Entities;
 using AfiliadoBot.Domain.Enums;
 using AfiliadoBot.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
@@ -53,8 +54,16 @@ public class ProductsController : ControllerBase
                 : query.Where(_ => false);
         }
 
-        var result = await query
+        var pagedProducts = await query
             .OrderByDescending(p => p.CreatedAt)
+            .ToPagedResultAsync(page, pageSize, ct);
+
+        // Destinos (site + redes sociais) sao agregados numa unica query adicional sobre a pagina
+        // atual de produtos (evita N+1 — Issue #208/T-02, especificacao-tecnica.md §1.1).
+        var productIds = pagedProducts.Items.Select(p => p.Id).ToList();
+        var destinationsByProduct = await BuildDestinationsByProductAsync(productIds, ct);
+
+        var items = pagedProducts.Items
             .Select(p => new ProductListItemDto(
                 p.Id,
                 p.Title,
@@ -68,11 +77,82 @@ public class ProductsController : ControllerBase
                 p.AiScore,
                 p.AiReason,
                 p.CreatedAt,
-                p.SourceUrl))
-            .ToPagedResultAsync(page, pageSize, ct);
+                p.SourceUrl,
+                BuildDestinations(p, destinationsByProduct.GetValueOrDefault(p.Id))))
+            .ToList();
+
+        var result = new PagedResult<ProductListItemDto>
+        {
+            Items = items,
+            Page = pagedProducts.Page,
+            PageSize = pagedProducts.PageSize,
+            TotalItems = pagedProducts.TotalItems,
+        };
 
         return Ok(result);
     }
+
+    /// <summary>
+    /// Busca, numa unica query, a linha mais recente (maior CreatedAt) de PublicationQueue por
+    /// (ProductId, SocialNetwork) para os produtos informados (Issue #208/T-02). Agrupamento feito
+    /// em memoria apos materializar a query — mesmo criterio ja usado em GetProduct/facebookCaption.
+    /// </summary>
+    private async Task<Dictionary<Guid, List<PublicationQueue>>> BuildDestinationsByProductAsync(
+        List<Guid> productIds, CancellationToken ct)
+    {
+        if (productIds.Count == 0)
+            return new Dictionary<Guid, List<PublicationQueue>>();
+
+        var queueEntries = await _db.PublicationQueues
+            .AsNoTracking()
+            .Where(q => productIds.Contains(q.ProductId))
+            .ToListAsync(ct);
+
+        return queueEntries
+            .GroupBy(q => q.ProductId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.GroupBy(q => q.SocialNetwork)
+                    .Select(sg => sg.OrderByDescending(q => q.CreatedAt).First())
+                    .ToList());
+    }
+
+    /// <summary>
+    /// Monta a lista de destinos de um produto: "Site" so quando Published, e uma entrada para
+    /// cada valor de SocialNetwork com o status agregado (Issue #208/T-02, especificacao-tecnica.md
+    /// §1.1).
+    /// </summary>
+    private static List<PublicationDestinationDto> BuildDestinations(
+        Product product, List<PublicationQueue>? latestByNetwork)
+    {
+        var destinations = new List<PublicationDestinationDto>();
+
+        if (product.Status == ProductStatus.Published)
+            destinations.Add(new PublicationDestinationDto("Site", "Published"));
+
+        var latestBySocialNetwork = (latestByNetwork ?? [])
+            .ToDictionary(q => q.SocialNetwork, q => q.Status);
+
+        foreach (var network in Enum.GetValues<SocialNetwork>())
+        {
+            var status = latestBySocialNetwork.TryGetValue(network, out var queueStatus)
+                ? MapPublicationStatus(queueStatus)
+                : "NotApplicable";
+
+            destinations.Add(new PublicationDestinationDto(network.ToString(), status));
+        }
+
+        return destinations;
+    }
+
+    private static string MapPublicationStatus(PublicationStatus status) => status switch
+    {
+        PublicationStatus.Scheduled => "Pending",
+        PublicationStatus.ManualPending => "Pending",
+        PublicationStatus.Published => "Published",
+        PublicationStatus.Failed => "Failed",
+        _ => "NotApplicable",
+    };
 
     /// <summary>CA-B3 (inclui ai_score/ai_reason), CA-B4 (404 quando inexistente).</summary>
     [HttpGet("{id:guid}")]

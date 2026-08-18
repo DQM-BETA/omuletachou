@@ -20,7 +20,15 @@ public record ProductListItemDto(
     [property: JsonPropertyName("ai_score")] int? AiScore,
     [property: JsonPropertyName("ai_reason")] string? AiReason,
     DateTime CreatedAt,
-    string? SourceUrl); // NOVO — Issue #184, campo aditivo ao final (nao quebra consumidores existentes)
+    string? SourceUrl, // Issue #184, campo aditivo ao final (nao quebra consumidores existentes)
+    IReadOnlyList<PublicationDestinationDto> Destinations); // NOVO — Issue #208/T-02, campo aditivo ao final
+
+/// <summary>
+/// Um destino de publicacao (site ou rede social) de um produto, com o status agregado naquele
+/// destino (Issue #208/T-02). "Site" so aparece quando o produto esta Published; cada rede social
+/// sempre aparece, com status "NotApplicable" quando nao ha nenhuma PublicationQueue para ela.
+/// </summary>
+public record PublicationDestinationDto(string Destination, string Status);
 
 /// <summary>
 /// Detalhe de GET /api/products/{id} (CA-B3). ai_score/ai_reason em snake_case, formato exigido
