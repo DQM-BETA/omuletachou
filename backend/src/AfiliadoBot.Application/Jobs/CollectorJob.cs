@@ -1,3 +1,4 @@
+using AfiliadoBot.Domain.Enums;
 using AfiliadoBot.Domain.Interfaces;
 using Hangfire;
 using Microsoft.Extensions.Logging;
@@ -8,26 +9,35 @@ namespace AfiliadoBot.Application.Jobs;
 /// Job (Hangfire) que orquestra a coleta de produtos das plataformas configuradas
 /// (Amazon, MercadoLivre, Shopee), executando cada <see cref="IPlatformCollector"/>
 /// em sequencia. Falha isolada em um collector nao impede os demais (Issue #7, CA1-CA4).
-/// Ao final, encadeia o <see cref="ProcessorJob"/> via <see cref="BackgroundJob.Enqueue"/>
+/// Ao final, encadeia o <see cref="PublisherJob"/> via <see cref="BackgroundJob.Enqueue"/>
 /// desde que ao menos uma plataforma tenha coletado com sucesso.
+/// Corpo instrumentado por <see cref="IJobRunTracker"/> (Issue #227, JobName.Collector) — cobre
+/// tanto o cron "collector-job" quanto o POST /api/jobs/collector/trigger, unico ponto de
+/// convergencia entre os dois disparadores.
 /// </summary>
 public class CollectorJob
 {
     private readonly IEnumerable<IPlatformCollector> _collectors;
     private readonly IBackgroundJobClient _backgroundJobClient;
+    private readonly IJobRunTracker _jobRunTracker;
     private readonly ILogger<CollectorJob> _logger;
 
     public CollectorJob(
         IEnumerable<IPlatformCollector> collectors,
         IBackgroundJobClient backgroundJobClient,
+        IJobRunTracker jobRunTracker,
         ILogger<CollectorJob> logger)
     {
         _collectors = collectors;
         _backgroundJobClient = backgroundJobClient;
+        _jobRunTracker = jobRunTracker;
         _logger = logger;
     }
 
-    public async Task ExecuteAsync(CancellationToken ct = default)
+    public Task ExecuteAsync(CancellationToken ct = default) =>
+        _jobRunTracker.RunAsync(JobName.Collector, ExecuteCoreAsync, ct);
+
+    private async Task ExecuteCoreAsync(CancellationToken ct)
     {
         var anySuccess = false;
 

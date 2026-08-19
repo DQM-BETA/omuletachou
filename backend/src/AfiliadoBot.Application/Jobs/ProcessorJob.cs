@@ -13,6 +13,8 @@ namespace AfiliadoBot.Application.Jobs;
 /// mudanca de estado (lock otimista), download de midia, slug, categoria, link de afiliado
 /// do MercadoLivre, geracao de legenda por rede e montagem da fila de publicacao com
 /// agendamento por round-robin (Issue #6).
+/// Corpo instrumentado por <see cref="IJobRunTracker"/> (Issue #227, JobName.Processor) — cobre
+/// tanto o Enqueue encadeado pelo CollectorJob quanto o POST /api/jobs/processor/trigger.
 /// </summary>
 public class ProcessorJob
 {
@@ -32,6 +34,7 @@ public class ProcessorJob
     private readonly IMediaStorage _mediaStorage;
     private readonly IAiService _aiService;
     private readonly HttpClient _httpClient;
+    private readonly IJobRunTracker _jobRunTracker;
     private readonly ILogger<ProcessorJob> _logger;
     private readonly Random _random = new();
 
@@ -40,16 +43,21 @@ public class ProcessorJob
         IMediaStorage mediaStorage,
         IAiService aiService,
         HttpClient httpClient,
+        IJobRunTracker jobRunTracker,
         ILogger<ProcessorJob> logger)
     {
         _dbContext = dbContext;
         _mediaStorage = mediaStorage;
         _aiService = aiService;
         _httpClient = httpClient;
+        _jobRunTracker = jobRunTracker;
         _logger = logger;
     }
 
-    public async Task ExecuteAsync(CancellationToken ct = default)
+    public Task ExecuteAsync(CancellationToken ct = default) =>
+        _jobRunTracker.RunAsync(JobName.Processor, ExecuteCoreAsync, ct);
+
+    private async Task ExecuteCoreAsync(CancellationToken ct)
     {
         var products = await _dbContext.Products
             .Where(p => p.Status == ProductStatus.Queued)
@@ -190,7 +198,7 @@ public class ProcessorJob
     /// </summary>
     /// <returns>
     /// false quando o produto foi desviado do fluxo normal (Error por SourceUrl ausente, ou
-    /// AwaitingAffiliateLink) — em ambos os casos <see cref="ExecuteAsync"/> persiste e pula
+    /// AwaitingAffiliateLink) — em ambos os casos <see cref="ExecuteCoreAsync"/> persiste e pula
     /// para o proximo produto do lote (CA6, CA14).
     /// </returns>
     private Task<bool> EnsureAffiliateLinkAsync(Product product, CancellationToken ct)
@@ -220,7 +228,7 @@ public class ProcessorJob
     /// <returns>
     /// Quantidade de entradas de <see cref="PublicationQueue"/> efetivamente adicionadas ao
     /// contexto para o produto. Desde a Issue #208, esse valor nao influencia mais o
-    /// <see cref="Product.Status"/>: <see cref="ExecuteAsync"/> usa apenas para log de
+    /// <see cref="Product.Status"/>: <see cref="ExecuteCoreAsync"/> usa apenas para log de
     /// observabilidade quando zero (publicacao no site independe de rede social qualificada).
     /// </returns>
     private async Task<int> CreatePublicationQueueEntriesAsync(

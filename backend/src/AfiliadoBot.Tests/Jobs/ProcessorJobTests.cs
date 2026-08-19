@@ -5,6 +5,7 @@ using AfiliadoBot.Domain.Entities;
 using AfiliadoBot.Domain.Enums;
 using AfiliadoBot.Domain.Interfaces;
 using AfiliadoBot.Infrastructure.Data;
+using AfiliadoBot.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -118,6 +119,7 @@ public class ProcessorJobTests
             (mediaStorage ?? CreateMediaStorageMock()).Object,
             (aiService ?? CreateAiServiceMock()).Object,
             httpClient ?? CreateAffiliateLinkClient(),
+            new PassThroughJobRunTracker(),
             NullLogger<ProcessorJob>.Instance);
     }
 
@@ -500,6 +502,7 @@ public class ProcessorJobTests
             CreateMediaStorageMock().Object,
             CreateAiServiceMock().Object,
             CreateAffiliateLinkClient(),
+            new PassThroughJobRunTracker(),
             loggerMock.Object);
 
         await job.ExecuteAsync();
@@ -810,5 +813,33 @@ public class ProcessorJobTests
         var reloaded = await db.Products.FirstAsync();
         reloaded.AffiliateLink.Should().Be("https://amzn.to/existing");
         reloaded.Status.Should().Be(ProductStatus.Published);
+    }
+
+    // --- Issue #227 (JobRun tracking) ---
+
+    [Fact]
+    public async Task ExecuteAsync_GeraJobRun_QuandoChamadoDiretamente()
+    {
+        // CA 4.2/5.1: ExecuteAsync chamado diretamente (simulando o Enqueue encadeado pelo
+        // CollectorJob, sem passar pelo controller) tambem gera um JobRun.
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto();
+        db.Products.Add(product);
+        await db.SaveChangesAsync();
+
+        var tracker = new JobRunTracker(db);
+        var job = new ProcessorJob(
+            db,
+            CreateMediaStorageMock().Object,
+            CreateAiServiceMock().Object,
+            CreateAffiliateLinkClient(),
+            tracker,
+            NullLogger<ProcessorJob>.Instance);
+
+        await job.ExecuteAsync();
+
+        var run = await db.JobRuns.SingleAsync();
+        run.JobName.Should().Be(JobName.Processor);
+        run.Status.Should().Be(JobRunStatus.Success);
     }
 }
