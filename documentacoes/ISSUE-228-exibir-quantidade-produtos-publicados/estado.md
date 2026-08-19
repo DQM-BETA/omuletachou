@@ -1,8 +1,8 @@
 ---
 issue: 228
 titulo: feat: relatório de produtos com filtros (categoria/plataforma/status) na tela Reports
-etapa_atual: Em Desenvolvimento
-ultimo_agente: ux-ui
+etapa_atual: Em Desenvolvimento (correção Code Review — sub-issue #245 reaberta)
+ultimo_agente: lider-tecnico (mapeamento CR reprovado, 2026-08-19)
 openspec_change: openspec/changes/issue-228-relatorio-produtos-filtros
 tech_stacks: [dotnet, angular]
 repos:
@@ -11,14 +11,14 @@ repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-228-exibir-quantidade-produtos-publicados
 openspec_path: repos/omuletachou/openspec/changes/issue-228-relatorio-produtos-filtros
 sub_issues: ["#242 (stack:dotnet, task_id:T-01)", "#243 (stack:dotnet, task_id:T-02)", "#244 (stack:dotnet, task_id:T-03)", "#245 (stack:angular, task_id:T-04)"]
-desenv_tasks_merged: []
+desenv_tasks_merged: ["#242", "#243", "#244", "#245"]
 sub_issues_frontend: {"#245": "T-04"}
-pr_homologacao: ~
+pr_homologacao: 250
 pr_release: ~
-code_review_homolog_pr: ~
+code_review_homolog_pr: reprovado (PR #250, comentário https://github.com/DQM-BETA/omuletachou/pull/250#issuecomment-5347125317) — #245 reaberta para correção, PR #250 permanece aberto (absorve o fix commit automaticamente)
 qa_status: ~
 figma_url: ~
-blockers: nenhum
+blockers: mobile responsivo do bloco de filtros (ux-ui-spec.md §8, mat-expansion-panel + badge) não implementado — sub-issue #245 reaberta, aguardando correção do Dev Angular
 status_comment_id: ~
 rota: normal
 ---
@@ -67,6 +67,72 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 - Todos os estados especificados (default/loading/vazio/erro/sucesso; disabled/readonly marcados N/A onde não se aplicam) para filtros, cards e tabela — erro compartilhado entre cards+tabela (CA 5.1, nunca mostra dado antigo).
 - Heurísticas de Nielsen traduzidas em critérios verificáveis (tabela §7 do spec) + responsividade por 3 breakpoints (desktop/tablet/mobile) + fluxo de navegação (sem rota nova, tudo dentro de `ReportsComponent`).
 
+## Sub-issue #244 (T-03) — Dev .NET (2026-08-19)
+- Branch `feature/ISSUE-244-extensao-get-products` (worktree `.worktrees/feature-ISSUE-244-extensao-get-products`), base `desenv`.
+- `ProductsController.GetProducts` ganhou os 4 filtros aditivos (`category`, `subcategory`, `collectedFrom`, `collectedTo`); `ProductListItemDto` ganhou `Subcategory` (`string?`) ao final.
+- TDD: 9 testes novos em `ProductsControllerTests` (category, subcategory, faixa de data inclusiva, AND combinado, campo `Subcategory` no payload, não-regressão explícita sem os 4 novos params). Suíte completa: 479/479 passando.
+- Validação real: build da imagem Docker da API a partir da branch, container temporário conectado ao Postgres do ambiente local (`omuletachou_omuletachou_net`) — boot sem exceção, filtros exercitados contra dados reais (`category=Casa e Cozinha`, `subcategory=Eletroportáteis`, faixa de data, combinação AND), container removido após validar.
+- PR: https://github.com/DQM-BETA/omuletachou/pull/246 (feature→desenv) — **merged (squash) para desenv em 2026-08-19 pelo LT.**
+
+## Sub-issue #243 (T-02) — Dev .NET (2026-08-19)
+- Branch `feature/ISSUE-243-endpoint-reports-summary` (worktree `.worktrees/feature-ISSUE-243-endpoint-reports-summary`), base `desenv`.
+- Novo action `ReportsController.ProductsSummary` (`GET /api/reports/products/summary`, `[Authorize]`): filtros opcionais AND (`category`, `subcategory`, `platform`, `status`, `collectedFrom`, `collectedTo`), janela `[from, toExclusive)` inclusiva sobre `CreatedAt`, sem filtro de status não restringe a Published, sem match retorna 200 com total 0 e as 4 listas vazias. Novos DTOs em `AfiliadoBot.Api/Reports/ReportsDtos.cs` (`ProductsReportSummaryDto` + 4 records de breakdown).
+- TDD: 11 testes novos em `ReportsControllerTests` (status=Published breakdown completo CA 1.1, status=Pending explícito CA 2.4, filtros combinados AND CA 2.6, sem match CA 1.3/2.7, platform inválida sem 400, janela de data inclusiva CA 2.5, 401 sem token). Suíte completa: 480/480 passando, sem regressão.
+- Validação real: Postgres isolado em container temporário (`test_pg_issue243`), API rodada localmente (`dotnet run`) contra ele — migrations aplicadas e boot sem exceção; dados reais inseridos via SQL direto validaram total/breakdowns/janela de data batendo com o esperado. Container e processo derrubados ao final, sem tocar no stack `afiliado_*` compartilhado (em uso pela sub-issue #244 em paralelo).
+- PR: https://github.com/DQM-BETA/omuletachou/pull/247 (feature→desenv) — **merged (squash) para desenv em 2026-08-19 pelo LT.**
+
+## Sub-issue #242 (T-01) — Dev .NET (2026-08-19)
+- Branch `feature/ISSUE-242-indice-status-platform-createdat` (worktree `.worktrees/feature-ISSUE-242-indice-status-platform-createdat`), base `desenv`.
+- Novo índice composto `IX_products_status_platform_createdat` (`Status`, `Platform`, `CreatedAt` desc) em `ProductConfiguration.cs`; migration EF Core `AddStatusPlatformCreatedAtIndex` (só `CREATE INDEX`, não é `UNIQUE`).
+- TDD: teste novo `ProductConfigurationTests` (RED confirmado sem o índice, GREEN após adicioná-lo) inspeciona o EF model (design-time) — índice existe, colunas na ordem `Status, Platform, CreatedAt`, só `CreatedAt` descendente, não-único. Suíte completa: 477/477 passando, sem regressão.
+- Validação real: migration aplicada com sucesso (a) incrementalmente sobre a base de dev local compartilhada (`afiliado_db`, via script idempotente + `psql`) e (b) do zero sobre Postgres isolado em container temporário (`dotnet ef database update` completo, todas as migrations). Índice confirmado via `psql`: `CREATE INDEX "IX_products_status_platform_createdat" ON public.products USING btree (status, platform, created_at DESC)`. `dotnet run` contra o Postgres isolado: app inicia sem exceção (boot do DI ok, migrations aplicadas automaticamente).
+- PR: https://github.com/DQM-BETA/omuletachou/pull/248 (feature→desenv) — **merged (squash) para desenv em 2026-08-19 pelo LT (mergeado primeiro, contém a migration base).**
+
+## Sub-issue #245 (T-04) — Dev Angular (2026-08-19)
+- Branch `feature/ISSUE-245-filtros-relatorio-produtos` (worktree `.worktrees/feature-ISSUE-245-filtros-relatorio-produtos`), base `desenv`.
+- `reports.service.ts`: novo método `productsSummary(filters)` (`GET /api/reports/products/summary`) + interfaces `ProductsReportFilters`/`ProductsReportSummary`; novo método `categories()` (`GET /api/public/categories`, endpoint público já existente da Issue #167, reaproveitado para popular os `mat-select` de Categoria/Subcategoria dos filtros — sem endpoint novo, conforme ux-ui-spec.md §3.2).
+- `products.service.ts`: `ProductsListParams` ganhou `category?`, `subcategory?`, `collectedFrom?`, `collectedTo?` (aditivos); `ProductListItem` ganhou `subcategory?: string | null`.
+- `reports.component.ts`/`.html`: novo bloco "Relatório de produtos publicados" abaixo dos cards Hoje/Semana/Mês e do gráfico existentes (inalterados, CA 1.2) — `filterForm` reativo (Categoria, Subcategoria, Plataforma via `mat-button-toggle-group`, Status, faixa de data via `mat-date-range-input`), auto-apply com `debounceTime(150)`+`distinctUntilChanged` (faixa de data só dispara com início E fim preenchidos), default `status=Published` quando o campo Status está vazio (CA 1.1/2.4), `forkJoin` (cards+página 1) ao aplicar/mudar filtro, só `list()` ao trocar de página (CA design.md §2.1), "Limpar filtros" (disabled sem filtro ativo, CA 2.8), chips de filtros ativos removíveis, estado vazio (CA 1.3/2.7) e erro compartilhado cards+tabela sem manter dado antigo + retry (CA 5.1). Cards de breakdown com mini-barra de proporção, ordenados por contagem desc, truncados a 5 + "expandir". Sem exportar/imprimir (CA 4.1).
+- TDD: 3 arquivos de teste atualizados/estendidos — `reports.service.spec.ts` (+3 testes: `productsSummary` sem/com filtros combinados, `categories`), `products.service.spec.ts` (+2 testes: novos params, campo `subcategory`), `reports.component.spec.ts` (+22 testes cobrindo CA 1.1–1.3, 2.1–2.9, 4.1, 5.1, troca de página sem recalcular cards, falha ao carregar categorias não bloqueia o relatório, chips removíveis). Suíte completa: 172/172 passando, sem regressão. Cobertura `pages/reports`: 89.8%; `reports.service.ts`/`products.service.ts`: 100%.
+- Validação real: `ng build` (production config) e `ng serve` sobem sem erro; `curl http://localhost:4301/reports` retornou 200 com o bundle do novo bloco compilado. Backend (#242/#243/#244) implementado em paralelo em worktrees separados — este PR usa mock do `HttpClient`/serviços (padrão já usado no projeto, ver Issue #237); integração real fica para Code Review/QA após todas as sub-issues mergeadas.
+- Nota de implementação: `ux-ui-spec.md` §5 menciona reaproveitar "o mapeamento de cor por status já existente na tela Products" para a coluna Status da tabela — na prática `products.component.scss` não tem esse mapeamento por status (só um badge cinza único + cursor:help no Error). Implementado um mapeamento de cores por status (Published=verde, Pending=âmbar, Error=vermelho, demais=neutro) local ao `reports.component.scss`, sem alterar `ProductsComponent` (fora de escopo). Decisão de detalhe visual, não de negócio/arquitetura — registrado aqui para o Code Review avaliar se vale unificar com Products em follow-up.
+- PR: https://github.com/DQM-BETA/omuletachou/pull/249 (feature→desenv) — **merged (squash) para desenv em 2026-08-19 pelo LT (mergeado por último, após os 3 PRs de backend).**
+
+## Merge das sub-issues (LT — 2026-08-19)
+- Ordem de merge (squash, feature→desenv): #248 (#242, índice/migration) → #247 (#243, endpoint summary) → #246 (#244, extensão products) → #249 (#245, frontend Angular). Ordem escolhida para aplicar primeiro a migration base e minimizar risco de conflito em `AfiliadoBotDbContextModelSnapshot.cs`.
+- Todos os 4 merges concluídos **sem conflito real** — `mergeStateStatus: CLEAN` confirmado antes de cada merge (aguardado o recálculo do GitHub entre um merge e o próximo). Não houve necessidade de `gh pr update-branch`.
+- 4 sub-issues fechadas (#242, #243, #244, #245) via `gh issue close --reason completed`.
+- `desenv` local sincronizado via `git pull` (fast-forward 28fb75d..4890eac), confirmado com `git log`.
+- PR de promoção `desenv→homolog` criado: **#250** (merge commit, não-squash, conforme convenção de promoção entre branches de longa vida).
+- Nota de follow-up (não bloqueante) herdada do Dev de #245: mapeamento de cor por status ficou local em `reports.component.scss` (não reaproveitou `ProductsComponent`, que não tinha esse mapeamento) — Code Review avaliar se vale unificar em follow-up futuro.
+
+## Code Review — PR #250 desenv→homolog (2026-08-19) — REPROVADO
+
+- Execução completa: `dotnet test` 490/490, `npm test` 172/172, `docker compose build --no-cache api dashboard` + boot real (`/health` 200), migration `AddStatusPlatformCreatedAtIndex` confirmada aplicada e índice confirmado via `psql`.
+- Integração real end-to-end contra Postgres real do container: `GET /api/reports/products/summary` e `GET /api/products` validados com filtros combinados (AND), sem-match (200/total 0), platform inválida (sem 400), 401 sem token, não-regressão de `GetProducts` sem os 4 novos params — todos ok.
+- Checklist de veto: sem segredo commitado, `[Authorize]` ok nos dois controllers, sem N+1 (1 IQueryable base + Count + 4 GroupBy), sem `.first()`/`.nth()`/`.last()` em specs novas, sem teste-lixo.
+- Nota do LT sobre mapeamento de cor por status local em `reports.component.scss`: avaliada e **aceita** — `ProductsComponent` de fato não tem esse mapeamento pronto hoje (só um badge cinza único), a premissa do ux-ui-spec estava incorreta.
+- **Divergência bloqueante:** `ux-ui-spec.md` §8 exige bloco de filtros colapsado por padrão em `mat-expansion-panel` (com badge de contagem) no breakpoint mobile (<600px) — não implementado (só há `grid-template-columns: 1fr` via CSS, sem colapso/badge). Responsividade web é citada explicitamente como critério de veto do Code Review.
+- Achado secundário (não bloqueante isolado): §4.3/§5.1 pedem skeleton no carregamento inicial dos cards/tabela; a implementação só usa `mat-progress-bar` no card de filtros, podendo piscar o estado "Nenhum dado"/"Nenhum produto encontrado" antes do primeiro `forkJoin` resolver.
+- Evidência completa postada como comentário no PR: https://github.com/DQM-BETA/omuletachou/pull/250#issuecomment-5347125317
+- Encaminhado ao LT: implementar o colapso mobile do bloco de filtros (bloqueante) + avaliar o gap de skeleton (opcional). Resto do PR aprovado, sem necessidade de re-trabalho fora desses itens.
+
+## Mapeamento de falha — LT (2026-08-19)
+
+**Decisão de fluxo:** reabrir a sub-issue **#245** (mesma sub-issue, mesma `task_id: T-04`) em vez de criar uma nova sub-issue de correção. Racional:
+- A falha é uma correção de escopo já coberto por #245 (bloco de filtros do `ReportsComponent`), não uma tarefa nova.
+- A convenção de branch (`feature/ISSUE-NNN-descricao`, NNN = nº da sub-issue) e o restante do pipeline (mapeamento de custo/ledger, `sub_issues_frontend`) já referenciam #245/T-04 — criar uma sub-issue nova fragmentaria o rastreio sem ganho.
+- Não há precedente na squad de abrir sub-issue de correção separada para reprovação de Code Review pós-merge (revisado: melhorias `2026-06-18` e `2026-06-23` tratam reincidência/correção sempre pela issue original, nunca abrindo uma nova).
+- `gh issue reopen 245 --repo DQM-BETA/omuletachou` executado, com comentário de mapeamento das duas falhas (link: https://github.com/DQM-BETA/omuletachou/issues/245).
+
+**Mapeamento dos achados do Code Review (PR #250) → sub-issue #245:**
+1. **Bloqueante** — `ux-ui-spec.md` §8 (Responsividade mobile <600px): bloco de filtros precisa estar dentro de `mat-expansion-panel`, colapsado por padrão, com badge de contagem de filtros ativos (ex. "Filtros (2)"), expandindo ao toque. Hoje só há `grid-template-columns: 1fr` via CSS, sempre expandido. Arquivos afetados: `dashboard/src/app/pages/reports/reports.component.html` e `.scss`.
+2. **Secundário (incluir na mesma correção, não bloqueante isolado)** — `ux-ui-spec.md` §4.3/§5.1: skeleton de carregamento inicial ausente nos cards/tabela; hoje só há `mat-progress-bar`, o que pode piscar "Nenhum dado"/"Nenhum produto encontrado" antes do primeiro `forkJoin` resolver.
+
+**Não escopo desta correção:** resto do PR #250 (backend T-01/T-02/T-03, contrato de dados, autorização, não-regressão, testes, mapeamento de cor por status) já aprovado pelo Code Review — dev não deve tocar nesses pontos.
+
+**Fluxo de saída:** Dev Angular abre `feature/ISSUE-245-...` a partir de `desenv` atualizada, corrige os 2 itens, TDD dos cenários novos/ajustados, push, PR `feature→desenv`. Após o LT mergear esse PR (squash) em `desenv`, o PR #250 (`desenv→homolog`, ainda aberto) absorve o commit automaticamente — não é necessário recriar o PR de promoção. Code Review então reavalia o PR #250 atualizado.
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|---|---|---|---|---|---|
@@ -77,3 +143,10 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 | 5 | Arquiteto (design.md) | Arquiteto | sonnet-5 | ~ | ~ | ~ |
 | 6 | Refinamento Técnico (task breakdown) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
 | 7 | UX/UI (spec visual sub-issue #245) | UX/UI | sonnet-5 | ~ | ~ | ~ |
+| 8 | Dev .NET (sub-issue #244, T-03) | Dev .NET | sonnet-5 | ~ | ~ | ~ |
+| 9 | Dev .NET (sub-issue #242, T-01) | Dev .NET | sonnet-5 | ~ | ~ | ~ |
+| 9 | Dev .NET (sub-issue #243, T-02) | Dev .NET | sonnet-5 | ~ | ~ | ~ |
+| 10 | Dev Angular (sub-issue #245, T-04) | Dev Angular | sonnet-5 | ~ | ~ | ~ |
+| 11 | Líder Técnico (merge 4 sub-issues + PR #250 desenv→homolog) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
+| 12 | Code Review (PR #250 desenv→homolog) — REPROVADO | Code Review | sonnet-5 | ~ | ~ | ~ |
+| 13 | Líder Técnico (mapeamento falha CR, #245 reaberta) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |

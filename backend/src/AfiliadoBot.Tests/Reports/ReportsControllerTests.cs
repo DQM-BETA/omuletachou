@@ -72,6 +72,36 @@ public class ReportsControllerTests : IClassFixture<CustomWebApplicationFactory>
             sourceUrl: "https://example.com/src");
     }
 
+    // Issue #228/T-02: builder usado pelos testes de ProductsSummary — categoria/subcategoria/
+    // plataforma controladas para exercitar filtro e breakdown.
+    private static Product BuildProduct(string category, string? subcategory, Platform platform)
+    {
+        return new Product(
+            title: "Produto Teste " + Guid.NewGuid(),
+            description: "Descricao",
+            salePrice: 99.90m,
+            originalPrice: 149.90m,
+            discountPct: 33m,
+            affiliateLink: "https://example.com/aff",
+            slug: "produto-teste-" + Guid.NewGuid(),
+            category: category,
+            platform: platform,
+            imageUrl: "https://example.com/img.png",
+            externalId: "ext-" + Guid.NewGuid(),
+            sourceUrl: "https://example.com/src",
+            subcategory: subcategory);
+    }
+
+    // CreatedAt tem setter privado (definido em DateTime.UtcNow no construtor) — precisamos
+    // forcar datas especificas para exercitar a janela [from, toExclusive) de collectedFrom/
+    // collectedTo (CA 2.5), mesmo padrao de reflection ja usado por SetPublishedAt acima.
+    private static void SetCreatedAt(Product product, DateTime createdAt)
+    {
+        var prop = typeof(Product).GetProperty(nameof(Product.CreatedAt),
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)!;
+        prop.SetValue(product, createdAt);
+    }
+
     [Fact]
     public async Task Summary_SemToken_Retorna401()
     {
@@ -215,5 +245,252 @@ public class ReportsControllerTests : IClassFixture<CustomWebApplicationFactory>
         body.GetProperty("today").GetInt32().Should().BeGreaterThanOrEqualTo(1);
         body.GetProperty("week").GetInt32().Should().BeGreaterThanOrEqualTo(body.GetProperty("today").GetInt32());
         body.GetProperty("month").GetInt32().Should().BeGreaterThanOrEqualTo(2);
+    }
+
+    // ---- Issue #228/T-02: GET /api/reports/products/summary --------------------------------
+    // Cada teste usa uma categoria unica (Guid) para isolar seus produtos dos demais testes da
+    // classe, que compartilham o mesmo banco InMemory via CustomWebApplicationFactory
+    // (IClassFixture) — mesma tecnica das secoes acima usarem delta/baseline.
+
+    [Fact]
+    public async Task ProductsSummary_SemToken_Retorna401()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/api/reports/products/summary");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task ProductsSummary_ComStatusPublished_RetornaTotalEOs4BreakdownsCorretos()
+    {
+        var client = _factory.CreateClient();
+        var token = await LoginAndGetTokenAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var category = "Eletronicos-" + Guid.NewGuid();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+
+            var p1 = BuildProduct(category, "Celulares", Platform.MercadoLivre);
+            p1.MarkAsPublished();
+            var p2 = BuildProduct(category, "Celulares", Platform.MercadoLivre);
+            p2.MarkAsPublished();
+            var p3 = BuildProduct(category, "Notebooks", Platform.Amazon);
+            p3.MarkAsPublished();
+
+            // Mesma categoria, mas Pending — nao deve contar com status=Published explicito.
+            var pPending = BuildProduct(category, "Celulares", Platform.MercadoLivre);
+
+            db.Products.AddRange(p1, p2, p3, pPending);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync(
+            $"/api/reports/products/summary?status=Published&category={Uri.EscapeDataString(category)}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        body.GetProperty("total").GetInt32().Should().Be(3);
+
+        var byPlatform = body.GetProperty("byPlatform").EnumerateArray()
+            .ToDictionary(e => e.GetProperty("platform").GetString()!, e => e.GetProperty("count").GetInt32());
+        byPlatform.GetValueOrDefault("MercadoLivre").Should().Be(2);
+        byPlatform.GetValueOrDefault("Amazon").Should().Be(1);
+
+        var byCategory = body.GetProperty("byCategory").EnumerateArray()
+            .ToDictionary(e => e.GetProperty("category").GetString()!, e => e.GetProperty("count").GetInt32());
+        byCategory.GetValueOrDefault(category).Should().Be(3);
+
+        var byStatus = body.GetProperty("byStatus").EnumerateArray()
+            .ToDictionary(e => e.GetProperty("status").GetString()!, e => e.GetProperty("count").GetInt32());
+        byStatus.GetValueOrDefault("Published").Should().Be(3);
+        byStatus.ContainsKey("Pending").Should().BeFalse();
+
+        var bySubcategory = body.GetProperty("bySubcategory").EnumerateArray()
+            .ToDictionary(e => e.GetProperty("subcategory").GetString()!, e => e.GetProperty("count").GetInt32());
+        bySubcategory.GetValueOrDefault("Celulares").Should().Be(2);
+        bySubcategory.GetValueOrDefault("Notebooks").Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ProductsSummary_ComStatusPendingExplicito_NaoRestringeAPublished()
+    {
+        var client = _factory.CreateClient();
+        var token = await LoginAndGetTokenAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var category = "Moda-" + Guid.NewGuid();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+
+            var pending1 = BuildProduct(category, "Camisetas", Platform.Shopee);
+            var pending2 = BuildProduct(category, "Camisetas", Platform.Shopee);
+
+            var published = BuildProduct(category, "Camisetas", Platform.Shopee);
+            published.MarkAsPublished();
+
+            db.Products.AddRange(pending1, pending2, published);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync(
+            $"/api/reports/products/summary?status=Pending&category={Uri.EscapeDataString(category)}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        body.GetProperty("total").GetInt32().Should().Be(2);
+        var byStatus = body.GetProperty("byStatus").EnumerateArray()
+            .ToDictionary(e => e.GetProperty("status").GetString()!, e => e.GetProperty("count").GetInt32());
+        byStatus.GetValueOrDefault("Pending").Should().Be(2);
+        byStatus.ContainsKey("Published").Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ProductsSummary_ComFiltrosCombinados_RetornaIntersecaoAND()
+    {
+        var client = _factory.CreateClient();
+        var token = await LoginAndGetTokenAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var category = "Combinado-" + Guid.NewGuid();
+        var from = new DateTime(2026, 1, 10, 0, 0, 0, DateTimeKind.Utc);
+        var to = new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+
+            // Casa TODOS os filtros: platform=MercadoLivre, category, dentro da janela.
+            var match = BuildProduct(category, "Sub", Platform.MercadoLivre);
+            match.MarkAsPublished();
+            SetCreatedAt(match, from.AddDays(2));
+
+            // Plataforma diferente — nao deve casar.
+            var wrongPlatform = BuildProduct(category, "Sub", Platform.Amazon);
+            wrongPlatform.MarkAsPublished();
+            SetCreatedAt(wrongPlatform, from.AddDays(2));
+
+            // Mesma categoria/plataforma, mas fora da janela de datas — nao deve casar.
+            var outOfRange = BuildProduct(category, "Sub", Platform.MercadoLivre);
+            outOfRange.MarkAsPublished();
+            SetCreatedAt(outOfRange, from.AddDays(-5));
+
+            db.Products.AddRange(match, wrongPlatform, outOfRange);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync(
+            "/api/reports/products/summary" +
+            $"?platform=MercadoLivre&category={Uri.EscapeDataString(category)}" +
+            $"&collectedFrom={from:yyyy-MM-dd}&collectedTo={to:yyyy-MM-dd}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        body.GetProperty("total").GetInt32().Should().Be(1);
+        var byPlatform = body.GetProperty("byPlatform").EnumerateArray()
+            .ToDictionary(e => e.GetProperty("platform").GetString()!, e => e.GetProperty("count").GetInt32());
+        byPlatform.Should().ContainKey("MercadoLivre").WhoseValue.Should().Be(1);
+        byPlatform.ContainsKey("Amazon").Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ProductsSummary_SemMatch_Retorna200ComTotalZeroEBreakdownsVazios()
+    {
+        var client = _factory.CreateClient();
+        var token = await LoginAndGetTokenAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var category = "InexistenteNoBanco-" + Guid.NewGuid();
+
+        var response = await client.GetAsync(
+            $"/api/reports/products/summary?category={Uri.EscapeDataString(category)}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        body.GetProperty("total").GetInt32().Should().Be(0);
+        body.GetProperty("byPlatform").EnumerateArray().Should().BeEmpty();
+        body.GetProperty("byCategory").EnumerateArray().Should().BeEmpty();
+        body.GetProperty("byStatus").EnumerateArray().Should().BeEmpty();
+        body.GetProperty("bySubcategory").EnumerateArray().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ProductsSummary_ComPlatformInvalida_NaoRetorna400EResultaSemMatch()
+    {
+        var client = _factory.CreateClient();
+        var token = await LoginAndGetTokenAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var category = "PlataformaInvalida-" + Guid.NewGuid();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            var product = BuildProduct(category, null, Platform.Amazon);
+            product.MarkAsPublished();
+            db.Products.Add(product);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync(
+            $"/api/reports/products/summary?category={Uri.EscapeDataString(category)}&platform=NaoExiste");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("total").GetInt32().Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ProductsSummary_ComCollectedFromECollectedTo_JanelaInclusivaNosLimites()
+    {
+        var client = _factory.CreateClient();
+        var token = await LoginAndGetTokenAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var category = "JanelaData-" + Guid.NewGuid();
+        var from = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+        var to = new DateTime(2026, 3, 5, 0, 0, 0, DateTimeKind.Utc);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+
+            // Exatamente no limite inicial (inicio do dia) — deve entrar.
+            var onFrom = BuildProduct(category, null, Platform.Amazon);
+            SetCreatedAt(onFrom, from);
+
+            // Exatamente no limite final (qualquer hora dentro do dia final) — deve entrar.
+            var onTo = BuildProduct(category, null, Platform.Amazon);
+            SetCreatedAt(onTo, to.AddHours(23).AddMinutes(59));
+
+            // Um dia antes do limite inicial — nao deve entrar.
+            var beforeFrom = BuildProduct(category, null, Platform.Amazon);
+            SetCreatedAt(beforeFrom, from.AddDays(-1));
+
+            // Um dia depois do limite final (fora da janela) — nao deve entrar.
+            var afterTo = BuildProduct(category, null, Platform.Amazon);
+            SetCreatedAt(afterTo, to.AddDays(2));
+
+            db.Products.AddRange(onFrom, onTo, beforeFrom, afterTo);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync(
+            "/api/reports/products/summary" +
+            $"?category={Uri.EscapeDataString(category)}&collectedFrom={from:yyyy-MM-dd}&collectedTo={to:yyyy-MM-dd}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("total").GetInt32().Should().Be(2);
     }
 }
