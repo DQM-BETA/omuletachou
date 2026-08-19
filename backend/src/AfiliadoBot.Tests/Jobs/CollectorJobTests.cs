@@ -2,10 +2,13 @@ using AfiliadoBot.Application.Jobs;
 using AfiliadoBot.Domain.Entities;
 using AfiliadoBot.Domain.Enums;
 using AfiliadoBot.Domain.Interfaces;
+using AfiliadoBot.Infrastructure.Data;
+using AfiliadoBot.Tests.TestHelpers;
 using FluentAssertions;
 using global::Hangfire;
 using global::Hangfire.Common;
 using global::Hangfire.States;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
@@ -46,7 +49,11 @@ public class CollectorJobTests
         IEnumerable<IPlatformCollector> collectors,
         Mock<IBackgroundJobClient> backgroundJobClientMock)
     {
-        return new CollectorJob(collectors, backgroundJobClientMock.Object, NullLogger<CollectorJob>.Instance);
+        return new CollectorJob(
+            collectors,
+            backgroundJobClientMock.Object,
+            new PassThroughJobRunTracker(),
+            NullLogger<CollectorJob>.Instance);
     }
 
     private static Mock<IBackgroundJobClient> CreateBackgroundJobClientMock()
@@ -124,5 +131,29 @@ public class CollectorJobTests
         backgroundJobClient.Verify(
             c => c.Create(It.IsAny<Job>(), It.IsAny<IState>()),
             Times.Never);
+    }
+
+    // --- Issue #227 (JobRun tracking) ---
+
+    [Fact]
+    public async Task ExecuteAsync_GeraJobRun_QuandoChamadoDiretamente()
+    {
+        // CA 4.2/5.1: ExecuteAsync chamado diretamente (simulando o cron do Hangfire, sem passar
+        // pelo controller) tambem gera um JobRun — mesmo mecanismo cobre os dois disparadores.
+        using var db = new AfiliadoBotDbContext(
+            new DbContextOptionsBuilder<AfiliadoBotDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                .Options);
+        var tracker = new JobRunTracker(db);
+
+        var amazon = CreateCollectorMock(Platform.Amazon, 1);
+        var backgroundJobClient = CreateBackgroundJobClientMock();
+        var job = new CollectorJob(new[] { amazon.Object }, backgroundJobClient.Object, tracker, NullLogger<CollectorJob>.Instance);
+
+        await job.ExecuteAsync();
+
+        var run = await db.JobRuns.SingleAsync();
+        run.JobName.Should().Be(JobName.Collector);
+        run.Status.Should().Be(JobRunStatus.Success);
     }
 }

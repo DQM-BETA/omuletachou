@@ -16,27 +16,35 @@ namespace AfiliadoBot.Application.Jobs;
 /// Ao final do ciclo, dispara push notification (Issue #14 / Sub-A) com base nos produtos
 /// publicados com sucesso no Telegram (primeira rede do ciclo) — 1 individual se exatamente 1
 /// produto, 1 consolidada se mais de 1, nenhuma se 0 (design.md, throttling do PublisherJob).
+/// Corpo instrumentado por <see cref="IJobRunTracker"/> (Issue #227, JobName.Publisher) — cobre
+/// tanto o cron "publisher-job" quanto o POST /api/jobs/publisher/trigger.
 /// </summary>
 public class PublisherJob
 {
     private readonly AfiliadoBotDbContext _dbContext;
     private readonly IEnumerable<ISocialPublisher> _publishers;
     private readonly IPushNotificationService _pushNotificationService;
+    private readonly IJobRunTracker _jobRunTracker;
     private readonly ILogger<PublisherJob> _logger;
 
     public PublisherJob(
         AfiliadoBotDbContext dbContext,
         IEnumerable<ISocialPublisher> publishers,
         IPushNotificationService pushNotificationService,
+        IJobRunTracker jobRunTracker,
         ILogger<PublisherJob> logger)
     {
         _dbContext = dbContext;
         _publishers = publishers;
         _pushNotificationService = pushNotificationService;
+        _jobRunTracker = jobRunTracker;
         _logger = logger;
     }
 
-    public async Task ExecuteAsync(CancellationToken ct = default)
+    public Task ExecuteAsync(CancellationToken ct = default) =>
+        _jobRunTracker.RunAsync(JobName.Publisher, ExecuteCoreAsync, ct);
+
+    private async Task ExecuteCoreAsync(CancellationToken ct)
     {
         var now = DateTime.UtcNow;
 

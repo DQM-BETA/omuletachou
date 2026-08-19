@@ -118,6 +118,12 @@ builder.Services.AddHttpClient<IPlatformCollector, ShopeeCollector>();
 // Media storage (ProcessorJob, Issue #6)
 builder.Services.AddHttpClient<IMediaStorage, LocalMediaStorage>();
 
+// JobRunTracker (Issue #227): instrumenta CollectorJob/ProcessorJob/PublisherJob e os 3
+// collectors individuais disparados manualmente via JobsController — persistencia de
+// execucoes de job (design.md §2.2). Scoped: usa o mesmo AfiliadoBotDbContext (Scoped) do
+// request/job em execucao.
+builder.Services.AddScoped<IJobRunTracker, JobRunTracker>();
+
 // ProcessorJob (Issue #6)
 builder.Services.AddHttpClient<ProcessorJob>();
 
