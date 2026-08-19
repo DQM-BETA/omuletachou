@@ -2,7 +2,7 @@
 issue: 228
 titulo: feat: relatório de produtos com filtros (categoria/plataforma/status) na tela Reports
 etapa_atual: Em Desenvolvimento
-ultimo_agente: ux-ui
+ultimo_agente: dev-dotnet (#242)
 openspec_change: openspec/changes/issue-228-relatorio-produtos-filtros
 tech_stacks: [dotnet, angular]
 repos:
@@ -67,6 +67,27 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 - Todos os estados especificados (default/loading/vazio/erro/sucesso; disabled/readonly marcados N/A onde não se aplicam) para filtros, cards e tabela — erro compartilhado entre cards+tabela (CA 5.1, nunca mostra dado antigo).
 - Heurísticas de Nielsen traduzidas em critérios verificáveis (tabela §7 do spec) + responsividade por 3 breakpoints (desktop/tablet/mobile) + fluxo de navegação (sem rota nova, tudo dentro de `ReportsComponent`).
 
+## Sub-issue #244 (T-03) — Dev .NET (2026-08-19)
+- Branch `feature/ISSUE-244-extensao-get-products` (worktree `.worktrees/feature-ISSUE-244-extensao-get-products`), base `desenv`.
+- `ProductsController.GetProducts` ganhou os 4 filtros aditivos (`category`, `subcategory`, `collectedFrom`, `collectedTo`); `ProductListItemDto` ganhou `Subcategory` (`string?`) ao final.
+- TDD: 9 testes novos em `ProductsControllerTests` (category, subcategory, faixa de data inclusiva, AND combinado, campo `Subcategory` no payload, não-regressão explícita sem os 4 novos params). Suíte completa: 479/479 passando.
+- Validação real: build da imagem Docker da API a partir da branch, container temporário conectado ao Postgres do ambiente local (`omuletachou_omuletachou_net`) — boot sem exceção, filtros exercitados contra dados reais (`category=Casa e Cozinha`, `subcategory=Eletroportáteis`, faixa de data, combinação AND), container removido após validar.
+- PR: https://github.com/DQM-BETA/omuletachou/pull/246 (feature→desenv), aguardando merge do LT.
+
+## Sub-issue #243 (T-02) — Dev .NET (2026-08-19)
+- Branch `feature/ISSUE-243-endpoint-reports-summary` (worktree `.worktrees/feature-ISSUE-243-endpoint-reports-summary`), base `desenv`.
+- Novo action `ReportsController.ProductsSummary` (`GET /api/reports/products/summary`, `[Authorize]`): filtros opcionais AND (`category`, `subcategory`, `platform`, `status`, `collectedFrom`, `collectedTo`), janela `[from, toExclusive)` inclusiva sobre `CreatedAt`, sem filtro de status não restringe a Published, sem match retorna 200 com total 0 e as 4 listas vazias. Novos DTOs em `AfiliadoBot.Api/Reports/ReportsDtos.cs` (`ProductsReportSummaryDto` + 4 records de breakdown).
+- TDD: 11 testes novos em `ReportsControllerTests` (status=Published breakdown completo CA 1.1, status=Pending explícito CA 2.4, filtros combinados AND CA 2.6, sem match CA 1.3/2.7, platform inválida sem 400, janela de data inclusiva CA 2.5, 401 sem token). Suíte completa: 480/480 passando, sem regressão.
+- Validação real: Postgres isolado em container temporário (`test_pg_issue243`), API rodada localmente (`dotnet run`) contra ele — migrations aplicadas e boot sem exceção; dados reais inseridos via SQL direto validaram total/breakdowns/janela de data batendo com o esperado. Container e processo derrubados ao final, sem tocar no stack `afiliado_*` compartilhado (em uso pela sub-issue #244 em paralelo).
+- PR: https://github.com/DQM-BETA/omuletachou/pull/247 (feature→desenv), aguardando merge do LT.
+
+## Sub-issue #242 (T-01) — Dev .NET (2026-08-19)
+- Branch `feature/ISSUE-242-indice-status-platform-createdat` (worktree `.worktrees/feature-ISSUE-242-indice-status-platform-createdat`), base `desenv`.
+- Novo índice composto `IX_products_status_platform_createdat` (`Status`, `Platform`, `CreatedAt` desc) em `ProductConfiguration.cs`; migration EF Core `AddStatusPlatformCreatedAtIndex` (só `CREATE INDEX`, não é `UNIQUE`).
+- TDD: teste novo `ProductConfigurationTests` (RED confirmado sem o índice, GREEN após adicioná-lo) inspeciona o EF model (design-time) — índice existe, colunas na ordem `Status, Platform, CreatedAt`, só `CreatedAt` descendente, não-único. Suíte completa: 477/477 passando, sem regressão.
+- Validação real: migration aplicada com sucesso (a) incrementalmente sobre a base de dev local compartilhada (`afiliado_db`, via script idempotente + `psql`) e (b) do zero sobre Postgres isolado em container temporário (`dotnet ef database update` completo, todas as migrations). Índice confirmado via `psql`: `CREATE INDEX "IX_products_status_platform_createdat" ON public.products USING btree (status, platform, created_at DESC)`. `dotnet run` contra o Postgres isolado: app inicia sem exceção (boot do DI ok, migrations aplicadas automaticamente).
+- PR: https://github.com/DQM-BETA/omuletachou/pull/248 (feature→desenv), aguardando merge do LT.
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|---|---|---|---|---|---|
@@ -77,3 +98,6 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 | 5 | Arquiteto (design.md) | Arquiteto | sonnet-5 | ~ | ~ | ~ |
 | 6 | Refinamento Técnico (task breakdown) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
 | 7 | UX/UI (spec visual sub-issue #245) | UX/UI | sonnet-5 | ~ | ~ | ~ |
+| 8 | Dev .NET (sub-issue #244, T-03) | Dev .NET | sonnet-5 | ~ | ~ | ~ |
+| 9 | Dev .NET (sub-issue #242, T-01) | Dev .NET | sonnet-5 | ~ | ~ | ~ |
+| 9 | Dev .NET (sub-issue #243, T-02) | Dev .NET | sonnet-5 | ~ | ~ | ~ |
