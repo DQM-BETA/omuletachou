@@ -11,6 +11,38 @@
         {{ job.lastMessage }}
       </p>
       <p *ngIf="!job.lastMessage" class="job-feedback job-feedback--idle">Nenhuma execução disparada ainda.</p>
+
+      <div class="job-last-execution">
+        <p *ngIf="job.lastExecutionStatus === null" class="job-last-execution__empty">
+          Nenhuma execução ainda
+        </p>
+
+        <ng-container *ngIf="job.lastExecutionStatus !== null">
+          <p
+            class="job-last-execution__status"
+            [class.job-last-execution__status--success]="job.lastExecutionStatus === 'success'"
+            [class.job-last-execution__status--failed]="job.lastExecutionStatus === 'failed'"
+            [class.job-last-execution__status--running]="job.lastExecutionStatus === 'running'"
+          >
+            <mat-icon *ngIf="job.lastExecutionStatus === 'success'" aria-hidden="true">check_circle</mat-icon>
+            <mat-icon *ngIf="job.lastExecutionStatus === 'failed'" aria-hidden="true">error</mat-icon>
+            <span *ngIf="job.lastExecutionStatus === 'success'">Sucesso</span>
+            <span *ngIf="job.lastExecutionStatus === 'failed'">Falha</span>
+            <span *ngIf="job.lastExecutionStatus === 'running'">Em execução...</span>
+          </p>
+
+          <p class="job-last-execution__timestamps">
+            Início: {{ job.lastExecutionStartedAt | date: 'dd/MM/yyyy HH:mm' }}
+            <ng-container *ngIf="job.lastExecutionFinishedAt">
+              · Fim: {{ job.lastExecutionFinishedAt | date: 'dd/MM/yyyy HH:mm' }}
+            </ng-container>
+          </p>
+
+          <p *ngIf="job.lastExecutionStatus === 'failed' && job.lastExecutionError" class="job-last-execution__error">
+            {{ job.lastExecutionError }}
+          </p>
+        </ng-container>
+      </div>
     </mat-card-content>
 
     <mat-card-actions>

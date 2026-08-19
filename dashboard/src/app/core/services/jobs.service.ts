@@ -19,11 +19,25 @@ export const JOB_ENDPOINTS: Record<JobKind, string> = {
   publisher: '/api/jobs/publisher/trigger',
 };
 
+export type JobExecutionStatus = 'running' | 'success' | 'failed' | null;
+
+export interface JobLastExecutionDto {
+  jobName: JobKind;
+  status: JobExecutionStatus;
+  startedAt: string | null;
+  finishedAt: string | null;
+  errorMessage: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class JobsService {
   constructor(private http: HttpClient) {}
 
   trigger(kind: JobKind): Observable<{ count?: number }> {
     return this.http.post<{ count?: number }>(JOB_ENDPOINTS[kind], {});
+  }
+
+  getLastExecutions(): Observable<JobLastExecutionDto[]> {
+    return this.http.get<JobLastExecutionDto[]>('/api/jobs/last-executions');
   }
 }
