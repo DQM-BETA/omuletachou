@@ -122,6 +122,13 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasDatabaseName("IX_products_status_category_subcategory_createdat")
             .IsDescending(false, false, false, true);
 
+        // Indice orientado a Plataforma (Issue #228, design.md secao 2.2). Os indices acima sao
+        // todos orientados a Categoria/Subcategoria; nenhum cobre filtro por Plataforma isolado
+        // ou combinado com faixa de data de coleta (relatorio de produtos publicados).
+        builder.HasIndex(x => new { x.Status, x.Platform, x.CreatedAt })
+            .HasDatabaseName("IX_products_status_platform_createdat")
+            .IsDescending(false, false, true);
+
         builder.Property(x => x.AiScore)
             .HasColumnName("ai_score");
 
