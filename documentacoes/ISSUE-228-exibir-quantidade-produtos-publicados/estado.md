@@ -1,8 +1,8 @@
 ---
 issue: 228
 titulo: feat: relatório de produtos com filtros (categoria/plataforma/status) na tela Reports
-etapa_atual: Backlog — aguardando priorização do Gerente
-ultimo_agente: coordenador
+etapa_atual: PM Fase 1 — aguardando Gate 1
+ultimo_agente: pm-analista-negocios
 openspec_change: ~
 tech_stacks: []
 repos:
@@ -20,6 +20,7 @@ qa_status: ~
 figma_url: ~
 blockers: nenhum
 status_comment_id: ~
+rota: backlog
 ---
 
 ## Resumo
@@ -42,11 +43,21 @@ O Gerente detalhou: não é só um card numérico simples de "produtos publicado
 - **Schema:** verificar se todas as dimensões já existem em `products` pós-#208 (provavelmente não precisa mudança, a confirmar)
 - **Acionamento:** on-demand ou com time-based refresh?
 
+## Levantamento (PM Fase 1 — 2026-08-19)
+Perguntas postadas na Issue (comentário: https://github.com/DQM-BETA/omuletachou/issues/228#issuecomment-5346494763), aguardando resposta do Gerente no Gate 1:
+1. Confirmação do objetivo de negócio — ferramenta operacional interna (dashboard admin), não feature do site público.
+2. Escopo de filtros v1 vs. futuro — subcategoria / faixa de data de coleta / faixa de desconto entram agora ou ficam de fora do PRD atual?
+3. Formato de exibição preferido — tabela detalhada, cards agregados, gráfico, ou combinação.
+4. Necessidade de exportação/impressão (CSV/Excel) ou só consulta em tela.
+5. Atualização em tempo real vs. recálculo só ao aplicar filtro (on-demand).
+6. Confirmar rota `backlog` (mantida) ou promover para `normal`/`rapido` (priorizar agora), como decidido para a #227.
+
 ## Rota
-`backlog` — apenas documentação de descoberta; não entra em pipeline até priorização do Gerente.
+`backlog` — mantida até o Gerente decidir o contrário no Gate 1. Apenas documentação de descoberta; não entra em pipeline de dev até priorização.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|---|---|---|---|---|---|
 | 1 | Preparação (registar backlog) | Coordenador | haiku-4.5 | ~ | ~| ~ |
 | 2 | Atualização (escopo expandido, 2026-08-19) | Coordenador | haiku-4.5 | ~ | ~ | ~ |
+| 3 | PM Fase 1 (levantamento) | PM Analista de Negócios | sonnet-5 | ~ | ~ | ~ |
