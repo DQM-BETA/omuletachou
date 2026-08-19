@@ -31,3 +31,47 @@
 .trigger-spinner {
   display: inline-block;
 }
+
+.job-last-execution {
+  margin-top: 8px;
+  font-size: 0.8125rem;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.job-last-execution__empty {
+  color: rgba(0, 0, 0, 0.5);
+  font-style: italic;
+}
+
+.job-last-execution__status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+
+  mat-icon {
+    font-size: 18px;
+    height: 18px;
+    width: 18px;
+  }
+}
+
+.job-last-execution__status--success {
+  color: #2e7d32;
+}
+
+.job-last-execution__status--failed {
+  color: #c62828;
+}
+
+.job-last-execution__status--running {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.job-last-execution__timestamps {
+  margin: 2px 0;
+}
+
+.job-last-execution__error {
+  color: #c62828;
+}

@@ -2,8 +2,8 @@
 issue: 155
 titulo: "chore: Configurar Playwright (test:visual) no dashboard — Gate Visual do QA nunca dispara"
 rota: rapido
-etapa_atual: "Code Review"
-ultimo_agente: lt
+etapa_atual: "Concluído"
+ultimo_agente: coordenador
 openspec_change: ~
 tech_stacks:
   - Angular
@@ -17,12 +17,14 @@ sub_issues: ["#232 (stack:angular, task_id:T-01)"]
 desenv_tasks_merged: ["#232"]
 sub_issues_frontend: {}
 pr_homologacao: 234
-pr_release: ~
-code_review_homolog_pr: ~
-qa_status: ~
+pr_release: 235
+code_review_homolog_pr: 234
+qa_status: aprovado
 figma_url: ~
 blockers: nenhum
 status_comment_id: IC_kwDOTMlfyM8AAAABPnxeBw
+createdAt: 2026-08-14T13:45:04Z
+closedAt: 2026-08-19T14:50:24Z
 ---
 
 ## Escopo
@@ -54,12 +56,45 @@ Especificação técnica completa em `especificacao-tecnica.md` (mesmo diretóri
 - Todas as sub-issues da Issue #155 concluídas (única sub-issue).
 - PR #234 (desenv→homolog, merge commit): https://github.com/DQM-BETA/omuletachou/pull/234
 
-## Custo (ledger)
-| # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
-|---|---|---|---|---|---|---|
-| 1 | Preparação (Issue + estado.md) | Coordenador | Haiku | — | — | — |
-| 2 | Refinamento (rapido) — spec técnica + sub-issue #232 | LT | Sonnet | — | — | — |
-| 3 | Dev (sub-issue #232, PR #233) | Dev Angular | Sonnet | — | — | — |
-| 4 | Merge PR #233 (squash) + PR #234 (desenv→homolog) | LT | Sonnet | — | — | — |
+## Code Review (PR #234, rota `rapido` — CR leve, mas real) — APROVADO
+Execução real (não leitura de diff), evidência completa postada como comentário no PR (`gh pr comment 234`):
+- `npm ci` (dashboard): 945 pacotes, sem erro.
+- `npm test` (Karma, `ChromeHeadless`, `--watch=false`): **140/140 SUCCESS** — sem regressão, bate com o baseline do Dev.
+- `ng build` (produção): sucesso; únicos warnings são de budget pré-existentes (não relacionados a este diff).
+- `npm run test:visual` (Playwright real, chromium, `webServer` subindo `ng serve` automaticamente): **8/8 passed (18.9s)** — specs rodaram de verdade, não só o script existindo. 8 screenshots gerados em `dashboard/screenshots/`; `login.png` e `products.png` inspecionados visualmente — Material Design aplicado, sidenav/tabelas/formulários estilizados, erro de API tratado via snackbar sem quebrar layout (consistente com `blockApiCalls`).
+- Checklist de veto: compila e sobe (ok); integração real — specs navegam o app Angular real servido por `ng serve` (não mock), decisão `blockApiCalls`/`injectDummyAuth` justificada e coerente com `auth.guard.ts`/`auth.interceptor.ts` (Gate Visual = layout/CSS, não dado); conformidade com spec — CA-1 a CA-5 atendidos (CA-5 redirecionado para `README.md` por trava dura de permissão em `CLAUDE.md`, decisão razoável); sem teste-lixo — asserts usam `data-testid`/classes reais confirmadas no código-fonte; sem segredo commitado (`dummy-token-e2e-visual` é literal não-secreto); nenhuma ocorrência de `.first()`/`.nth()`/`.last()` em `dashboard/e2e/*.spec.ts`.
+- Plugin `/code-review` (Anthropic): 0 comentários/reviews no PR no momento da checagem (`gh pr view --json comments,reviews`) — sem achados a incorporar.
+- Nota fora de escopo (sem impacto na aprovação): o diff também carrega docs de outras issues (#223, #227–#231) já pendentes de sync `desenv→homolog` em `desenv` — puramente docs/estado.md, sem código de app.
+- **PR #234 mesclado `desenv→homolog` via merge commit (`44f9df9`).**
 
-_Atualizado: 2026-08-19_
+## QA
+- Validado em `homolog` (commit `44f9df9`, PR #234 mergeado). Branch sincronizada via `git fetch` + `git pull origin homolog` antes da validação.
+- `docker compose build --no-cache dashboard` (sem cache) + `docker compose up -d dashboard` → build de produção sucesso, container saudável, `http://localhost:8081/` → 200 OK.
+- `npm run test:visual` real (`SCREENSHOTS_DIR={docs_path}/screenshots`) → **8/8 passed**, screenshots reais gerados e substituídos na pasta `screenshots/` (evidência da rodada de QA).
+- Gate Visual obrigatório do QA aplicado nas 8 screenshots: header/sidenav 1x em todas as telas, sem duplicação estrutural, sem CSS quebrado, mensagens de erro tratadas de forma estilizada (comportamento esperado — `blockApiCalls` aborta `/api/**` de propósito).
+- Validação integrada (d3): login real via `POST /api/auth/login` (proxy nginx do container `dashboard` → API .NET real → Postgres real) → 200 + JWT; `GET /api/products` autenticado → 200 com 110 produtos reais.
+- `npx ng test --watch=false --browsers=ChromeHeadless` → 140/140, sem regressão.
+- CA-1 a CA-5 (especificação técnica): todos ✅ (ver `relatorio-qa.md`).
+- Achado não bloqueante: `tsc --noEmit` na raiz aponta 3 erros de estilo (`noPropertyAccessFromIndexSignature`) em `playwright.config.ts`/`e2e/visual.spec.ts` — fora do gate de `ng build`, mesmo padrão pré-existente em `website`. Não impede aprovação.
+- **Status: APROVADO.** Relatório completo em `relatorio-qa.md`.
+
+## Líder Técnico (PR de release)
+- Evidências do QA (`estado.md`, `relatorio-qa.md`, `screenshots/.last-run.json`) commitadas em `desenv` (mesmo padrão já usado pelo Code Review) — `homolog`/`main` são protegidas por branch protection (`enforce_admins:true`, PR obrigatório), sem push direto possível.
+- PR #235 (`homolog→main`, merge commit): https://github.com/DQM-BETA/omuletachou/pull/235 — referencia Issue #155, sub-issue #232, PR #234 e `relatorio-qa.md`.
+- **PR #235 mergeada em main via merge commit (`0940a3ca`).**
+
+## Custo (ledger)
+| # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) | Notas |
+|---|---|---|---|---|---|---|---|
+| 1 | Preparação (Issue + estado.md) | Coordenador | Haiku | — | — | — | Rota rapido |
+| 2 | Refinamento (rapido) — spec técnica + sub-issue #232 | LT | Sonnet | — | — | — | Padrão website replicado |
+| 3 | Dev (sub-issue #232, PR #233) | Dev Angular | Sonnet | — | — | — | Implementação + blockApiCalls |
+| 4 | Merge PR #233 (squash) + PR #234 (desenv→homolog) | LT | Sonnet | — | — | — | Merge commit homolog |
+| 5 | Code Review (PR #234 — build/boot/testes reais, merge homolog) | Code Review | Sonnet | — | — | — | Execução real 8/8 visual |
+| 6 | QA (validação em homolog) | QA | Sonnet | — | — | — | Gate Visual + integração |
+| 7 | PR release (homolog→main, PR #235) | LT | Sonnet | — | — | — | Merge main concluído |
+| 8 | Gate 2 (merge main + consolidação) | Coordenador | Haiku | — | — | — | Merge 0940a3ca, Issue fechada |
+
+**Tempo decorrido:** 2026-08-14 13:45 → 2026-08-19 14:50 = **5 dias, 1 hora e 5 minutos** (~121 horas)
+
+_Atualizado: 2026-08-19 — Gate 2 concluído. Merge para main realizado._
