@@ -1,18 +1,18 @@
 ---
 issue: 228
 titulo: feat: relatório de produtos com filtros (categoria/plataforma/status) na tela Reports
-etapa_atual: Refinamento Técnico
-ultimo_agente: pm-analista-negocios
+etapa_atual: Em Desenvolvimento
+ultimo_agente: lider-tecnico
 openspec_change: openspec/changes/issue-228-relatorio-produtos-filtros
-tech_stacks: []
+tech_stacks: [dotnet, angular]
 repos:
   omuletachou: "https://github.com/DQM-BETA/omuletachou"
 repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-228-exibir-quantidade-produtos-publicados
 openspec_path: repos/omuletachou/openspec/changes/issue-228-relatorio-produtos-filtros
-sub_issues: []
+sub_issues: ["#242 (stack:dotnet, task_id:T-01)", "#243 (stack:dotnet, task_id:T-02)", "#244 (stack:dotnet, task_id:T-03)", "#245 (stack:angular, task_id:T-04)"]
 desenv_tasks_merged: []
-sub_issues_frontend: {}
+sub_issues_frontend: {"#245": "T-04"}
 pr_homologacao: ~
 pr_release: ~
 code_review_homolog_pr: ~
@@ -49,6 +49,16 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 ## Rota
 `normal` — promovida pelo Gerente no Gate 1 (2026-08-19). Segue o pipeline completo.
 
+## Arquitetura (Arquiteto)
+`design.md` completo em `openspec_path` — decisões: dois endpoints (`GET /api/reports/products/summary` novo para cards agregados + extensão aditiva de `GET /api/products` para a tabela/gráfico detalhado), índice composto novo `IX_products_status_platform_createdat`, sem cache/materialização (query direta on-demand), default `Status=Published` implementado no Angular (não no backend), `Product.CreatedAt` já é a data de coleta (sem migration de tipo).
+
+## Refinamento Técnico (LT — 2026-08-19)
+- `especificacao-tecnica.md`: repos/omuletachou/documentacoes/ISSUE-228-exibir-quantidade-produtos-publicados/especificacao-tecnica.md — contratos de API (endpoint novo + extensão), schema, padrões obrigatórios.
+- `tasks.md`: repos/omuletachou/openspec/changes/issue-228-relatorio-produtos-filtros/tasks.md — 4 sub-tarefas com critérios Given/When/Then + contexto técnico.
+- Task breakdown: 4 sub-issues criadas — 3 stack:dotnet (índice/migration, endpoint summary, extensão GetProducts) + 1 stack:angular (filtros/cards/tabela na tela Reports).
+- Design.md do Arquiteto (estava pendente de commit) commitado junto com este refinamento.
+- Demanda tem UI (design.md §4 lista componentes de filtros/cards/tabela-gráfico no Angular) — UX/UI atua antes do dev da sub-issue #245.
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|---|---|---|---|---|---|
@@ -56,3 +66,5 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 | 2 | Atualização (escopo expandido, 2026-08-19) | Coordenador | haiku-4.5 | ~ | ~ | ~ |
 | 3 | PM Fase 1 (levantamento) | PM Analista de Negócios | sonnet-5 | ~ | ~ | ~ |
 | 4 | PM Fase 2 (PRD + critérios de aceite) | PM Analista de Negócios | sonnet-5 | ~ | ~ | ~ |
+| 5 | Arquiteto (design.md) | Arquiteto | sonnet-5 | ~ | ~ | ~ |
+| 6 | Refinamento Técnico (task breakdown) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
