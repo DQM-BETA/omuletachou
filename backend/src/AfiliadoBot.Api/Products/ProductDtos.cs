@@ -21,7 +21,8 @@ public record ProductListItemDto(
     [property: JsonPropertyName("ai_reason")] string? AiReason,
     DateTime CreatedAt,
     string? SourceUrl, // Issue #184, campo aditivo ao final (nao quebra consumidores existentes)
-    IReadOnlyList<PublicationDestinationDto> Destinations); // NOVO — Issue #208/T-02, campo aditivo ao final
+    IReadOnlyList<PublicationDestinationDto> Destinations, // Issue #208/T-02, campo aditivo ao final
+    string? Subcategory); // Issue #228/T-03, campo aditivo ao final (nao reordenar campos existentes)
 
 /// <summary>
 /// Um destino de publicacao (site ou rede social) de um produto, com o status agregado naquele

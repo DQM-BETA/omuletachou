@@ -50,7 +50,8 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
         Platform platform,
         string category = "Geral",
         string? affiliateLink = "https://exemplo.com/aff",
-        string? sourceUrl = null)
+        string? sourceUrl = null,
+        string? subcategory = null)
     {
         return new Product(
             title: title,
@@ -63,7 +64,19 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
             category: category,
             platform: platform,
             externalId: Guid.NewGuid().ToString("N"),
-            sourceUrl: sourceUrl);
+            sourceUrl: sourceUrl,
+            subcategory: subcategory);
+    }
+
+    /// <summary>Ajusta CreatedAt via EF apos o insert (sem setter publico na entidade so para teste
+    /// — mesmo padrao ja usado em PublicControllerTests.SeedPublishedProductAsync).</summary>
+    private async Task SetCreatedAtAsync(Guid productId, DateTime createdAtUtc)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+        var product = await db.Products.FirstAsync(p => p.Id == productId);
+        db.Entry(product).Property("CreatedAt").CurrentValue = createdAtUtc;
+        await db.SaveChangesAsync();
     }
 
     [Fact]
@@ -158,6 +171,227 @@ public class ProductsControllerTests : IClassFixture<CustomWebApplicationFactory
 
         items.Should().Contain(i => i.GetProperty("id").GetGuid() == matching.Id);
         items.Should().NotContain(i => i.GetProperty("id").GetGuid() == wrongPlatform.Id);
+    }
+
+    // Issue #228/T-03 — filtros category/subcategory/collectedFrom/collectedTo (aditivos) e
+    // campo Subcategory no DTO.
+
+    [Fact]
+    public async Task GetProducts_FiltroCategory_RetornaApenasCorrespondentes()
+    {
+        // CA 2.1
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var marker = Guid.NewGuid().ToString("N")[..8];
+        var matching = NewProduct($"Produto Categoria Match {marker}", Platform.Amazon, category: $"Eletronicos-{marker}");
+        var wrongCategory = NewProduct($"Produto Categoria Wrong {marker}", Platform.Amazon, category: $"Moda-{marker}");
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            db.Products.Add(matching);
+            db.Products.Add(wrongCategory);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync($"/api/products?category=Eletronicos-{marker}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var items = body.GetProperty("items").EnumerateArray().ToList();
+
+        items.Should().Contain(i => i.GetProperty("id").GetGuid() == matching.Id);
+        items.Should().NotContain(i => i.GetProperty("id").GetGuid() == wrongCategory.Id);
+    }
+
+    [Fact]
+    public async Task GetProducts_FiltroSubcategory_RetornaApenasCorrespondentes()
+    {
+        // CA 2.2
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var marker = Guid.NewGuid().ToString("N")[..8];
+        var matching = NewProduct($"Produto Subcategoria Match {marker}", Platform.Amazon, subcategory: $"Celulares-{marker}");
+        var wrongSubcategory = NewProduct($"Produto Subcategoria Wrong {marker}", Platform.Amazon, subcategory: $"Notebooks-{marker}");
+        var nullSubcategory = NewProduct($"Produto Subcategoria Nula {marker}", Platform.Amazon);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            db.Products.Add(matching);
+            db.Products.Add(wrongSubcategory);
+            db.Products.Add(nullSubcategory);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync($"/api/products?subcategory=Celulares-{marker}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var items = body.GetProperty("items").EnumerateArray().ToList();
+
+        items.Should().Contain(i => i.GetProperty("id").GetGuid() == matching.Id);
+        items.Should().NotContain(i => i.GetProperty("id").GetGuid() == wrongSubcategory.Id);
+        items.Should().NotContain(i => i.GetProperty("id").GetGuid() == nullSubcategory.Id);
+    }
+
+    [Fact]
+    public async Task GetProducts_FiltroCollectedFromCollectedTo_RetornaApenasNaFaixaInclusive()
+    {
+        // CA 2.5 — janela inclusiva nos dois limites.
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var marker = Guid.NewGuid().ToString("N")[..8];
+        var beforeRange = NewProduct($"Produto Antes Da Faixa {marker}", Platform.Amazon);
+        var onStart = NewProduct($"Produto No Inicio Da Faixa {marker}", Platform.Amazon);
+        var onEnd = NewProduct($"Produto No Fim Da Faixa {marker}", Platform.Amazon);
+        var afterRange = NewProduct($"Produto Depois Da Faixa {marker}", Platform.Amazon);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            db.Products.AddRange(beforeRange, onStart, onEnd, afterRange);
+            await db.SaveChangesAsync();
+        }
+
+        var rangeStart = new DateTime(2026, 3, 10, 0, 0, 0, DateTimeKind.Utc);
+        var rangeEnd = new DateTime(2026, 3, 12, 0, 0, 0, DateTimeKind.Utc);
+
+        await SetCreatedAtAsync(beforeRange.Id, rangeStart.AddDays(-1));
+        await SetCreatedAtAsync(onStart.Id, rangeStart); // exatamente no limite inicial
+        await SetCreatedAtAsync(onEnd.Id, rangeEnd.AddHours(23).AddMinutes(59)); // ultimo instante do dia final
+        await SetCreatedAtAsync(afterRange.Id, rangeEnd.AddDays(1));
+
+        var response = await client.GetAsync("/api/products?collectedFrom=2026-03-10&collectedTo=2026-03-12&pageSize=100");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var items = body.GetProperty("items").EnumerateArray().ToList();
+
+        items.Should().Contain(i => i.GetProperty("id").GetGuid() == onStart.Id);
+        items.Should().Contain(i => i.GetProperty("id").GetGuid() == onEnd.Id);
+        items.Should().NotContain(i => i.GetProperty("id").GetGuid() == beforeRange.Id);
+        items.Should().NotContain(i => i.GetProperty("id").GetGuid() == afterRange.Id);
+    }
+
+    [Fact]
+    public async Task GetProducts_TodosOsFiltrosCombinados_RetornaIntersecaoAND()
+    {
+        // CA 2.6
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var marker = Guid.NewGuid().ToString("N")[..8];
+        var fullMatch = NewProduct(
+            $"Produto Full Match {marker}", Platform.Amazon,
+            category: $"Eletronicos-{marker}", subcategory: $"Celulares-{marker}");
+        var wrongSubcategory = NewProduct(
+            $"Produto Wrong Sub {marker}", Platform.Amazon,
+            category: $"Eletronicos-{marker}", subcategory: $"Notebooks-{marker}");
+        var wrongPlatform = NewProduct(
+            $"Produto Wrong Platform {marker}", Platform.Shopee,
+            category: $"Eletronicos-{marker}", subcategory: $"Celulares-{marker}");
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            db.Products.AddRange(fullMatch, wrongSubcategory, wrongPlatform);
+            await db.SaveChangesAsync();
+        }
+
+        var rangeDate = new DateTime(2026, 5, 1, 0, 0, 0, DateTimeKind.Utc);
+        await SetCreatedAtAsync(fullMatch.Id, rangeDate);
+        await SetCreatedAtAsync(wrongSubcategory.Id, rangeDate);
+        await SetCreatedAtAsync(wrongPlatform.Id, rangeDate);
+
+        var response = await client.GetAsync(
+            $"/api/products?status=pending&platform=amazon&category=Eletronicos-{marker}" +
+            $"&subcategory=Celulares-{marker}&collectedFrom=2026-05-01&collectedTo=2026-05-01");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var items = body.GetProperty("items").EnumerateArray().ToList();
+
+        items.Should().ContainSingle(i => i.GetProperty("id").GetGuid() == fullMatch.Id);
+        items.Should().NotContain(i => i.GetProperty("id").GetGuid() == wrongSubcategory.Id);
+        items.Should().NotContain(i => i.GetProperty("id").GetGuid() == wrongPlatform.Id);
+    }
+
+    [Fact]
+    public async Task GetProducts_QualquerChamada_RetornaCampoSubcategoryNoPayload()
+    {
+        // Campo aditivo Subcategory no DTO — presente sempre, pode ser null.
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var marker = Guid.NewGuid().ToString("N")[..8];
+        var comSubcategoria = NewProduct($"Produto Com Subcategoria {marker}", Platform.Amazon, subcategory: $"Celulares-{marker}");
+        var semSubcategoria = NewProduct($"Produto Sem Subcategoria {marker}", Platform.Amazon);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            db.Products.AddRange(comSubcategoria, semSubcategoria);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync("/api/products?pageSize=100");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var items = body.GetProperty("items").EnumerateArray().ToList();
+
+        var itemComSubcategoria = items.Single(i => i.GetProperty("id").GetGuid() == comSubcategoria.Id);
+        itemComSubcategoria.GetProperty("subcategory").GetString().Should().Be($"Celulares-{marker}");
+
+        var itemSemSubcategoria = items.Single(i => i.GetProperty("id").GetGuid() == semSubcategoria.Id);
+        itemSemSubcategoria.GetProperty("subcategory").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    [Fact]
+    public async Task GetProducts_SemOsQuatroNovosParams_ComportamentoIdenticoAoAnterior()
+    {
+        // Nao-regressao explicita (design.md §5 / especificacao-tecnica.md §3): chamar
+        // GetProducts sem category/subcategory/collectedFrom/collectedTo continua retornando
+        // produtos de todos os status/categorias/datas — sem filtro implicito, mesmo
+        // comportamento usado hoje por ProductsComponent.
+        var client = _factory.CreateClient();
+        var token = await AuthenticateAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var marker = Guid.NewGuid().ToString("N")[..8];
+        var pendingProduct = NewProduct($"Produto Nao Regressao Pending {marker}", Platform.Amazon, category: $"CategoriaA-{marker}");
+        var publishedProduct = NewProduct($"Produto Nao Regressao Published {marker}", Platform.Shopee, category: $"CategoriaB-{marker}");
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AfiliadoBotDbContext>();
+            publishedProduct.MarkAsPublished();
+            db.Products.AddRange(pendingProduct, publishedProduct);
+            await db.SaveChangesAsync();
+        }
+
+        await SetCreatedAtAsync(pendingProduct.Id, new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        await SetCreatedAtAsync(publishedProduct.Id, new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        var response = await client.GetAsync("/api/products?pageSize=100");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var items = body.GetProperty("items").EnumerateArray().ToList();
+
+        // Sem filtro de status/categoria/data: ambos os produtos (statuses e datas distintas)
+        // aparecem — prova que nenhum default implicito foi introduzido.
+        items.Should().Contain(i => i.GetProperty("id").GetGuid() == pendingProduct.Id);
+        items.Should().Contain(i => i.GetProperty("id").GetGuid() == publishedProduct.Id);
     }
 
     [Fact]
