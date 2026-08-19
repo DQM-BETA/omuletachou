@@ -2,8 +2,8 @@
 issue: 155
 titulo: "chore: Configurar Playwright (test:visual) no dashboard — Gate Visual do QA nunca dispara"
 rota: rapido
-etapa_atual: "Aguardando Gate 2"
-ultimo_agente: lt
+etapa_atual: "Concluído"
+ultimo_agente: coordenador
 openspec_change: ~
 tech_stacks:
   - Angular
@@ -23,6 +23,8 @@ qa_status: aprovado
 figma_url: ~
 blockers: nenhum
 status_comment_id: IC_kwDOTMlfyM8AAAABPnxeBw
+createdAt: 2026-08-14T13:45:04Z
+closedAt: 2026-08-19T14:50:24Z
 ---
 
 ## Escopo
@@ -79,17 +81,20 @@ Execução real (não leitura de diff), evidência completa postada como coment�
 ## Líder Técnico (PR de release)
 - Evidências do QA (`estado.md`, `relatorio-qa.md`, `screenshots/.last-run.json`) commitadas em `desenv` (mesmo padrão já usado pelo Code Review) — `homolog`/`main` são protegidas por branch protection (`enforce_admins:true`, PR obrigatório), sem push direto possível.
 - PR #235 (`homolog→main`, merge commit): https://github.com/DQM-BETA/omuletachou/pull/235 — referencia Issue #155, sub-issue #232, PR #234 e `relatorio-qa.md`.
-- **Aguardando aprovação humana do Gerente (Gate 2). Não mesclado.**
+- **PR #235 mergeada em main via merge commit (`0940a3ca`).**
 
 ## Custo (ledger)
-| # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
-|---|---|---|---|---|---|---|
-| 1 | Preparação (Issue + estado.md) | Coordenador | Haiku | — | — | — |
-| 2 | Refinamento (rapido) — spec técnica + sub-issue #232 | LT | Sonnet | — | — | — |
-| 3 | Dev (sub-issue #232, PR #233) | Dev Angular | Sonnet | — | — | — |
-| 4 | Merge PR #233 (squash) + PR #234 (desenv→homolog) | LT | Sonnet | — | — | — |
-| 5 | Code Review (PR #234 — build/boot/testes reais, merge homolog) | Code Review | Sonnet | — | — | — |
-| 6 | QA (validação em homolog) | QA | Sonnet | — | — | — |
-| 7 | PR release (homolog→main, PR #235) | LT | Sonnet | — | — | — |
+| # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) | Notas |
+|---|---|---|---|---|---|---|---|
+| 1 | Preparação (Issue + estado.md) | Coordenador | Haiku | — | — | — | Rota rapido |
+| 2 | Refinamento (rapido) — spec técnica + sub-issue #232 | LT | Sonnet | — | — | — | Padrão website replicado |
+| 3 | Dev (sub-issue #232, PR #233) | Dev Angular | Sonnet | — | — | — | Implementação + blockApiCalls |
+| 4 | Merge PR #233 (squash) + PR #234 (desenv→homolog) | LT | Sonnet | — | — | — | Merge commit homolog |
+| 5 | Code Review (PR #234 — build/boot/testes reais, merge homolog) | Code Review | Sonnet | — | — | — | Execução real 8/8 visual |
+| 6 | QA (validação em homolog) | QA | Sonnet | — | — | — | Gate Visual + integração |
+| 7 | PR release (homolog→main, PR #235) | LT | Sonnet | — | — | — | Merge main concluído |
+| 8 | Gate 2 (merge main + consolidação) | Coordenador | Haiku | — | — | — | Merge 0940a3ca, Issue fechada |
 
-_Atualizado: 2026-08-19_
+**Tempo decorrido:** 2026-08-14 13:45 → 2026-08-19 14:50 = **5 dias, 1 hora e 5 minutos** (~121 horas)
+
+_Atualizado: 2026-08-19 — Gate 2 concluído. Merge para main realizado._
