@@ -32,6 +32,7 @@ Pedido do Gerente com dependência explícita da **Issue #230** — deve ser ref
 ### 1. Faixa de produtos sugeridos inteligente (site público, tela de produtos)
 - Adicionar uma faixa/linha de "produtos sugeridos" na tela de listagem de produtos do site, baseada na categoria dos produtos atualmente filtrados pelo usuário.
 - Se o filtro atual não retornar nenhum produto (lista vazia), a faixa de sugeridos deve mostrar os produtos **mais clicados** em vez de sugestões por categoria.
+- **Detalhe UI (complemento 2026-08-19):** a faixa de produtos sugeridos deve ser um **carrossel horizontal com navegação por seta para a direita e seta para a esquerda**, permitindo ao usuário navegar entre os produtos sugeridos.
 
 ### 2. Rastreio de cliques (nova funcionalidade, pré-requisito dos itens 1 e 3)
 - Registrar quando um produto é clicado (provavelmente ao clicar no card/link de afiliado no site público) para alimentar o ranking de "mais clicados".
@@ -60,3 +61,4 @@ Aguardando priorização do Gerente. Bloqueada por Issue #230.
 ---
 
 _Criado: 2026-08-19 — Coordenador_
+_Atualizado: 2026-08-19 — Coordenador (complemento UI: detalhe de navegação do carrossel)_
