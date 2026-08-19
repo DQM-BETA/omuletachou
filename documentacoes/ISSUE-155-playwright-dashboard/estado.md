@@ -2,8 +2,8 @@
 issue: 155
 titulo: "chore: Configurar Playwright (test:visual) no dashboard — Gate Visual do QA nunca dispara"
 rota: rapido
-etapa_atual: "Aguardando PR release (LT)"
-ultimo_agente: qa
+etapa_atual: "Aguardando Gate 2"
+ultimo_agente: lt
 openspec_change: ~
 tech_stacks:
   - Angular
@@ -17,7 +17,7 @@ sub_issues: ["#232 (stack:angular, task_id:T-01)"]
 desenv_tasks_merged: ["#232"]
 sub_issues_frontend: {}
 pr_homologacao: 234
-pr_release: ~
+pr_release: 235
 code_review_homolog_pr: 234
 qa_status: aprovado
 figma_url: ~
@@ -76,6 +76,11 @@ Execução real (não leitura de diff), evidência completa postada como coment�
 - Achado não bloqueante: `tsc --noEmit` na raiz aponta 3 erros de estilo (`noPropertyAccessFromIndexSignature`) em `playwright.config.ts`/`e2e/visual.spec.ts` — fora do gate de `ng build`, mesmo padrão pré-existente em `website`. Não impede aprovação.
 - **Status: APROVADO.** Relatório completo em `relatorio-qa.md`.
 
+## Líder Técnico (PR de release)
+- Evidências do QA (`estado.md`, `relatorio-qa.md`, `screenshots/.last-run.json`) commitadas em `desenv` (mesmo padrão já usado pelo Code Review) — `homolog`/`main` são protegidas por branch protection (`enforce_admins:true`, PR obrigatório), sem push direto possível.
+- PR #235 (`homolog→main`, merge commit): https://github.com/DQM-BETA/omuletachou/pull/235 — referencia Issue #155, sub-issue #232, PR #234 e `relatorio-qa.md`.
+- **Aguardando aprovação humana do Gerente (Gate 2). Não mesclado.**
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|---|---|---|---|---|---|
@@ -85,5 +90,6 @@ Execução real (não leitura de diff), evidência completa postada como coment�
 | 4 | Merge PR #233 (squash) + PR #234 (desenv→homolog) | LT | Sonnet | — | — | — |
 | 5 | Code Review (PR #234 — build/boot/testes reais, merge homolog) | Code Review | Sonnet | — | — | — |
 | 6 | QA (validação em homolog) | QA | Sonnet | — | — | — |
+| 7 | PR release (homolog→main, PR #235) | LT | Sonnet | — | — | — |
 
 _Atualizado: 2026-08-19_
