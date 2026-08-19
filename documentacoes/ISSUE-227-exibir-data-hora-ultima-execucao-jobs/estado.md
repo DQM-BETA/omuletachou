@@ -1,7 +1,7 @@
 issue: 227
 titulo: feat: exibir data/hora da última execução de cada job na tela Jobs
-etapa_atual: QA
-ultimo_agente: code-review
+etapa_atual: Aguardando PR release (LT)
+ultimo_agente: qa
 openspec_change: openspec/changes/issue-227-exibir-data-hora-ultima-execucao-jobs
 tech_stacks: [dotnet, angular]
 repos:
@@ -16,7 +16,7 @@ desenv_tasks_merged: ["#236", "#237"]
 pr_homologacao: 240
 pr_release: ~
 code_review_homolog_pr: 240 (aprovado, merge commit 1c5e020e53b52d2df8d1b944315dd265989207f4, desenv->homolog)
-qa_status: ~
+qa_status: aprovado
 figma_url: ~
 blockers: nenhum
 status_comment_id: ~
