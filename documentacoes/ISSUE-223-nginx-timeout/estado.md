@@ -1,7 +1,7 @@
 issue: 223
 titulo: fix: nginx do dashboard derruba o disparo de jobs longos com timeout (504) antes do job terminar
-etapa_atual: QA concluido
-ultimo_agente: qa
+etapa_atual: Aguardando Aprovação (Gate 2)
+ultimo_agente: lt
 openspec_change: ~
 tech_stacks: []
 repos: {}
@@ -12,7 +12,7 @@ sub_issues: []
 desenv_tasks_merged: []
 sub_issues_frontend: {}
 pr_homologacao: 225
-pr_release: ~
+pr_release: 226
 code_review_homolog_pr: 225
 qa_status: aprovado
 figma_url: ~
@@ -43,4 +43,5 @@ status_comment_id: ~
   - **Validação integrada real repetida pelo QA (não apenas reaproveitada do Dev):** login real via `/api/auth/login` através do nginx → `POST /api/jobs/collector/mercadolivre/trigger` autenticado, aguardado de forma síncrona por **281s** → **HTTP 200**, `{"count":110}`, sem 504. Confirmado via query direta no Postgres: 84 produtos novos com `created_at` no horário exato do job. Logs de `afiliado_dashboard` e `afiliado_api` sem 504/`OperationCanceledException`/`TaskCanceledException` na janela. Containers estáveis (sem restart) durante e após.
   - E2E/screenshots: N/A — `dashboard/package.json` (componente tocado pelo diff) não define `test:visual`; `website/package.json` define, mas `website/` não foi tocado por este diff. Mudança é puramente infra/config, sem UI alterada.
   - Nenhuma issue encontrada. Nenhum finding de severidade alta/média/baixa.
-- **Próximo passo:** Líder Técnico — abrir PR `homolog→main` (merge commit) e aguardar **Gate 2 (Gerente)**.
+- **PR release (2026-08-19) — PR #226 (`homolog→main`, merge commit) criado por LT.** Descreve o bug (timeout 60s do nginx cancelando `CancellationToken` no backend e descartando trabalho já feito em jobs longos) e a correção (timeouts de 600s no bloco `/api/`), referenciando PR #225 e `relatorio-qa.md` (job real de 281s, HTTP 200, produtos persistidos). Aguardando **Gate 2 (Gerente)** para aprovação do merge — LT NÃO mescla.
+- **Próximo passo:** Gate 2 — Gerente aprova o merge de #226. Após aprovação, Coordenador mescla `homolog→main` e fecha a Issue.
