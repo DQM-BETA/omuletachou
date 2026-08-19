@@ -1,8 +1,8 @@
 ---
 issue: 228
 titulo: feat: relatório de produtos com filtros (categoria/plataforma/status) na tela Reports
-etapa_atual: Code Review
-ultimo_agente: lt (merge sub-issues + PR desenv->homolog)
+etapa_atual: Code Review (reprovado — aguardando LT)
+ultimo_agente: code-review (reprovado, 2026-08-19)
 openspec_change: openspec/changes/issue-228-relatorio-produtos-filtros
 tech_stacks: [dotnet, angular]
 repos:
@@ -15,10 +15,10 @@ desenv_tasks_merged: ["#242", "#243", "#244", "#245"]
 sub_issues_frontend: {"#245": "T-04"}
 pr_homologacao: 250
 pr_release: ~
-code_review_homolog_pr: ~
+code_review_homolog_pr: reprovado (PR #250, comentário https://github.com/DQM-BETA/omuletachou/pull/250#issuecomment-5347125317)
 qa_status: ~
 figma_url: ~
-blockers: nenhum
+blockers: mobile responsivo do bloco de filtros (ux-ui-spec.md §8) não implementado — bloqueia Code Review
 status_comment_id: ~
 rota: normal
 ---
@@ -106,6 +106,17 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 - PR de promoção `desenv→homolog` criado: **#250** (merge commit, não-squash, conforme convenção de promoção entre branches de longa vida).
 - Nota de follow-up (não bloqueante) herdada do Dev de #245: mapeamento de cor por status ficou local em `reports.component.scss` (não reaproveitou `ProductsComponent`, que não tinha esse mapeamento) — Code Review avaliar se vale unificar em follow-up futuro.
 
+## Code Review — PR #250 desenv→homolog (2026-08-19) — REPROVADO
+
+- Execução completa: `dotnet test` 490/490, `npm test` 172/172, `docker compose build --no-cache api dashboard` + boot real (`/health` 200), migration `AddStatusPlatformCreatedAtIndex` confirmada aplicada e índice confirmado via `psql`.
+- Integração real end-to-end contra Postgres real do container: `GET /api/reports/products/summary` e `GET /api/products` validados com filtros combinados (AND), sem-match (200/total 0), platform inválida (sem 400), 401 sem token, não-regressão de `GetProducts` sem os 4 novos params — todos ok.
+- Checklist de veto: sem segredo commitado, `[Authorize]` ok nos dois controllers, sem N+1 (1 IQueryable base + Count + 4 GroupBy), sem `.first()`/`.nth()`/`.last()` em specs novas, sem teste-lixo.
+- Nota do LT sobre mapeamento de cor por status local em `reports.component.scss`: avaliada e **aceita** — `ProductsComponent` de fato não tem esse mapeamento pronto hoje (só um badge cinza único), a premissa do ux-ui-spec estava incorreta.
+- **Divergência bloqueante:** `ux-ui-spec.md` §8 exige bloco de filtros colapsado por padrão em `mat-expansion-panel` (com badge de contagem) no breakpoint mobile (<600px) — não implementado (só há `grid-template-columns: 1fr` via CSS, sem colapso/badge). Responsividade web é citada explicitamente como critério de veto do Code Review.
+- Achado secundário (não bloqueante isolado): §4.3/§5.1 pedem skeleton no carregamento inicial dos cards/tabela; a implementação só usa `mat-progress-bar` no card de filtros, podendo piscar o estado "Nenhum dado"/"Nenhum produto encontrado" antes do primeiro `forkJoin` resolver.
+- Evidência completa postada como comentário no PR: https://github.com/DQM-BETA/omuletachou/pull/250#issuecomment-5347125317
+- Encaminhado ao LT: implementar o colapso mobile do bloco de filtros (bloqueante) + avaliar o gap de skeleton (opcional). Resto do PR aprovado, sem necessidade de re-trabalho fora desses itens.
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|---|---|---|---|---|---|
@@ -121,3 +132,4 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 | 9 | Dev .NET (sub-issue #243, T-02) | Dev .NET | sonnet-5 | ~ | ~ | ~ |
 | 10 | Dev Angular (sub-issue #245, T-04) | Dev Angular | sonnet-5 | ~ | ~ | ~ |
 | 11 | Líder Técnico (merge 4 sub-issues + PR #250 desenv→homolog) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
+| 12 | Code Review (PR #250 desenv→homolog) — REPROVADO | Code Review | sonnet-5 | ~ | ~ | ~ |
