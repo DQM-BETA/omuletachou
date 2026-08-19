@@ -1,7 +1,7 @@
 issue: 227
 titulo: feat: exibir data/hora da última execução de cada job na tela Jobs
-etapa_atual: Aguardando Gate 2
-ultimo_agente: lider-tecnico
+etapa_atual: Concluído
+ultimo_agente: coordenador
 openspec_change: openspec/changes/issue-227-exibir-data-hora-ultima-execucao-jobs
 tech_stacks: [dotnet, angular]
 repos:
@@ -19,5 +19,7 @@ code_review_homolog_pr: 240 (aprovado, merge commit 1c5e020e53b52d2df8d1b944315d
 qa_status: aprovado
 figma_url: ~
 blockers: nenhum
-status_comment_id: ~
+status_comment_id: IC_kwDOTMlfyM8AAAABPoqXAA (comment 5346416641, criado em 2026-08-19)
 rota: normal
+createdAt: 2026-08-19T13:14:34Z
+closedAt: 2026-08-19T16:00:00Z (auto-fechada via merge PR #241 homolog->main)
