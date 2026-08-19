@@ -1,7 +1,7 @@
 issue: 223
 titulo: fix: nginx do dashboard derruba o disparo de jobs longos com timeout (504) antes do job terminar
-etapa_atual: Aguardando Aprovação (Gate 2)
-ultimo_agente: lt
+etapa_atual: Concluído
+ultimo_agente: coordenador
 openspec_change: ~
 tech_stacks: []
 repos: {}
@@ -44,4 +44,5 @@ status_comment_id: ~
   - E2E/screenshots: N/A — `dashboard/package.json` (componente tocado pelo diff) não define `test:visual`; `website/package.json` define, mas `website/` não foi tocado por este diff. Mudança é puramente infra/config, sem UI alterada.
   - Nenhuma issue encontrada. Nenhum finding de severidade alta/média/baixa.
 - **PR release (2026-08-19) — PR #226 (`homolog→main`, merge commit) criado por LT.** Descreve o bug (timeout 60s do nginx cancelando `CancellationToken` no backend e descartando trabalho já feito em jobs longos) e a correção (timeouts de 600s no bloco `/api/`), referenciando PR #225 e `relatorio-qa.md` (job real de 281s, HTTP 200, produtos persistidos). Aguardando **Gate 2 (Gerente)** para aprovação do merge — LT NÃO mescla.
-- **Próximo passo:** Gate 2 — Gerente aprova o merge de #226. Após aprovação, Coordenador mescla `homolog→main` e fecha a Issue.
+- **Gate 2 APROVADO — Merge finalizado (2026-08-19).** PR #226 mesclado via merge commit (`494da6e`) em `main`. Issue #223 fechada pelo Coordenador.
+
