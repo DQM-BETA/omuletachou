@@ -1,8 +1,8 @@
 ---
 issue: 228
 titulo: feat: relatório de produtos com filtros (categoria/plataforma/status) na tela Reports
-etapa_atual: Code Review (reprovado — aguardando LT)
-ultimo_agente: code-review (reprovado, 2026-08-19)
+etapa_atual: Em Desenvolvimento (correção Code Review — sub-issue #245 reaberta)
+ultimo_agente: lider-tecnico (mapeamento CR reprovado, 2026-08-19)
 openspec_change: openspec/changes/issue-228-relatorio-produtos-filtros
 tech_stacks: [dotnet, angular]
 repos:
@@ -15,10 +15,10 @@ desenv_tasks_merged: ["#242", "#243", "#244", "#245"]
 sub_issues_frontend: {"#245": "T-04"}
 pr_homologacao: 250
 pr_release: ~
-code_review_homolog_pr: reprovado (PR #250, comentário https://github.com/DQM-BETA/omuletachou/pull/250#issuecomment-5347125317)
+code_review_homolog_pr: reprovado (PR #250, comentário https://github.com/DQM-BETA/omuletachou/pull/250#issuecomment-5347125317) — #245 reaberta para correção, PR #250 permanece aberto (absorve o fix commit automaticamente)
 qa_status: ~
 figma_url: ~
-blockers: mobile responsivo do bloco de filtros (ux-ui-spec.md §8) não implementado — bloqueia Code Review
+blockers: mobile responsivo do bloco de filtros (ux-ui-spec.md §8, mat-expansion-panel + badge) não implementado — sub-issue #245 reaberta, aguardando correção do Dev Angular
 status_comment_id: ~
 rota: normal
 ---
@@ -117,6 +117,22 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 - Evidência completa postada como comentário no PR: https://github.com/DQM-BETA/omuletachou/pull/250#issuecomment-5347125317
 - Encaminhado ao LT: implementar o colapso mobile do bloco de filtros (bloqueante) + avaliar o gap de skeleton (opcional). Resto do PR aprovado, sem necessidade de re-trabalho fora desses itens.
 
+## Mapeamento de falha — LT (2026-08-19)
+
+**Decisão de fluxo:** reabrir a sub-issue **#245** (mesma sub-issue, mesma `task_id: T-04`) em vez de criar uma nova sub-issue de correção. Racional:
+- A falha é uma correção de escopo já coberto por #245 (bloco de filtros do `ReportsComponent`), não uma tarefa nova.
+- A convenção de branch (`feature/ISSUE-NNN-descricao`, NNN = nº da sub-issue) e o restante do pipeline (mapeamento de custo/ledger, `sub_issues_frontend`) já referenciam #245/T-04 — criar uma sub-issue nova fragmentaria o rastreio sem ganho.
+- Não há precedente na squad de abrir sub-issue de correção separada para reprovação de Code Review pós-merge (revisado: melhorias `2026-06-18` e `2026-06-23` tratam reincidência/correção sempre pela issue original, nunca abrindo uma nova).
+- `gh issue reopen 245 --repo DQM-BETA/omuletachou` executado, com comentário de mapeamento das duas falhas (link: https://github.com/DQM-BETA/omuletachou/issues/245).
+
+**Mapeamento dos achados do Code Review (PR #250) → sub-issue #245:**
+1. **Bloqueante** — `ux-ui-spec.md` §8 (Responsividade mobile <600px): bloco de filtros precisa estar dentro de `mat-expansion-panel`, colapsado por padrão, com badge de contagem de filtros ativos (ex. "Filtros (2)"), expandindo ao toque. Hoje só há `grid-template-columns: 1fr` via CSS, sempre expandido. Arquivos afetados: `dashboard/src/app/pages/reports/reports.component.html` e `.scss`.
+2. **Secundário (incluir na mesma correção, não bloqueante isolado)** — `ux-ui-spec.md` §4.3/§5.1: skeleton de carregamento inicial ausente nos cards/tabela; hoje só há `mat-progress-bar`, o que pode piscar "Nenhum dado"/"Nenhum produto encontrado" antes do primeiro `forkJoin` resolver.
+
+**Não escopo desta correção:** resto do PR #250 (backend T-01/T-02/T-03, contrato de dados, autorização, não-regressão, testes, mapeamento de cor por status) já aprovado pelo Code Review — dev não deve tocar nesses pontos.
+
+**Fluxo de saída:** Dev Angular abre `feature/ISSUE-245-...` a partir de `desenv` atualizada, corrige os 2 itens, TDD dos cenários novos/ajustados, push, PR `feature→desenv`. Após o LT mergear esse PR (squash) em `desenv`, o PR #250 (`desenv→homolog`, ainda aberto) absorve o commit automaticamente — não é necessário recriar o PR de promoção. Code Review então reavalia o PR #250 atualizado.
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|---|---|---|---|---|---|
@@ -133,3 +149,4 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 | 10 | Dev Angular (sub-issue #245, T-04) | Dev Angular | sonnet-5 | ~ | ~ | ~ |
 | 11 | Líder Técnico (merge 4 sub-issues + PR #250 desenv→homolog) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
 | 12 | Code Review (PR #250 desenv→homolog) — REPROVADO | Code Review | sonnet-5 | ~ | ~ | ~ |
+| 13 | Líder Técnico (mapeamento falha CR, #245 reaberta) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
