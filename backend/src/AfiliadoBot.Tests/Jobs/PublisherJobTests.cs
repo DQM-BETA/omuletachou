@@ -4,6 +4,7 @@ using AfiliadoBot.Domain.Enums;
 using AfiliadoBot.Domain.Interfaces;
 using AfiliadoBot.Infrastructure.Data;
 using AfiliadoBot.Infrastructure.Push;
+using AfiliadoBot.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -52,7 +53,12 @@ public class PublisherJobTests
         AfiliadoBotDbContext db,
         IEnumerable<ISocialPublisher> publishers,
         IPushNotificationService? pushNotificationService = null)
-        => new(db, publishers, pushNotificationService ?? Mock.Of<IPushNotificationService>(), NullLogger<PublisherJob>.Instance);
+        => new(
+            db,
+            publishers,
+            pushNotificationService ?? Mock.Of<IPushNotificationService>(),
+            new PassThroughJobRunTracker(),
+            NullLogger<PublisherJob>.Instance);
 
     [Fact]
     public async Task ExecuteAsync_PublicaItensScheduledVencidos()
@@ -447,6 +453,31 @@ public class PublisherJobTests
         push.Verify(p => p.SendIndividualAsync(
             It.Is<Product>(prod => prod.Id == product1.Id), It.IsAny<CancellationToken>()), Times.Once);
         push.Verify(p => p.SendConsolidatedAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // --- Issue #227 (JobRun tracking) ---
+
+    [Fact]
+    public async Task ExecuteAsync_GeraJobRun_QuandoChamadoDiretamente()
+    {
+        // CA 4.2/5.1: ExecuteAsync chamado diretamente (simulando o cron "publisher-job", sem
+        // passar pelo controller) tambem gera um JobRun.
+        using var db = CreateInMemoryContext();
+        var product = CriarProduto();
+        db.Products.Add(product);
+        var item = new PublicationQueue(product.Id, SocialNetwork.Telegram, DateTime.UtcNow.AddHours(-1), "Legenda de teste");
+        db.PublicationQueues.Add(item);
+        await db.SaveChangesAsync();
+
+        var tracker = new JobRunTracker(db);
+        var telegram = CreatePublisherMock(SocialNetwork.Telegram, success: true);
+        var job = new PublisherJob(db, new[] { telegram.Object }, Mock.Of<IPushNotificationService>(), tracker, NullLogger<PublisherJob>.Instance);
+
+        await job.ExecuteAsync();
+
+        var run = await db.JobRuns.SingleAsync();
+        run.JobName.Should().Be(JobName.Publisher);
+        run.Status.Should().Be(JobRunStatus.Success);
     }
 
     [Fact]

@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 
-import { JobsService } from './jobs.service';
+import { JobLastExecutionDto, JobsService } from './jobs.service';
 
 describe('JobsService', () => {
   let service: JobsService;
@@ -83,5 +83,32 @@ describe('JobsService', () => {
     req.flush('erro interno', { status: 500, statusText: 'Internal Server Error' });
 
     expect(errorReceived).toBeTruthy();
+  });
+
+  it('getLastExecutions() chama GET /api/jobs/last-executions e retorna as 6 entradas', () => {
+    const mock: JobLastExecutionDto[] = [
+      {
+        jobName: 'collector',
+        status: 'success',
+        startedAt: '2026-08-19T10:00:00Z',
+        finishedAt: '2026-08-19T10:02:15Z',
+        errorMessage: null,
+      },
+      {
+        jobName: 'collector-amazon',
+        status: null,
+        startedAt: null,
+        finishedAt: null,
+        errorMessage: null,
+      },
+    ];
+
+    service.getLastExecutions().subscribe(result => {
+      expect(result).toEqual(mock);
+    });
+
+    const req = httpMock.expectOne('/api/jobs/last-executions');
+    expect(req.request.method).toBe('GET');
+    req.flush(mock);
   });
 });
