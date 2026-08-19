@@ -1,7 +1,7 @@
 issue: 227
 titulo: feat: exibir data/hora da última execução de cada job na tela Jobs
 etapa_atual: Em Desenvolvimento
-ultimo_agente: lider-tecnico
+ultimo_agente: dev-angular
 openspec_change: openspec/changes/issue-227-exibir-data-hora-ultima-execucao-jobs
 tech_stacks: [dotnet, angular]
 repos:
@@ -11,6 +11,7 @@ docs_path: repos/omuletachou/documentacoes/ISSUE-227-exibir-data-hora-ultima-exe
 openspec_path: repos/omuletachou/openspec/changes/issue-227-exibir-data-hora-ultima-execucao-jobs
 sub_issues: ["#236 (stack:dotnet, task_id:T-01)", "#237 (stack:angular, task_id:T-02)"]
 sub_issues_frontend: {"#237": "T-02"}
+pr_frontend_237: 238
 desenv_tasks_merged: []
 pr_homologacao: ~
 pr_release: ~
