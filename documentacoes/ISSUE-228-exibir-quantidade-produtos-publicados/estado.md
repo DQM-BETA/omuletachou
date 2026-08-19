@@ -2,7 +2,7 @@
 issue: 228
 titulo: feat: relatório de produtos com filtros (categoria/plataforma/status) na tela Reports
 etapa_atual: Em Desenvolvimento
-ultimo_agente: lider-tecnico
+ultimo_agente: ux-ui
 openspec_change: openspec/changes/issue-228-relatorio-produtos-filtros
 tech_stacks: [dotnet, angular]
 repos:
@@ -59,6 +59,14 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 - Design.md do Arquiteto (estava pendente de commit) commitado junto com este refinamento.
 - Demanda tem UI (design.md §4 lista componentes de filtros/cards/tabela-gráfico no Angular) — UX/UI atua antes do dev da sub-issue #245.
 
+## UX/UI (2026-08-19)
+- `ux-ui-spec.md`: repos/omuletachou/documentacoes/ISSUE-228-exibir-quantidade-produtos-publicados/ux-ui-spec.md — spec visual da sub-issue #245.
+- Figma da squad só tem o kit de tokens genérico (sem mockups de `Products`/`Jobs`/`Reports`) — spec ancorada no Angular Material já em uso no dashboard (reaproveita componentes/padrões visuais já existentes em `ProductsComponent`), com tokens de cor do Figma (Iris/Fuschia) mapeados como acento conceitual ao tema Material existente (não paleta nova).
+- Decisão de UX que resolve a ambiguidade "tabela/gráfico" do proposal: tabela paginada (`mat-table`) para o detalhe (dado columnar por produto) + mini barras de proporção embutidas nos cards de breakdown (não um gráfico `ng2-charts` separado — dado já é o agregado do summary).
+- Filtros com auto-apply (sem botão "Aplicar"), chips removíveis individualmente, "Limpar filtros" com estado disabled quando não há filtro ativo, tooltip explicando "data de coleta ≠ data de publicação".
+- Todos os estados especificados (default/loading/vazio/erro/sucesso; disabled/readonly marcados N/A onde não se aplicam) para filtros, cards e tabela — erro compartilhado entre cards+tabela (CA 5.1, nunca mostra dado antigo).
+- Heurísticas de Nielsen traduzidas em critérios verificáveis (tabela §7 do spec) + responsividade por 3 breakpoints (desktop/tablet/mobile) + fluxo de navegação (sem rota nova, tudo dentro de `ReportsComponent`).
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|---|---|---|---|---|---|
@@ -68,3 +76,4 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 | 4 | PM Fase 2 (PRD + critérios de aceite) | PM Analista de Negócios | sonnet-5 | ~ | ~ | ~ |
 | 5 | Arquiteto (design.md) | Arquiteto | sonnet-5 | ~ | ~ | ~ |
 | 6 | Refinamento Técnico (task breakdown) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
+| 7 | UX/UI (spec visual sub-issue #245) | UX/UI | sonnet-5 | ~ | ~ | ~ |
