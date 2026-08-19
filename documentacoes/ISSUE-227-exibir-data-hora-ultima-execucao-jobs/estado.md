@@ -1,7 +1,7 @@
 issue: 227
 titulo: feat: exibir data/hora da última execução de cada job na tela Jobs
-etapa_atual: Backlog
-ultimo_agente: coordenador
+etapa_atual: PM Fase 1 — aguardando Gate 1
+ultimo_agente: pm-analista-negocios
 openspec_change: ~
 tech_stacks: []
 repos:
