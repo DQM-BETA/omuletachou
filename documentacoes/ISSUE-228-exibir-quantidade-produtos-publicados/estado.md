@@ -1,15 +1,15 @@
 ---
 issue: 228
 titulo: feat: relatório de produtos com filtros (categoria/plataforma/status) na tela Reports
-etapa_atual: PM Fase 1 — aguardando Gate 1
+etapa_atual: Refinamento Técnico
 ultimo_agente: pm-analista-negocios
-openspec_change: ~
+openspec_change: openspec/changes/issue-228-relatorio-produtos-filtros
 tech_stacks: []
 repos:
   omuletachou: "https://github.com/DQM-BETA/omuletachou"
 repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-228-exibir-quantidade-produtos-publicados
-openspec_path: ~
+openspec_path: repos/omuletachou/openspec/changes/issue-228-relatorio-produtos-filtros
 sub_issues: []
 desenv_tasks_merged: []
 sub_issues_frontend: {}
@@ -20,40 +20,34 @@ qa_status: ~
 figma_url: ~
 blockers: nenhum
 status_comment_id: ~
-rota: backlog
+rota: normal
 ---
 
 ## Resumo
-Adicionar relatório de quantidade de produtos publicados no site à tela `Reports`, com filtros combináveis (categoria, plataforma, status, outros).
+Adicionar relatório de produtos publicados no site à tela `Reports`, com filtros combináveis (Categoria, Subcategoria, Plataforma, Status, Faixa de data de coleta) e exibição em cards de resumo agregados + tabela/gráfico detalhado, on-demand.
 
 ## Contexto
-A tela `Reports` (`localhost:8081/reports`) mostra cards de "Hoje/Semana/Mês" e gráfico de "Publicações por rede (últimos 7 dias)" — ambos baseados na fila de publicação social (`publication_queue`). Desde Issue #208, a visibilidade no site é desacoplada da rede social (um produto pode estar `Published` no site sem passar pela fila social). Falta indicador de quantos produtos estão realmente publicados e visíveis no site.
+A tela `Reports` (`localhost:8081/reports`) mostra cards de "Hoje/Semana/Mês" e gráfico de "Publicações por rede (últimos 7 dias)" — ambos baseados na fila de publicação social (`publication_queue`). Desde Issue #208, a visibilidade no site é desacoplada da rede social (um produto pode estar `Published` no site sem passar pela fila social). Faltava indicador de quantos produtos estão realmente publicados e visíveis no site — agora especificado nesta issue.
 
-## Pedido (atualizado 2026-08-19)
-O Gerente detalhou: não é só um card numérico simples de "produtos publicados no site" — é um **relatório com filtros combináveis**, onde o usuário possa refinar a view por:
-- **Categoria**
-- **Plataforma** (Mercado Livre, Amazon, Shopee)
-- **Status**
-- Possivelmente outros (subcategoria, faixa de data de coleta, faixa de desconto)
+## Gate 1 — Respostas do Gerente (2026-08-19)
+1. Objetivo de negócio confirmado: ferramenta operacional interna do dashboard (admin), não é feature do site público.
+2. Filtros v1: Categoria, Plataforma, Status (já certos) + **Subcategoria** e **Faixa de data de coleta** entram na v1. **Faixa de desconto fica fora do escopo** (não implementar).
+3. Formato: combinação — cards de resumo agregados + tabela/gráfico detalhado abaixo (opção d).
+4. Sem exportação/impressão nesta versão — só consulta em tela.
+5. Sem atualização em tempo real — recalcula on-demand ao aplicar/mudar filtro.
+6. Rota promovida de `backlog` para `normal` — segue o pipeline completo.
 
-## Investigação necessária (refinamento)
-- **Escopo visual:** layout do relatório (tabela, cards, gráficos?), arranjo dos filtros (dropdown, chips, range slider?), paginação se aplicável
-- **UX de filtros:** combináveis (AND/OR?), modo "salvar favoritos"?
-- **Fonte de dados:** agregação por dimensões (categoria, plataforma, status) + contagem; considerar cache/performance
-- **Schema:** verificar se todas as dimensões já existem em `products` pós-#208 (provavelmente não precisa mudança, a confirmar)
-- **Acionamento:** on-demand ou com time-based refresh?
+Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228#issuecomment-5346638492
 
-## Levantamento (PM Fase 1 — 2026-08-19)
-Perguntas postadas na Issue (comentário: https://github.com/DQM-BETA/omuletachou/issues/228#issuecomment-5346494763), aguardando resposta do Gerente no Gate 1:
-1. Confirmação do objetivo de negócio — ferramenta operacional interna (dashboard admin), não feature do site público.
-2. Escopo de filtros v1 vs. futuro — subcategoria / faixa de data de coleta / faixa de desconto entram agora ou ficam de fora do PRD atual?
-3. Formato de exibição preferido — tabela detalhada, cards agregados, gráfico, ou combinação.
-4. Necessidade de exportação/impressão (CSV/Excel) ou só consulta em tela.
-5. Atualização em tempo real vs. recálculo só ao aplicar filtro (on-demand).
-6. Confirmar rota `backlog` (mantida) ou promover para `normal`/`rapido` (priorizar agora), como decidido para a #227.
+## PRD (PM Fase 2 — 2026-08-19)
+- `proposal.md`: repos/omuletachou/openspec/changes/issue-228-relatorio-produtos-filtros/proposal.md
+- `criterios-aceite.md`: repos/omuletachou/documentacoes/ISSUE-228-exibir-quantidade-produtos-publicados/criterios-aceite.md (5 grupos de cenários Given/When/Then: exibição padrão, filtros combináveis, atualização on-demand, sem exportação, tratamento de erro)
+
+## Ambiguidade arquitetural avaliada
+**Sim.** Contrato do endpoint de relatório (agregados vs. detalhado — um endpoint ou dois), performance de agregação com múltiplos filtros combinados em `products` (possível necessidade de índice novo, especialmente `Subcategory` e data de coleta), se as agregações são calculadas em tempo real a cada request ou exigem cache/materialização, e formato/tipo da coluna de data de coleta para suportar filtro de faixa. Encaminhado ao **Arquiteto** antes do refinamento do LT.
 
 ## Rota
-`backlog` — mantida até o Gerente decidir o contrário no Gate 1. Apenas documentação de descoberta; não entra em pipeline de dev até priorização.
+`normal` — promovida pelo Gerente no Gate 1 (2026-08-19). Segue o pipeline completo.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -61,3 +55,4 @@ Perguntas postadas na Issue (comentário: https://github.com/DQM-BETA/omuletacho
 | 1 | Preparação (registar backlog) | Coordenador | haiku-4.5 | ~ | ~| ~ |
 | 2 | Atualização (escopo expandido, 2026-08-19) | Coordenador | haiku-4.5 | ~ | ~ | ~ |
 | 3 | PM Fase 1 (levantamento) | PM Analista de Negócios | sonnet-5 | ~ | ~ | ~ |
+| 4 | PM Fase 2 (PRD + critérios de aceite) | PM Analista de Negócios | sonnet-5 | ~ | ~ | ~ |
