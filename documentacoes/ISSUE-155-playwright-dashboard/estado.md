@@ -2,8 +2,8 @@
 issue: 155
 titulo: "chore: Configurar Playwright (test:visual) no dashboard — Gate Visual do QA nunca dispara"
 rota: rapido
-etapa_atual: "QA"
-ultimo_agente: code-review
+etapa_atual: "Aguardando PR release (LT)"
+ultimo_agente: qa
 openspec_change: ~
 tech_stacks:
   - Angular
@@ -19,7 +19,7 @@ sub_issues_frontend: {}
 pr_homologacao: 234
 pr_release: ~
 code_review_homolog_pr: 234
-qa_status: ~
+qa_status: aprovado
 figma_url: ~
 blockers: nenhum
 status_comment_id: IC_kwDOTMlfyM8AAAABPnxeBw
@@ -65,6 +65,17 @@ Execução real (não leitura de diff), evidência completa postada como coment�
 - Nota fora de escopo (sem impacto na aprovação): o diff também carrega docs de outras issues (#223, #227–#231) já pendentes de sync `desenv→homolog` em `desenv` — puramente docs/estado.md, sem código de app.
 - **PR #234 mesclado `desenv→homolog` via merge commit (`44f9df9`).**
 
+## QA
+- Validado em `homolog` (commit `44f9df9`, PR #234 mergeado). Branch sincronizada via `git fetch` + `git pull origin homolog` antes da validação.
+- `docker compose build --no-cache dashboard` (sem cache) + `docker compose up -d dashboard` → build de produção sucesso, container saudável, `http://localhost:8081/` → 200 OK.
+- `npm run test:visual` real (`SCREENSHOTS_DIR={docs_path}/screenshots`) → **8/8 passed**, screenshots reais gerados e substituídos na pasta `screenshots/` (evidência da rodada de QA).
+- Gate Visual obrigatório do QA aplicado nas 8 screenshots: header/sidenav 1x em todas as telas, sem duplicação estrutural, sem CSS quebrado, mensagens de erro tratadas de forma estilizada (comportamento esperado — `blockApiCalls` aborta `/api/**` de propósito).
+- Validação integrada (d3): login real via `POST /api/auth/login` (proxy nginx do container `dashboard` → API .NET real → Postgres real) → 200 + JWT; `GET /api/products` autenticado → 200 com 110 produtos reais.
+- `npx ng test --watch=false --browsers=ChromeHeadless` → 140/140, sem regressão.
+- CA-1 a CA-5 (especificação técnica): todos ✅ (ver `relatorio-qa.md`).
+- Achado não bloqueante: `tsc --noEmit` na raiz aponta 3 erros de estilo (`noPropertyAccessFromIndexSignature`) em `playwright.config.ts`/`e2e/visual.spec.ts` — fora do gate de `ng build`, mesmo padrão pré-existente em `website`. Não impede aprovação.
+- **Status: APROVADO.** Relatório completo em `relatorio-qa.md`.
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|---|---|---|---|---|---|
@@ -73,5 +84,6 @@ Execução real (não leitura de diff), evidência completa postada como coment�
 | 3 | Dev (sub-issue #232, PR #233) | Dev Angular | Sonnet | — | — | — |
 | 4 | Merge PR #233 (squash) + PR #234 (desenv→homolog) | LT | Sonnet | — | — | — |
 | 5 | Code Review (PR #234 — build/boot/testes reais, merge homolog) | Code Review | Sonnet | — | — | — |
+| 6 | QA (validação em homolog) | QA | Sonnet | — | — | — |
 
 _Atualizado: 2026-08-19_
