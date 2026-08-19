@@ -1,7 +1,7 @@
 issue: 223
 titulo: fix: nginx do dashboard derruba o disparo de jobs longos com timeout (504) antes do job terminar
-etapa_atual: QA
-ultimo_agente: code-review
+etapa_atual: QA concluido
+ultimo_agente: qa
 openspec_change: ~
 tech_stacks: []
 repos: {}
@@ -14,7 +14,7 @@ sub_issues_frontend: {}
 pr_homologacao: 225
 pr_release: ~
 code_review_homolog_pr: 225
-qa_status: ~
+qa_status: aprovado
 figma_url: ~
 blockers: nenhum
 status_comment_id: ~
@@ -35,4 +35,12 @@ status_comment_id: ~
   - **`.first()/.nth()/.last()` em specs E2E:** não aplicável — PR não toca nenhum spec Playwright.
   - **Escopo do diff:** além do `nginx.conf`, o PR carrega commits de documentação pré-existentes da Issue #208 (estado.md, relatorio-qa.md, screenshots) que estavam em `desenv` aguardando o próximo sync `desenv→homolog` — puramente docs, sem risco, não introduzidos por esta issue.
   - PR #225 mesclado `desenv→homolog` via merge commit (`2d8d5a9`), conforme exigido para promoções entre branches de longa vida.
-- **Próximo passo:** QA (fluxo `rapido` mantém QA e Gate 2).
+- **QA (2026-08-19) — APROVADO. 7/7 critérios (100%).** Detalhes completos em `relatorio-qa.md`. Resumo:
+  - Branch sincronizada: `git fetch` + `checkout homolog` + `pull` → fast-forward, commit `2d8d5a9` confirmado no log.
+  - Rebuild próprio sem cache (`docker compose build --no-cache dashboard` + `up -d`) a partir de `homolog`, eliminando qualquer dúvida de imagem stale.
+  - Config real no container confirmada byte-a-byte com o diff + `nginx -t` ok.
+  - Smoke test do proxy `/api/` ok (401 idêntico via proxy e via API direta).
+  - **Validação integrada real repetida pelo QA (não apenas reaproveitada do Dev):** login real via `/api/auth/login` através do nginx → `POST /api/jobs/collector/mercadolivre/trigger` autenticado, aguardado de forma síncrona por **281s** → **HTTP 200**, `{"count":110}`, sem 504. Confirmado via query direta no Postgres: 84 produtos novos com `created_at` no horário exato do job. Logs de `afiliado_dashboard` e `afiliado_api` sem 504/`OperationCanceledException`/`TaskCanceledException` na janela. Containers estáveis (sem restart) durante e após.
+  - E2E/screenshots: N/A — `dashboard/package.json` (componente tocado pelo diff) não define `test:visual`; `website/package.json` define, mas `website/` não foi tocado por este diff. Mudança é puramente infra/config, sem UI alterada.
+  - Nenhuma issue encontrada. Nenhum finding de severidade alta/média/baixa.
+- **Próximo passo:** Líder Técnico — abrir PR `homolog→main` (merge commit) e aguardar **Gate 2 (Gerente)**.
