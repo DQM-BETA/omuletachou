@@ -1,14 +1,14 @@
 issue: 227
 titulo: feat: exibir data/hora da última execução de cada job na tela Jobs
-etapa_atual: PM Fase 1 — aguardando Gate 1
+etapa_atual: Refinamento Técnico (Arquiteto)
 ultimo_agente: pm-analista-negocios
-openspec_change: ~
+openspec_change: openspec/changes/issue-227-exibir-data-hora-ultima-execucao-jobs
 tech_stacks: []
 repos:
   omuletachou: ~
 repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-227-exibir-data-hora-ultima-execucao-jobs
-openspec_path: ~
+openspec_path: repos/omuletachou/openspec/changes/issue-227-exibir-data-hora-ultima-execucao-jobs
 sub_issues: []
 desenv_tasks_merged: []
 sub_issues_frontend: {}
@@ -19,4 +19,4 @@ qa_status: ~
 figma_url: ~
 blockers: nenhum
 status_comment_id: ~
-rota: backlog
+rota: normal
