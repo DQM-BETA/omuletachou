@@ -11,7 +11,7 @@
 
 ## Pipeline
 - rota: normal
-- etapa_atual: Em Desenvolvimento
+- etapa_atual: Code Review
 - ultimo_agente: lider-tecnico
 - status_comment_id: (gerenciado pelo Coordenador — não criado ainda por este agente)
 - tech_stacks: [nodejs]
@@ -20,12 +20,12 @@
 
 ## Sub-issues
 - #261 (stack:nodejs, task_id:T-01) — Remover filtro de desconto mínimo (item 1) — **CONCLUÍDA/MERGED**
-- #262 (stack:nodejs, task_id:T-02) — Corrigir bug do slider de preço + digitar min/max (itens 2+3) — **conflito RESOLVIDO, pronta para merge** (ver Notas)
+- #262 (stack:nodejs, task_id:T-02) — Corrigir bug do slider de preço + digitar min/max (itens 2+3) — **CONCLUÍDA/MERGED**
 - sub_issues_frontend: {}
-- desenv_tasks_merged: [261]
+- desenv_tasks_merged: [261, 262]
 - pr_261_feature_desenv: https://github.com/DQM-BETA/omuletachou/pull/263 (MERGED squash em desenv, 2026-08-20; sub-issue #261 fechada)
-- pr_262_feature_desenv: https://github.com/DQM-BETA/omuletachou/pull/264 (aberto — conflito RESOLVIDO e branch sincronizada com `desenv`, 2026-08-20; `gh pr view` confirma `mergeStateStatus: CLEAN` / `mergeable: MERGEABLE`; pronto para merge pelo LT)
-- pr_homologacao: ~
+- pr_262_feature_desenv: https://github.com/DQM-BETA/omuletachou/pull/264 (MERGED squash em desenv, 2026-08-20, commit `99b801e`; sub-issue #262 fechada)
+- pr_homologacao: https://github.com/DQM-BETA/omuletachou/pull/265 (desenv→homolog, aberto 2026-08-20 — merge commit, NUNCA squash)
 - pr_release: ~
 - code_review_homolog_pr: ~
 - qa_status: ~
@@ -93,15 +93,13 @@ ou trade-off de infraestrutura. Seguiu direto para o **Líder Técnico**.
   (`PriceGroup`) — LT tentou fundir sequencialmente conforme nota de dependência em `tasks.md`,
   mas encontrou conflito real (ver seção "Implementação — T-02" e "Notas").
 
-## Implementação — T-02 / Sub-issue #262 (concluída pelo Dev, 2026-08-20; merge BLOQUEADO por conflito)
+## Implementação — T-02 / Sub-issue #262 (concluída pelo Dev, 2026-08-20; MERGED pelo LT, 2026-08-20)
 - Branch `feature/ISSUE-262-fix-slider-preco-minmax` (worktree
   `.worktrees/feature-ISSUE-262-fix-slider-preco-minmax`), base `desenv`.
-- PR feature→desenv: #264 — https://github.com/DQM-BETA/omuletachou/pull/264 — **aberto, BLOQUEADO
-  por conflito** com `desenv` após o merge do #263 (mesmo arquivo `FilterBar.tsx`). `gh pr
-  update-branch 264` falhou ("Cannot update PR branch due to conflicts"). Conflito confirmado
-  localmente (merge de teste `origin/feature/ISSUE-262-fix-slider-preco-minmax` +
-  `origin/desenv`, sem push) em `website/components/FilterBar.tsx` e
-  `website/app/styles/filter-bar.css` — não é trivial, precisa de resolução manual pelo dev.
+- PR feature→desenv: #264 — https://github.com/DQM-BETA/omuletachou/pull/264 — **MERGED (squash)**
+  em `desenv` 2026-08-20 (commit `99b801e`). Sub-issue #262 fechada (`completed`). Conflito com
+  `desenv` (introduzido pelo merge do #263 no mesmo arquivo) resolvido pelo Dev antes deste merge
+  (ver seção "Resolução do conflito PR #264").
 - Causa raiz confirmada empiricamente (não só por tracing estático do LT): teste e2e Playwright
   (`e2e/filter-bar-price.spec.ts`) rodado contra o app real (`npm run dev`) + API real (docker
   compose local, dados reais do catálogo) confirma que 150 eventos `input` em sucessão apertada
@@ -171,8 +169,16 @@ ou trade-off de infraestrutura. Seguiu direto para o **Líder Técnico**.
 - `npm run build` já validado dentro do build da imagem Docker do `website` (sucesso); container
   `afiliado_website` respondeu HTTP 200 em `localhost:3000` — app inicializa sem erro.
 - Push: `feature/ISSUE-262-fix-slider-preco-minmax` (2 commits novos: merge de resolução +
-  correção do teste e2e obsoleto). `gh pr view 264` confirma `mergeStateStatus: CLEAN` /
-  `mergeable: MERGEABLE` — PR #264 pronto para merge pelo LT, sem necessidade de novo PR.
+  correção do teste e2e obsoleto). `gh pr view 264` confirmou `mergeStateStatus: CLEAN` /
+  `mergeable: MERGEABLE` — PR #264 mergeado pelo LT sem necessidade de novo PR.
+
+## Merge #264 + PR desenv→homolog (LT, 2026-08-20)
+- PR #264 mergeado via squash, sem conflitos (`gh pr merge 264 --squash`), commit `99b801e` em
+  `desenv`. Sub-issue #262 fechada (`completed`).
+- Como #262 era a última sub-issue pendente da Issue #230 (`desenv_tasks_merged` == `sub_issues`),
+  criado o PR de promoção `desenv→homolog` #265 —
+  https://github.com/DQM-BETA/omuletachou/pull/265 (merge commit, NUNCA squash — a ser mergeado
+  pelo Code Review).
 
 ## Notas
 - Diretório duplicado `documentacoes/ISSUE-230-revisar-filtros-site-público/` (com acento) —
@@ -190,8 +196,8 @@ ou trade-off de infraestrutura. Seguiu direto para o **Líder Técnico**.
   `filter-bar.css`. Fora do escopo de ferramentas do LT resolver conflito de código — devolvido
   ao Dev responsável pela sub-issue #262 para sincronizar `feature/ISSUE-262-fix-slider-preco-minmax`
   com `desenv` (`git merge origin/desenv` ou `git rebase origin/desenv`), resolver as duas
-  divergências e dar push. Após o push, novo LT retoma o merge de #264 e a criação do PR
-  `desenv→homolog` (única sub-issue restante).
+  divergências e dar push. Após o push, novo LT retomou o merge de #264 (concluído nesta invocação,
+  ver "Merge #264 + PR desenv→homolog") e criou o PR `desenv→homolog` (#265).
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -200,3 +206,4 @@ ou trade-off de infraestrutura. Seguiu direto para o **Líder Técnico**.
 | 2 | PM Fase 2 | pm-analista-negocios | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
 | 3 | Refinamento Técnico | lider-tecnico | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
 | 4 | Merge #263 + tentativa #264 (bloqueado) | lider-tecnico | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
+| 5 | Merge #264 + PR desenv→homolog | lider-tecnico | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
