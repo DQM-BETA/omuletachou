@@ -1,8 +1,8 @@
 ---
 issue: 228
 titulo: feat: relatório de produtos com filtros (categoria/plataforma/status) na tela Reports
-etapa_atual: Em Desenvolvimento (correção Code Review — sub-issue #245 reaberta)
-ultimo_agente: lider-tecnico (mapeamento CR reprovado, 2026-08-19)
+etapa_atual: Code Review
+ultimo_agente: lider-tecnico (merge PR #251 — correção CR, 2026-08-20)
 openspec_change: openspec/changes/issue-228-relatorio-produtos-filtros
 tech_stacks: [dotnet, angular]
 repos:
@@ -15,10 +15,10 @@ desenv_tasks_merged: ["#242", "#243", "#244", "#245"]
 sub_issues_frontend: {"#245": "T-04"}
 pr_homologacao: 250
 pr_release: ~
-code_review_homolog_pr: reprovado (PR #250, comentário https://github.com/DQM-BETA/omuletachou/pull/250#issuecomment-5347125317) — #245 reaberta para correção, PR #250 permanece aberto (absorve o fix commit automaticamente)
+code_review_homolog_pr: correção mergeada (PR #251 → desenv, squash, 2026-08-20) — PR #250 (desenv→homolog) absorveu o commit automaticamente (mesma branch desenv), permanece aberto, CLEAN/MERGEABLE com 18 commits. Aguardando reavaliação do Code Review.
 qa_status: ~
 figma_url: ~
-blockers: mobile responsivo do bloco de filtros (ux-ui-spec.md §8, mat-expansion-panel + badge) não implementado — sub-issue #245 reaberta, aguardando correção do Dev Angular
+blockers: ~
 status_comment_id: ~
 rota: normal
 ---
@@ -133,6 +133,13 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 
 **Fluxo de saída:** Dev Angular abre `feature/ISSUE-245-...` a partir de `desenv` atualizada, corrige os 2 itens, TDD dos cenários novos/ajustados, push, PR `feature→desenv`. Após o LT mergear esse PR (squash) em `desenv`, o PR #250 (`desenv→homolog`, ainda aberto) absorve o commit automaticamente — não é necessário recriar o PR de promoção. Code Review então reavalia o PR #250 atualizado.
 
+## Correção Code Review — merge PR #251 (LT — 2026-08-20)
+- Dev Angular entregou a correção na sub-issue #245 (branch `feature/ISSUE-245-filtros-relatorio-produtos`, base `desenv` atualizada): bloco de filtros mobile em `mat-expansion-panel` colapsado por padrão com badge de contagem (ux-ui-spec.md §8), + skeleton de carregamento nos cards/tabela (ux-ui-spec.md §4.3/§5.1), com testes novos em `reports.component.spec.ts`.
+- PR https://github.com/DQM-BETA/omuletachou/pull/251 (feature→desenv) — **merged (squash) para desenv em 2026-08-20 pelo LT**, `mergedAt: 2026-08-20T12:20:24Z`.
+- Sub-issue #245 fechada novamente (`gh issue close --reason completed`).
+- PR #250 (desenv→homolog) confirmado atualizado automaticamente (mesma branch `desenv`) — 18 commits, `mergeStateStatus: CLEAN`, `mergeable: MERGEABLE`. Não foi necessário recriar o PR de promoção.
+- `etapa_atual` volta a **Code Review** — aguardando reavaliação do PR #250 com a correção incluída.
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|---|---|---|---|---|---|
@@ -150,3 +157,5 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 | 11 | Líder Técnico (merge 4 sub-issues + PR #250 desenv→homolog) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
 | 12 | Code Review (PR #250 desenv→homolog) — REPROVADO | Code Review | sonnet-5 | ~ | ~ | ~ |
 | 13 | Líder Técnico (mapeamento falha CR, #245 reaberta) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
+| 14 | Dev Angular (correção sub-issue #245, PR #251) | Dev Angular | sonnet-5 | ~ | ~ | ~ |
+| 15 | Líder Técnico (merge PR #251 → desenv; confirma PR #250 atualizado) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
