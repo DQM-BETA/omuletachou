@@ -13,7 +13,6 @@ interface HomePageProps {
     subcategory?: string;
     minPrice?: string;
     maxPrice?: string;
-    minDiscount?: string;
     sort?: string;
   };
 }
@@ -26,8 +25,6 @@ function buildFilters(searchParams: HomePageProps['searchParams']): DealFilters 
     subcategory: searchParams.subcategory,
     minPrice: searchParams.minPrice !== undefined ? Number(searchParams.minPrice) : undefined,
     maxPrice: searchParams.maxPrice !== undefined ? Number(searchParams.maxPrice) : undefined,
-    minDiscount:
-      searchParams.minDiscount !== undefined ? Number(searchParams.minDiscount) : undefined,
     sort: searchParams.sort,
   };
 }
@@ -39,7 +36,6 @@ function buildPaginationQuery(searchParams: HomePageProps['searchParams'], page:
   if (searchParams.subcategory) params.set('subcategory', searchParams.subcategory);
   if (searchParams.minPrice) params.set('minPrice', searchParams.minPrice);
   if (searchParams.maxPrice) params.set('maxPrice', searchParams.maxPrice);
-  if (searchParams.minDiscount) params.set('minDiscount', searchParams.minDiscount);
   if (searchParams.sort) params.set('sort', searchParams.sort);
   params.set('page', String(page));
   return `?${params.toString()}`;
@@ -49,7 +45,7 @@ export default async function Home({ searchParams }: HomePageProps) {
   const page = Number(searchParams.page ?? '1') || 1;
   const filters = buildFilters(searchParams);
   const hasActiveFilters = Boolean(
-    filters.category || filters.subcategory || filters.minPrice || filters.maxPrice || filters.minDiscount
+    filters.category || filters.subcategory || filters.minPrice || filters.maxPrice
   );
 
   const [result, categories] = await Promise.all([
@@ -75,7 +71,7 @@ export default async function Home({ searchParams }: HomePageProps) {
           {hasActiveFilters ? (
             <>
               <p>Nenhuma oferta encontrada com esses filtros.</p>
-              <p>Tente ajustar a faixa de preço ou o desconto mínimo.</p>
+              <p>Tente ajustar a faixa de preço ou os demais filtros.</p>
               <Link href="/" className="deal-card__cta">
                 Ver todas as ofertas
               </Link>

@@ -19,10 +19,12 @@
   - omuletachou: https://github.com/DQM-BETA/omuletachou
 
 ## Sub-issues
-- #261 (stack:nodejs, task_id:T-01) — Remover filtro de desconto mínimo (item 1)
-- #262 (stack:nodejs, task_id:T-02) — Corrigir bug do slider de preço + digitar min/max (itens 2+3)
+- #261 (stack:nodejs, task_id:T-01) — Remover filtro de desconto mínimo (item 1) — **CONCLUÍDA/MERGED**
+- #262 (stack:nodejs, task_id:T-02) — Corrigir bug do slider de preço + digitar min/max (itens 2+3) — **BLOQUEADA por conflito** (ver Notas)
 - sub_issues_frontend: {}
-- desenv_tasks_merged: []
+- desenv_tasks_merged: [261]
+- pr_261_feature_desenv: https://github.com/DQM-BETA/omuletachou/pull/263 (MERGED squash em desenv, 2026-08-20; sub-issue #261 fechada)
+- pr_262_feature_desenv: https://github.com/DQM-BETA/omuletachou/pull/264 (aberto — CONFLICTING após merge do #263; `gh pr update-branch` falhou; conflito confirmado localmente em `website/components/FilterBar.tsx` e `website/app/styles/filter-bar.css` — dev precisa sincronizar com `desenv` e resolver manualmente, depois push)
 - pr_homologacao: ~
 - pr_release: ~
 - code_review_homolog_pr: ~
@@ -75,6 +77,57 @@ ou trade-off de infraestrutura. Seguiu direto para o **Líder Técnico**.
 - `documentacoes/ISSUE-230-revisar-filtros-site-publico/especificacao-tecnica.md` (LT)
 - `openspec/changes/issue-230-revisar-filtros-site-publico/tasks.md` (LT — T-01, T-02)
 
+## Implementação — T-01 / Sub-issue #261 (concluída pelo Dev, 2026-08-20; MERGED pelo LT, 2026-08-20)
+- Branch `feature/ISSUE-261-remover-desconto-minimo` (worktree
+  `.worktrees/feature-ISSUE-261-remover-desconto-minimo`), base `desenv`.
+- PR feature→desenv: #263 — https://github.com/DQM-BETA/omuletachou/pull/263 — **MERGED (squash)**
+  em `desenv` 2026-08-20 (commit `f6e4d4f`). Sub-issue #261 fechada (`completed`).
+- Removido o seletor "Desconto mínimo" de `FilterBar.tsx` + código órfão (state, handler, CSS,
+  referências em `page.tsx`/`lib/api.ts`) — checklist da especificação técnica cumprido
+  integralmente; grep confirmou ausência de qualquer referência residual a `minDiscount` fora do
+  teste de regressão dedicado.
+- Testes: 116/116 passando (100%), cobertura de `FilterBar.tsx` 92%/`page.tsx` 100% linhas/`api.ts`
+  100% (threshold do projeto é 80%). `npm run build` sucesso; `npm start` inicializa sem erro.
+- Sem ambiguidade/dúvida técnica — não precisou de decisão de arquitetura.
+- T-02 (sub-issue #262) segue pendente, mesmo arquivo (`FilterBar.tsx`) em região diferente
+  (`PriceGroup`) — LT tentou fundir sequencialmente conforme nota de dependência em `tasks.md`,
+  mas encontrou conflito real (ver seção "Implementação — T-02" e "Notas").
+
+## Implementação — T-02 / Sub-issue #262 (concluída pelo Dev, 2026-08-20; merge BLOQUEADO por conflito)
+- Branch `feature/ISSUE-262-fix-slider-preco-minmax` (worktree
+  `.worktrees/feature-ISSUE-262-fix-slider-preco-minmax`), base `desenv`.
+- PR feature→desenv: #264 — https://github.com/DQM-BETA/omuletachou/pull/264 — **aberto, BLOQUEADO
+  por conflito** com `desenv` após o merge do #263 (mesmo arquivo `FilterBar.tsx`). `gh pr
+  update-branch 264` falhou ("Cannot update PR branch due to conflicts"). Conflito confirmado
+  localmente (merge de teste `origin/feature/ISSUE-262-fix-slider-preco-minmax` +
+  `origin/desenv`, sem push) em `website/components/FilterBar.tsx` e
+  `website/app/styles/filter-bar.css` — não é trivial, precisa de resolução manual pelo dev.
+- Causa raiz confirmada empiricamente (não só por tracing estático do LT): teste e2e Playwright
+  (`e2e/filter-bar-price.spec.ts`) rodado contra o app real (`npm run dev`) + API real (docker
+  compose local, dados reais do catálogo) confirma que 150 eventos `input` em sucessão apertada
+  no slider não navegam mais para a página de erro (CA 2.4).
+- Fix: estado local de rascunho (`minDraft`/`maxDraft`) desacoplado da URL a cada evento; commit
+  via `router.replace` ao soltar o gesto e/ou debounce de 250ms; clamp `min<=max` defensivo;
+  `website/app/error.tsx` como defesa em profundidade.
+- Campos numéricos min/max digitáveis, sincronizados bidirecionalmente com o slider, com
+  validação completa (CA 3.4-3.7).
+- **Bug arquitetural latente encontrado e corrigido durante o TDD** (fora do escopo original,
+  mas bloqueava a própria correção): `PriceGroup` era um componente aninhado
+  (`function PriceGroup() {}` declarado dentro do corpo de `FilterBar`) — o React desmonta/
+  remonta essa subárvore inteira a cada re-render do pai (nova identidade de função), o que
+  destruía o `<input type="range">` a cada `onChange` (perda de foco/pointer capture nativo) e
+  impedia o `onBlur` dos campos de texto de disparar. Convertido para valor JSX estável
+  (`const priceGroup = (...)`), mesmo padrão já usado em `groupCategory`/`groupSubcategory`/
+  `groupSort`. Não mexido em `DiscountGroup`/`Dropdown` (mesmo padrão, mas fora do escopo de
+  T-02 — região de T-01, sem overlap funcional).
+- Testes: 131/131 Jest passando (100%, suíte completa sem regressão), cobertura global 92.5%
+  stmts / 88.8% branch (threshold do projeto 80%). 13 casos novos em `FilterBar.test.tsx`
+  (CA 2.1-2.4, 3.1-3.7) + 3 em `app/error.test.tsx`. e2e: 4/4 novos + 5/5 existentes
+  (`visual.spec.ts`) passando contra app real. `npm run build` (corrigido 1 erro de lint
+  `prefer-const` encontrado só no build) e `npm start` sem erro.
+- Sem ambiguidade/dúvida técnica — não precisou de decisão de arquitetura além da correção do
+  bug de nested component (aplicação direta do padrão já existente no próprio arquivo).
+
 ## Notas
 - Diretório duplicado `documentacoes/ISSUE-230-revisar-filtros-site-público/` (com acento) —
   confirmado como artefato órfão de stub inicial do Coordenador (backlog, pré-refinamento do PM),
@@ -82,6 +135,17 @@ ou trade-off de infraestrutura. Seguiu direto para o **Líder Técnico**.
 - openspec change criado via `npx @fission-ai/openspec new change` — nome exigido em kebab-case
   minúsculo (`issue-230-...`, não `ISSUE-230-...`); path real difere do padrão usado em docs_path
   (que mantém `ISSUE-230` maiúsculo por convenção da squad).
+- **Merge sequencial (2026-08-20):** #263 mergeado (squash) primeiro sem conflito. Ao tentar
+  fundir #264 em seguida, `mergeStateStatus` mudou de `CLEAN` para `DIRTY`/`CONFLICTING` (efeito
+  colateral esperado do merge anterior no mesmo arquivo). `gh pr update-branch 264` falhou;
+  confirmado via merge de teste local (branch temporária, sem push, revertida com `git merge
+  --abort` + `git branch -D`) que o conflito é real em `FilterBar.tsx` (regiões próximas de
+  `PriceGroup`/`DiscountGroup` divergiram o suficiente para não haver merge automático) e em
+  `filter-bar.css`. Fora do escopo de ferramentas do LT resolver conflito de código — devolvido
+  ao Dev responsável pela sub-issue #262 para sincronizar `feature/ISSUE-262-fix-slider-preco-minmax`
+  com `desenv` (`git merge origin/desenv` ou `git rebase origin/desenv`), resolver as duas
+  divergências e dar push. Após o push, novo LT retoma o merge de #264 e a criação do PR
+  `desenv→homolog` (única sub-issue restante).
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -89,3 +153,4 @@ ou trade-off de infraestrutura. Seguiu direto para o **Líder Técnico**.
 | 1 | PM Fase 1 | pm-analista-negocios | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
 | 2 | PM Fase 2 | pm-analista-negocios | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
 | 3 | Refinamento Técnico | lider-tecnico | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
+| 4 | Merge #263 + tentativa #264 (bloqueado) | lider-tecnico | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |

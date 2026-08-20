@@ -23,11 +23,9 @@ const SORT_OPTIONS: DropdownOption[] = [
   { value: 'recent', label: 'Mais recente' },
 ];
 
-const DISCOUNT_OPTIONS = [10, 30, 50];
-
 // Filtros "restritivos" — contam para o badge/estado de "Limpar filtros" e geram pílula.
 // `sort` não conta (reordena, não restringe — decisão de UX registrada na spec §6.4).
-const RESTRICTIVE_KEYS = ['category', 'subcategory', 'minPrice', 'maxPrice', 'minDiscount'] as const;
+const RESTRICTIVE_KEYS = ['category', 'subcategory', 'minPrice', 'maxPrice'] as const;
 type RestrictiveKey = (typeof RESTRICTIVE_KEYS)[number];
 
 // Fora de escopo visual (spec §6.2): limites reais viriam do catálogo; usados aqui como
@@ -87,7 +85,6 @@ export default function FilterBar({ categories }: FilterBarProps) {
   const subcategory = searchParams.get('subcategory') ?? '';
   const minPriceParam = searchParams.get('minPrice');
   const maxPriceParam = searchParams.get('maxPrice');
-  const minDiscount = searchParams.get('minDiscount') ?? '';
   const sort = searchParams.get('sort') ?? '';
 
   const minPrice = minPriceParam !== null ? Number(minPriceParam) : PRICE_MIN;
@@ -347,10 +344,6 @@ export default function FilterBar({ categories }: FilterBarProps) {
     setOpenDropdown(null);
   };
 
-  const handleDiscountToggle = (value: number) => {
-    updateParams({ minDiscount: minDiscount === String(value) ? undefined : String(value) });
-  };
-
   const activeRestrictiveKeys = RESTRICTIVE_KEYS.filter((key) => searchParams.get(key));
   const activeFiltersCount = activeRestrictiveKeys.length;
   const hasActiveFilters = activeFiltersCount > 0;
@@ -555,32 +548,6 @@ export default function FilterBar({ categories }: FilterBarProps) {
       </div>
   );
 
-  function DiscountGroup() {
-    return (
-      <div className="filter-bar__group filter-bar__group--discount">
-        <span className="filter-bar__label" id="filter-bar-discount-label">
-          Desconto mínimo
-        </span>
-        <div className="filter-bar__discount-group" role="group" aria-labelledby="filter-bar-discount-label">
-          {DISCOUNT_OPTIONS.map((value) => {
-            const active = minDiscount === String(value);
-            return (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={active}
-                className={`filter-bar__discount-btn${active ? ' filter-bar__discount-btn--active' : ''}`}
-                onClick={() => handleDiscountToggle(value)}
-              >
-                {value}%+
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
   function ClearButton() {
     return (
       <button
@@ -635,19 +602,6 @@ export default function FilterBar({ categories }: FilterBarProps) {
               className="filter-bar__pill-remove"
               aria-label="Remover filtro de preço"
               onClick={() => removeFilter('minPrice')}
-            >
-              ✕
-            </button>
-          </span>
-        )}
-        {minDiscount && (
-          <span className="filter-bar__pill">
-            {minDiscount}% OFF+
-            <button
-              type="button"
-              className="filter-bar__pill-remove"
-              aria-label={`Remover filtro ${minDiscount}% OFF+`}
-              onClick={() => removeFilter('minDiscount')}
             >
               ✕
             </button>
@@ -711,7 +665,6 @@ export default function FilterBar({ categories }: FilterBarProps) {
           {groupCategory}
           {groupSubcategory}
           {priceGroup}
-          <DiscountGroup />
           {groupSort}
           <ClearButton />
         </div>
@@ -771,7 +724,6 @@ export default function FilterBar({ categories }: FilterBarProps) {
                   {groupCategory}
                   {groupSubcategory}
                   {priceGroup}
-                  <DiscountGroup />
                 </div>
                 <div className="filter-bar__drawer-footer">
                   <ClearButton />

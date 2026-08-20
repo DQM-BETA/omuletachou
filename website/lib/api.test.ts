@@ -90,7 +90,7 @@ describe('lib/api', () => {
       expect(calledUrl).toContain('category=eletronicos');
     });
 
-    it('Issue #167 (CA 6.1-6.4): aplica todos os filtros combináveis (subcategory/preço/desconto/sort)', async () => {
+    it('Issue #167 (CA 6.1-6.4): aplica todos os filtros combináveis (subcategory/preço/sort)', async () => {
       fetchMock.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -102,7 +102,6 @@ describe('lib/api', () => {
         subcategory: 'Celulares',
         minPrice: 100,
         maxPrice: 500,
-        minDiscount: 30,
         sort: 'price_asc',
       });
 
@@ -112,7 +111,6 @@ describe('lib/api', () => {
       expect(params.get('subcategory')).toBe('Celulares');
       expect(params.get('minPrice')).toBe('100');
       expect(params.get('maxPrice')).toBe('500');
-      expect(params.get('minDiscount')).toBe('30');
       expect(params.get('sort')).toBe('price_asc');
     });
 
@@ -131,7 +129,6 @@ describe('lib/api', () => {
       expect(params.has('subcategory')).toBe(false);
       expect(params.has('minPrice')).toBe(false);
       expect(params.has('maxPrice')).toBe(false);
-      expect(params.has('minDiscount')).toBe(false);
       expect(params.has('sort')).toBe(false);
     });
 
