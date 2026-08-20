@@ -6,24 +6,35 @@
 Mudança em 2 pontas do monorepo `omuletachou`, coordenadas mas tecnicamente independentes:
 
 1. **Backend (`AfiliadoBot.Api`, stack:dotnet)** — o campo `Platform` foi **removido do contrato público** (`PublicDealDto`) na Issue #167 (CA 5.1/5.2/5.3), por higiene, quando a distinção de plataforma deixou de ser usada como filtro/navegação. A Issue #229 precisa reintroduzi-lo, agora **apenas como dado de exibição** (texto informativo, não filtro) — o Gerente já confirmou no Gate 1 que isso não conflita com a decisão da #167 (sinalização visual ≠ filtro/navegação).
-2. **Frontend (`website/`, Next.js, stack:nodejs)** — o componente `DealCard.tsx` (compartilhado por home, categoria e oferta — confirmado: é o único componente de card usado nas 3 telas via `app/page.tsx` e `app/categoria/[categoria]/page.tsx`) passa a renderizar a tag de texto da plataforma, próxima ao preço, com o mapeamento enum→texto e o estilo (cor/tipografia/badge) definidos pelo UX/UI a partir do design system do Figma.
+2. **Frontend (`website/`, Next.js, stack:nodejs)** — a tag de texto da plataforma, próxima ao preço, com o mapeamento enum→texto e o estilo definidos pelo UX/UI, precisa ser renderizada em **dois componentes distintos** (ver correção abaixo), não apenas um.
 
-## Componentes/telas envolvidos
-- `website/components/DealCard.tsx` — componente único reutilizado em `app/page.tsx` (home), `app/categoria/[categoria]/page.tsx` (categoria) e na página de oferta/detalhe (mesma renderização de card). Não há componente de card duplicado — 1 sub-issue de frontend cobre as 3 telas.
-- `website/lib/types.ts` — `Deal` precisa de um novo campo opcional `platform` (ou nome equivalente já alinhado ao JSON do backend).
-- `website/app/styles/deal-card.css` — novo bloco de classe para a tag, usando as CSS vars de design token já existentes no arquivo (`--color-*`, `--font-size-*`, `--space-*`, `--radius-*`), consistente com `.deal-card__badge`.
-- `backend/src/AfiliadoBot.Api/Public/PublicDealDto.cs` — reintroduzir `Platform` (como string) e o mapeamento em `FromProduct`.
-- `backend/src/AfiliadoBot.Tests/Public/PublicControllerTests.cs` — o teste `GetDeals_JsonDeResposta_NuncaContemCampoPlatform` (linha ~121) fica desatualizado com a mudança e precisa ser removido/reescrito para refletir a nova decisão (documentar isso explicitamente na sub-issue de backend para o dev não interpretar como regressão acidental).
+## CORREÇÃO (pós Code Review do PR #257, 2026-08-20) — premissa de componente único estava errada
+A afirmação original deste documento — de que `DealCard.tsx` é "reutilizado... na página de oferta/detalhe (mesma renderização via `DealCard`)" — **está incorreta** e foi a causa da reprovação do Code Review no PR #257 (CA 3 não implementado).
+
+**Como é de fato:**
+- `website/app/oferta/[slug]/page.tsx` (página de oferta/detalhe) renderiza o produto principal via `website/components/DealDetail.tsx` — um componente **separado**, com markup próprio de preço (`deal-detail__price`, `deal-detail__price-current`, `deal-detail__price-strike`, `deal-detail__badge`).
+- `DealCard.tsx` só é usado **dentro** de `DealDetail.tsx`, na seção "Mais ofertas" (`relatedDeals`) — ou seja, para produtos relacionados, não para o produto que a página está exibindo.
+- `DealDetail` já recebe o objeto `deal: Deal` completo como prop (vindo de `fetchDeal(slug)` em `page.tsx`, que consome a mesma API pública já corrigida pela sub-issue #253) — **o campo `platform` já chega até `DealDetail` sem nenhum ajuste de plumbing/API necessário.** O único gap é que `DealDetail.tsx` nunca foi tocado para renderizar a tag.
+
+**Correção de escopo:** a sub-issue #254 (T-02) precisa aplicar a mesma lógica de tag (mesmo `PLATFORM_LABELS`, mesma regra de ocultação, não interativa) também em `DealDetail.tsx`, posicionada de forma equivalente ao `DealCard` (próxima ao bloco `.deal-detail__price`, ex. como primeiro filho, antes do markup de preço atual). Reaproveitar a mesma tabela de mapeamento (extrair para local compartilhado se fizer sentido, ou duplicar constante pequena — decisão de implementação do Dev) e, se prático, a mesma classe CSS `.deal-card__platform` (ela já não depende de nada específico do `DealCard`) para manter CA 8 (consistência de texto/estilo entre telas).
+
+## Componentes/telas envolvidos (atualizado)
+- `website/components/DealCard.tsx` — componente de card usado em `app/page.tsx` (home), `app/categoria/[categoria]/page.tsx` (categoria) e, dentro de `DealDetail.tsx`, na grade de produtos relacionados da página de oferta. **Já corrigido no PR #256** (aprovado pelo Code Review, não precisa de nova alteração).
+- `website/components/DealDetail.tsx` — componente que renderiza o produto principal da página de oferta/detalhe (`app/oferta/[slug]/page.tsx`). **Ainda não recebeu a tag de plataforma — é o gap a corrigir.**
+- `website/lib/types.ts` — `Deal.platform?: string | null` (já adicionado no PR #256, usado por ambos os componentes).
+- `website/app/styles/deal-card.css` — classe `.deal-card__platform` já existe (PR #256); reaproveitar ou criar equivalente `deal-detail__platform` com os mesmos tokens, a critério do Dev.
+- `backend/src/AfiliadoBot.Api/Public/PublicDealDto.cs` — já reintroduzido `Platform` (PR #255, sub-issue #253, mergeado). Nenhuma alteração adicional necessária aqui.
 
 ## Stack
-- Backend: ASP.NET Core 8.0 / C# (`stack:dotnet`)
-- Frontend: Next.js 14+ SSR (`stack:nodejs`)
+- Backend: ASP.NET Core 8.0 / C# (`stack:dotnet`) — concluído, sub-issue #253.
+- Frontend: Next.js 14+ SSR (`stack:nodejs`) — sub-issue #254 reaberta para cobrir `DealDetail.tsx`.
 
 ## Fluxo de dados
-1. `Product.Platform` (enum `Amazon | MercadoLivre | Shopee`, já existe na entidade — nunca foi removido do domínio, só do DTO público) é serializado em `PublicDealDto.Platform` como **string do nome do enum** (`"Amazon"`, `"MercadoLivre"`, `"Shopee"`), igual ao padrão já usado no DTO interno (`ProductsController`: `product.Platform.ToString()`). Backend não traduz para texto de exibição — mantém o contrato como dado bruto/estável, a tradução para texto amigável é responsabilidade do frontend (evita redeploy de backend só para ajustar copy).
-2. `website/lib/types.ts` → `Deal.platform?: string | null`.
-3. `DealCard.tsx` mapeia o valor via uma tabela `PLATFORM_LABELS` (a ser definida com o UX/UI: ex. `{ Amazon: 'Amazon', MercadoLivre: 'Mercado Livre', Shopee: 'Shopee' }` ou abreviações) — se `platform` for `null`/`undefined`/ausente do mapeamento, a tag não é renderizada (CA 4 e CA 5 dos critérios de aceite).
-4. Nenhuma nova rota de API, nenhum novo endpoint — mudança de contrato (campo a mais) num endpoint já existente (`GET /api/public/deals` e `GET /api/public/deals/{slug}`).
+1. `Product.Platform` (enum `Amazon | MercadoLivre | Shopee`) é serializado em `PublicDealDto.Platform` como string do nome do enum. **Concluído** (PR #255).
+2. `website/lib/types.ts` → `Deal.platform?: string | null`. **Concluído** (PR #256).
+3. `DealCard.tsx` mapeia o valor via `PLATFORM_LABELS` — **concluído** (PR #256), cobre home, categoria e a grade de relacionados dentro da página de oferta.
+4. `DealDetail.tsx` **precisa do mesmo mapeamento/renderização condicional**, aplicado ao produto principal exibido na página de oferta — **pendente**, escopo da correção desta rodada.
+5. Nenhuma nova rota de API, nenhum novo endpoint.
 
 ## Decisão explícita: reversão parcial da Issue #167
 Documentar no PR/commit que isto reintroduz `Platform` no contrato público — decisão já validada pelo Gerente no Gate 1 da #229 (ver comentário https://github.com/DQM-BETA/omuletachou/issues/229#issuecomment-5357600715). Não é regressão: a #167 removeu a plataforma como **mecanismo de filtro/navegação**; a #229 a reintroduz **apenas como texto informativo não interativo** (CA 7).
