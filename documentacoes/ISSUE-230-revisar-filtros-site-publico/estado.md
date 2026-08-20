@@ -11,9 +11,9 @@
 
 ## Pipeline
 - rota: normal
-- etapa_atual: Aguardando Gate 2
-- ultimo_agente: lider-tecnico
-- status_comment_id: (gerenciado pelo Coordenador — não criado ainda por este agente)
+- etapa_atual: Concluído
+- ultimo_agente: coordenador
+- status_comment_id: 5360444175
 - tech_stacks: [nodejs]
 - repos:
   - omuletachou: https://github.com/DQM-BETA/omuletachou
@@ -26,9 +26,10 @@
 - pr_261_feature_desenv: https://github.com/DQM-BETA/omuletachou/pull/263 (MERGED squash em desenv, 2026-08-20; sub-issue #261 fechada)
 - pr_262_feature_desenv: https://github.com/DQM-BETA/omuletachou/pull/264 (MERGED squash em desenv, 2026-08-20, commit `99b801e`; sub-issue #262 fechada)
 - pr_homologacao: https://github.com/DQM-BETA/omuletachou/pull/265 (desenv→homolog, MERGED — merge commit `7d343cd`, confirmado presente em `homolog` na validação do QA em 2026-08-20)
-- pr_release: https://github.com/DQM-BETA/omuletachou/pull/266 (homolog→main, aberto 2026-08-20 — merge commit, NUNCA squash; aguardando Gate 2)
+- pr_release: https://github.com/DQM-BETA/omuletachou/pull/266 (homolog→main, MERGED — merge commit `9aedc95`, 2026-08-20 19:04:32 UTC)
 - code_review_homolog_pr: 265 (Code Review aprovou e mergeou `desenv→homolog` via `gh pr merge 265 --merge`, commit `7d343cd`, 2026-08-20 — ver seção "Code Review — PR #265")
 - qa_status: **aprovado (2026-08-20)** — ver `relatorio-qa.md`
+- closedAt: 2026-08-20T19:04:37Z
 
 ## Resumo da demanda
 Escopo restrito aos itens 1-3 do pedido original (item 4 — busca inteligente — virou Issue #260,
@@ -227,10 +228,14 @@ ou trade-off de infraestrutura. Seguiu direto para o **Líder Técnico**.
   também arquivos de teste não tocados por #230); o type-check real do `next build` passou.
 - Containers de validação (`db`, `api`, `website`) parados (`docker compose stop`) ao final.
 
-## PR Release (LT, 2026-08-20)
+## PR Release + Gate 2 (2026-08-20)
 - Criado `homolog→main` #266 — https://github.com/DQM-BETA/omuletachou/pull/266 (merge commit,
   NUNCA squash), referenciando Issue #230, sub-issues #261/#262, PR de Code Review #265 e
-  `relatorio-qa.md`. Aguardando **Gate 2** (aprovação do Gerente) — não mesclado por este agente.
+  `relatorio-qa.md`.
+- **Gate 2 aprovado pelo Gerente** (2026-08-20 19:04:32 UTC)
+- Merge `homolog→main` executado: `gh pr merge 266 --merge` (merge commit `9aedc95`,
+  2026-08-20T19:04:32Z).
+- Issue #230 fechada com reason `completed` (2026-08-20T19:04:37Z).
 - Reconciliação de `estado.md`: os commits de Code Review (`code_review_homolog_pr: 265` e seção
   "Code Review — PR #265") foram feitos em `desenv` (commit `ea7086a`) enquanto o QA validava a
   partir de `homolog` (working tree local, sem esse commit) — divergência esperada entre branches,
@@ -263,14 +268,20 @@ ou trade-off de infraestrutura. Seguiu direto para o **Líder Técnico**.
   o QA não consultou por trabalhar a partir de `homolog`. Campo `code_review_homolog_pr: 265` e a
   seção "Code Review — PR #265" confirmados e reconciliados neste commit.
 
-## Custo (ledger)
+## Consolidação de Custo (2026-08-20, Gate 2 + Encerramento)
+- Issue criada: 2026-08-19 13:29:32 UTC
+- Issue fechada: 2026-08-20 19:04:37 UTC
+- **Tempo decorrido total:** 29h 35m 5s (1 dia, 5 horas, 35 minutos, 5 segundos)
+- **Observação:** O ledger da sessão principal não foi preenchido com dados de tokens/modelo por etapa (pendente de consolidação no HANDOFF de cada worker). A tabela abaixo aguarda atualização:
+
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|---|---|---|---|---|---|
-| 1 | PM Fase 1 | pm-analista-negocios | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
-| 2 | PM Fase 2 | pm-analista-negocios | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
-| 3 | Refinamento Técnico | lider-tecnico | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
-| 4 | Merge #263 + tentativa #264 (bloqueado) | lider-tecnico | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
-| 5 | Merge #264 + PR desenv→homolog | lider-tecnico | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
-| 6 | Code Review (PR #265) | code-review | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
-| 7 | QA | qa | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
-| 8 | PR release (homolog→main #266) | lider-tecnico | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
+| 1 | PM Fase 1 | pm-analista-negocios | Sonnet | (preencher) | - | - |
+| 2 | PM Fase 2 | pm-analista-negocios | Sonnet | (preencher) | - | - |
+| 3 | Refinamento Técnico | lider-tecnico | Sonnet | (preencher) | - | - |
+| 4 | Merge #263 + tentativa #264 (bloqueado) | lider-tecnico | Sonnet | (preencher) | - | - |
+| 5 | Merge #264 + PR desenv→homolog | lider-tecnico | Sonnet | (preencher) | - | - |
+| 6 | Code Review (PR #265) | code-review | Sonnet | (preencher) | - | - |
+| 7 | QA | qa | Sonnet | (preencher) | - | - |
+| 8 | Gate 2 + Encerramento | coordenador | Haiku | (preencher) | - | - |
+| | **TOTAIS** | | | **TBD** | | **TBD** |
