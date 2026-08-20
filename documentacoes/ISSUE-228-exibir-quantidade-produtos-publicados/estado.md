@@ -1,8 +1,8 @@
 ---
 issue: 228
 titulo: feat: relatório de produtos com filtros (categoria/plataforma/status) na tela Reports
-etapa_atual: Code Review
-ultimo_agente: lider-tecnico (merge PR #251 — correção CR, 2026-08-20)
+etapa_atual: QA
+ultimo_agente: code-review (aprovado PR #250, merge desenv→homolog, 2026-08-20)
 openspec_change: openspec/changes/issue-228-relatorio-produtos-filtros
 tech_stacks: [dotnet, angular]
 repos:
@@ -15,7 +15,7 @@ desenv_tasks_merged: ["#242", "#243", "#244", "#245"]
 sub_issues_frontend: {"#245": "T-04"}
 pr_homologacao: 250
 pr_release: ~
-code_review_homolog_pr: correção mergeada (PR #251 → desenv, squash, 2026-08-20) — PR #250 (desenv→homolog) absorveu o commit automaticamente (mesma branch desenv), permanece aberto, CLEAN/MERGEABLE com 18 commits. Aguardando reavaliação do Code Review.
+code_review_homolog_pr: 250 — APROVADO na 2ª rodada (2026-08-20), merge commit desenv→homolog concluído (oid 5f639ad)
 qa_status: ~
 figma_url: ~
 blockers: ~
@@ -106,7 +106,7 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 - PR de promoção `desenv→homolog` criado: **#250** (merge commit, não-squash, conforme convenção de promoção entre branches de longa vida).
 - Nota de follow-up (não bloqueante) herdada do Dev de #245: mapeamento de cor por status ficou local em `reports.component.scss` (não reaproveitou `ProductsComponent`, que não tinha esse mapeamento) — Code Review avaliar se vale unificar em follow-up futuro.
 
-## Code Review — PR #250 desenv→homolog (2026-08-19) — REPROVADO
+## Code Review — PR #250 desenv→homolog (2026-08-19) — REPROVADO (1ª rodada)
 
 - Execução completa: `dotnet test` 490/490, `npm test` 172/172, `docker compose build --no-cache api dashboard` + boot real (`/health` 200), migration `AddStatusPlatformCreatedAtIndex` confirmada aplicada e índice confirmado via `psql`.
 - Integração real end-to-end contra Postgres real do container: `GET /api/reports/products/summary` e `GET /api/products` validados com filtros combinados (AND), sem-match (200/total 0), platform inválida (sem 400), 401 sem token, não-regressão de `GetProducts` sem os 4 novos params — todos ok.
@@ -153,6 +153,18 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 - PR #250 (desenv→homolog) confirmado atualizado automaticamente (mesma branch `desenv`) — 18 commits, `mergeStateStatus: CLEAN`, `mergeable: MERGEABLE`. Não foi necessário recriar o PR de promoção.
 - `etapa_atual` volta a **Code Review** — aguardando reavaliação do PR #250 com a correção incluída.
 
+## Code Review — PR #250 desenv→homolog (2026-08-20) — APROVADO (2ª rodada)
+
+- Não-regressão confirmada: `dotnet test` 490/490 (idêntico à 1ª rodada), `npm test` 179/179 (172→179, +7 testes da correção), `docker compose build --no-cache api dashboard` OK, boot real (`/health` 200, dashboard `/` 200).
+- Verificação direcionada aos 2 pontos da reprovação anterior, via Playwright contra os containers reais (login real com credenciais seed `operador@omuletachou.local`):
+  1. **Colapso mobile (§8):** viewport 375px — `mat-expansion-panel[data-testid="filters-mobile-panel"]` presente e colapsado por padrão (`aria-expanded="false"`, sem `mat-expanded`) só em mobile; ausente em desktop. Badge (`data-testid="filters-active-badge"`) ausente sem filtro, mostra `(1)`/`(2)` corretamente com 1/2 filtros aplicados contra a API real (Plataforma=MercadoLivre, Status). Screenshot de evidência tirado.
+  2. **Skeleton inicial (§4.3/§5.1):** delay artificial de 2s nas chamadas `GET /api/reports/products/summary` e `GET /api/products` via `page.route` — `products-summary-skeleton`/`products-table-skeleton` visíveis durante a espera, sem flash de "Nenhum dado"; some ao resolver, resultados reais aparecem.
+- Checklist de veto revalidado: sem `.first()`/`.nth()`/`.last()` em specs e2e (nenhum Playwright novo neste PR), sem teste-lixo (10 testes novos com asserts reais de DOM/estado), sem segredo commitado.
+- Achado não-bloqueante registrado (fora de escopo desta correção): Sidenav do Layout global não colapsa para overlay em viewport mobile (375px) — comportamento do shell, não do `ReportsComponent`; fica para avaliação futura, não bloqueia.
+- Evidência completa postada como comentário no PR: https://github.com/DQM-BETA/omuletachou/pull/250#issuecomment-5355922801
+- **Merge `desenv→homolog` (merge commit) executado**: oid `5f639adab83b3eeaccfe8c469416aa51d768f354`, `mergedAt: 2026-08-20T12:32:13Z`.
+- `etapa_atual` avança para **QA**.
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|---|---|---|---|---|---|
@@ -172,3 +184,4 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 | 13 | Líder Técnico (mapeamento falha CR, #245 reaberta) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
 | 14 | Dev Angular (correção sub-issue #245 — colapso mobile + skeleton, PR #251) | Dev Angular | sonnet-5 | ~ | ~ | ~ |
 | 15 | Líder Técnico (merge PR #251 → desenv; confirma PR #250 atualizado) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
+| 16 | Code Review (PR #250 desenv→homolog, 2ª rodada) — APROVADO, merge homolog | Code Review | sonnet-5 | ~ | ~ | ~ |
