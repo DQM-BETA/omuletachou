@@ -2,7 +2,7 @@
 issue: 229
 titulo: 'feat: exibir tag pequena de plataforma de origem nos cards de produto do site público'
 etapa_atual: Em Desenvolvimento
-ultimo_agente: lider-tecnico
+ultimo_agente: ux-ui
 openspec_change: repos/omuletachou/openspec/changes/issue-229-exibir-tag-plataforma
 tech_stacks: [dotnet, nextjs]
 repos:
@@ -43,3 +43,4 @@ rota: normal
   - Dependência: integração completa (T-02 consumindo o campo real da API) depende de T-01 mergeado; desenvolvimento/testes unitários de T-02 seguem em paralelo com mocks.
 - **UX/UI necessário:** demanda envolve UI (texto exato + estilo da tag, consultando o design system do Figma) — sinalizado no HANDOFF (`proximo: UX/UI`) antes dos devs, conforme instrução do Gerente.
 - Docs escritas: `openspec_path/design.md` (resumido, LT), `docs_path/especificacao-tecnica.md`, `openspec_path/tasks.md` (T-01/T-02).
+- **UX/UI concluído (2026-08-20):** `ux-ui-spec.md` escrito. Decisões: tag de texto neutra (sem distinção de cor por plataforma), nome completo ("Amazon", "Mercado Livre", "Shopee"), posicionada em linha própria acima do bloco de preço (evita aperto em mobile), oculta quando `platform` ausente/não mapeado, não interativa. Usa tokens já existentes em `deal-card.css`. Comentário: https://github.com/DQM-BETA/omuletachou/issues/254#issuecomment-5357731168
