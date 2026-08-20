@@ -59,6 +59,18 @@ describe('FilterBar', () => {
     expect(screen.queryByRole('dialog', { name: 'Filtros' })).not.toBeInTheDocument();
   });
 
+  it('CA 1.1/1.2: não exibe o seletor de desconto mínimo no drawer mobile nem gera pílula/estado para ele', () => {
+    setSearchParams('minDiscount=30');
+    render(<FilterBar categories={categories} />);
+    openDrawer();
+
+    expect(screen.queryByText('Desconto mínimo')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^\d+%\+$/ })).not.toBeInTheDocument();
+    // `minDiscount` na URL não gera pílula nem conta como filtro ativo (código órfão removido).
+    expect(screen.queryByText(/OFF\+/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Limpar filtros' })).toBeDisabled();
+  });
+
   it('CA 7.1: dropdown de subcategoria fica desabilitado até escolher uma categoria', () => {
     render(<FilterBar categories={categories} />);
     openDrawer();
@@ -91,18 +103,6 @@ describe('FilterBar', () => {
     expect(params.get('subcategory')).toBeNull();
   });
 
-  it('combinação de filtros: categoria já ativa + novo desconto mínimo gera querystring com ambos', () => {
-    setSearchParams('category=Eletr%C3%B4nicos');
-    render(<FilterBar categories={categories} />);
-    openDrawer();
-
-    fireEvent.click(screen.getByRole('button', { name: '30%+' }));
-
-    const params = lastPushedParams();
-    expect(params.get('category')).toBe('Eletrônicos');
-    expect(params.get('minDiscount')).toBe('30');
-  });
-
   it('combinação de filtros: subcategoria habilitada após categoria, gera category+subcategory juntos', () => {
     setSearchParams('category=Eletr%C3%B4nicos');
     render(<FilterBar categories={categories} />);
@@ -117,20 +117,6 @@ describe('FilterBar', () => {
     const params = lastPushedParams();
     expect(params.get('category')).toBe('Eletrônicos');
     expect(params.get('subcategory')).toBe('Celulares');
-  });
-
-  it('botão de desconto mínimo funciona como toggle (clicar de novo remove o filtro)', () => {
-    setSearchParams('minDiscount=10');
-    render(<FilterBar categories={categories} />);
-    openDrawer();
-
-    const button = screen.getByRole('button', { name: '10%+' });
-    expect(button).toHaveAttribute('aria-pressed', 'true');
-
-    fireEvent.click(button);
-
-    const params = lastPushedParams();
-    expect(params.get('minDiscount')).toBeNull();
   });
 
   it('trocar a ordenação atualiza o parâmetro sort sem exigir o drawer aberto', () => {
@@ -160,8 +146,8 @@ describe('FilterBar', () => {
     expect(screen.getByRole('button', { name: 'Limpar filtros' })).toBeDisabled();
   });
 
-  it('"Limpar filtros" reseta category/subcategory/preço/desconto mas preserva sort', () => {
-    setSearchParams('category=Eletr%C3%B4nicos&subcategory=Celulares&minPrice=100&maxPrice=500&minDiscount=30&sort=price_asc');
+  it('"Limpar filtros" reseta category/subcategory/preço mas preserva sort', () => {
+    setSearchParams('category=Eletr%C3%B4nicos&subcategory=Celulares&minPrice=100&maxPrice=500&sort=price_asc');
     render(<FilterBar categories={categories} />);
     openDrawer();
 
@@ -172,24 +158,24 @@ describe('FilterBar', () => {
     expect(params.get('subcategory')).toBeNull();
     expect(params.get('minPrice')).toBeNull();
     expect(params.get('maxPrice')).toBeNull();
-    expect(params.get('minDiscount')).toBeNull();
     expect(params.get('sort')).toBe('price_asc');
   });
 
   it('exibe pílulas dos filtros ativos e remove individualmente', () => {
-    setSearchParams('category=Eletr%C3%B4nicos&minDiscount=30');
+    setSearchParams('category=Eletr%C3%B4nicos&minPrice=100&maxPrice=500');
     render(<FilterBar categories={categories} />);
 
     const pills = screen.getByText('Eletrônicos').closest('.filter-bar__pill');
     expect(pills).toBeInTheDocument();
-    expect(screen.getByText('30% OFF+')).toBeInTheDocument();
+    expect(screen.getByText('R$ 100 – R$ 500')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Remover filtro Eletrônicos' }));
 
     const params = lastPushedParams();
     expect(params.get('category')).toBeNull();
-    // minDiscount não deve ser afetado ao remover apenas a pílula de categoria.
-    expect(params.get('minDiscount')).toBe('30');
+    // minPrice/maxPrice não devem ser afetados ao remover apenas a pílula de categoria.
+    expect(params.get('minPrice')).toBe('100');
+    expect(params.get('maxPrice')).toBe('500');
   });
 
   it('fecha o drawer ao clicar em "Ver resultados"', () => {
@@ -204,7 +190,7 @@ describe('FilterBar', () => {
   });
 
   it('não renderiza nenhuma referência textual a plataforma (Amazon/MercadoLivre/Shopee) no DOM', () => {
-    setSearchParams('category=Eletr%C3%B4nicos&subcategory=Celulares&minDiscount=30');
+    setSearchParams('category=Eletr%C3%B4nicos&subcategory=Celulares');
     render(<FilterBar categories={categories} />);
     openDrawer();
 
@@ -256,7 +242,7 @@ describe('FilterBar', () => {
       window.matchMedia = originalMatchMedia;
     });
 
-    it('renderiza os 5 controles em linha única, sem o botão "Filtros" do resumo mobile', () => {
+    it('renderiza os 4 controles em linha única, sem o botão "Filtros" do resumo mobile e sem o filtro de desconto mínimo', () => {
       render(<FilterBar categories={categories} />);
 
       expect(screen.queryByRole('button', { name: 'Filtros' })).not.toBeInTheDocument();
@@ -264,8 +250,9 @@ describe('FilterBar', () => {
       expect(screen.getByRole('combobox', { name: 'Subcategoria' })).toBeInTheDocument();
       expect(screen.getByRole('combobox', { name: 'Ordenar por' })).toBeInTheDocument();
       expect(screen.getByRole('slider', { name: 'Preço mínimo' })).toBeInTheDocument();
-      expect(within(screen.getByTestId('filter-bar')).getByRole('button', { name: '10%+' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Limpar filtros' })).toBeInTheDocument();
+      expect(within(screen.getByTestId('filter-bar')).queryByText('Desconto mínimo')).not.toBeInTheDocument();
+      expect(within(screen.getByTestId('filter-bar')).queryByRole('button', { name: /^\d+%\+$/ })).not.toBeInTheDocument();
     });
   });
 });

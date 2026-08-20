@@ -291,50 +291,6 @@
   box-shadow: 0 0 0 6px var(--color-primary-light);
 }
 
-/* Botões de desconto mínimo */
-.filter-bar__discount-group {
-  display: flex;
-  gap: var(--space-2);
-}
-
-.filter-bar__discount-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 40px;
-  padding: 0 var(--space-3);
-  flex: 1;
-  background: var(--color-neutral-100);
-  color: var(--color-neutral-700);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-@media (hover: hover) {
-  .filter-bar__discount-btn:hover {
-    background: var(--color-neutral-200);
-  }
-}
-
-.filter-bar__discount-btn--active {
-  background: var(--color-primary);
-  color: var(--color-primary-contrast);
-  font-weight: var(--font-weight-bold);
-}
-
-@media (hover: hover) {
-  .filter-bar__discount-btn--active:hover {
-    background: var(--color-primary-dark);
-  }
-}
-
-.filter-bar__discount-btn:active {
-  background: var(--color-primary-darker);
-}
-
 /* Pílulas de filtro ativo */
 .filter-bar__active-pills {
   display: flex;
