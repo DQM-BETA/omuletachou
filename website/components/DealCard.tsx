@@ -5,9 +5,18 @@ interface DealCardProps {
   deal: Deal;
 }
 
+// Mapeamento enum -> texto de exibição (definido pelo UX/UI, ver docs_path/ux-ui-spec.md da
+// Issue #229). Nome completo, sem abreviação; nunca exibir o valor bruto do enum na tela.
+const PLATFORM_LABELS: Record<string, string> = {
+  Amazon: 'Amazon',
+  MercadoLivre: 'Mercado Livre',
+  Shopee: 'Shopee',
+};
+
 export default function DealCard({ deal }: DealCardProps) {
   const hasDiscount = deal.discountPct > 0;
   const imageUrl = resolveDealImageUrl(deal);
+  const platformLabel = deal.platform ? PLATFORM_LABELS[deal.platform] : undefined;
 
   return (
     <article className="deal-card" data-testid="deal-card">
@@ -30,10 +39,17 @@ export default function DealCard({ deal }: DealCardProps) {
       <h3 className="deal-card__title">{deal.title}</h3>
 
       <div className="deal-card__price">
-        <span className="deal-card__price-current">{formatPriceBRL(deal.salePrice)}</span>
-        {hasDiscount && (
-          <span className="deal-card__price-strike">{formatPriceBRL(deal.originalPrice)}</span>
+        {platformLabel && (
+          <span className="deal-card__platform" data-testid="platform-tag">
+            {platformLabel}
+          </span>
         )}
+        <div className="deal-card__price-row">
+          <span className="deal-card__price-current">{formatPriceBRL(deal.salePrice)}</span>
+          {hasDiscount && (
+            <span className="deal-card__price-strike">{formatPriceBRL(deal.originalPrice)}</span>
+          )}
+        </div>
       </div>
 
       {deal.affiliateLink ? (
