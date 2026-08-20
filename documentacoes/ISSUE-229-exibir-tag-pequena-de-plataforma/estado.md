@@ -1,8 +1,8 @@
 ---
 issue: 229
 titulo: 'feat: exibir tag pequena de plataforma de origem nos cards de produto do site público'
-etapa_atual: Aguardando Gate 2
-ultimo_agente: lt
+etapa_atual: Concluído
+ultimo_agente: coordenador
 openspec_change: repos/omuletachou/openspec/changes/issue-229-exibir-tag-plataforma
 tech_stacks: [dotnet, nextjs]
 repos:
@@ -19,8 +19,10 @@ code_review_homolog_pr: 257 (aprovado 2ª rodada, merge commit 89beab1aeba9910d2
 qa_status: aprovado
 figma_url: ~
 blockers: nenhum
-status_comment_id: ~
+status_comment_id: 5359472824
 rota: normal
+createdAt: 2026-08-19T13:22:54Z
+closedAt: 2026-08-20T17:33:25Z
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -112,3 +114,9 @@ Demais pontos do PR (backend #253, testes, build/boot via docker compose, integr
 - PR criado: `homolog→main`, merge commit (nunca squash) — https://github.com/DQM-BETA/omuletachou/pull/259 — referencia Issue #229, sub-issues #253/#254, PR #257, `relatorio-qa.md`.
 - **Não mesclado** — aguardando aprovação humana do Gerente (Gate 2).
 - `etapa_atual` atualizado para `Aguardando Gate 2`.
+
+### Gate 2 aprovado e merge executado (2026-08-20)
+- Merge `homolog→main` via merge commit (não squash): PR #259 mergeado em 2026-08-20 17:33:24Z.
+- Issue #229 auto-fechada (via `Closes #229` no corpo do PR).
+- Consolidação de custo: tabelas de status e custo postadas como comentários na Issue.
+- `etapa_atual` atualizado para `Concluído`.
