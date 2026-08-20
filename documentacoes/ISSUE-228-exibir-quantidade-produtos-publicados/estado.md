@@ -1,8 +1,8 @@
 ---
 issue: 228
 titulo: feat: relatório de produtos com filtros (categoria/plataforma/status) na tela Reports
-etapa_atual: QA
-ultimo_agente: code-review (aprovado PR #250, merge desenv→homolog, 2026-08-20)
+etapa_atual: Aguardando PR release (LT)
+ultimo_agente: qa (aprovado, 2026-08-20)
 openspec_change: openspec/changes/issue-228-relatorio-produtos-filtros
 tech_stacks: [dotnet, angular]
 repos:
@@ -16,7 +16,7 @@ sub_issues_frontend: {"#245": "T-04"}
 pr_homologacao: 250
 pr_release: ~
 code_review_homolog_pr: 250 — APROVADO na 2ª rodada (2026-08-20), merge commit desenv→homolog concluído (oid 5f639ad)
-qa_status: ~
+qa_status: aprovado
 figma_url: ~
 blockers: ~
 status_comment_id: ~
@@ -165,6 +165,15 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 - **Merge `desenv→homolog` (merge commit) executado**: oid `5f639adab83b3eeaccfe8c469416aa51d768f354`, `mergedAt: 2026-08-20T12:32:13Z`.
 - `etapa_atual` avança para **QA**.
 
+## QA — aprovado (2026-08-20)
+- Branch `homolog` sincronizada (`git fetch` + `checkout` + `pull`); commit `5f639ad` (merge PR #250) confirmado presente via `git log`.
+- `dotnet test`: 490/490. `npm test` (Angular): 179/179. `tsc --noEmit` do código de app: 0 erros (3 erros pré-existentes em arquivos de e2e/config, fora do escopo desta issue).
+- `docker compose build --no-cache api dashboard` a partir de `homolog` + `docker compose up -d db api dashboard`: build e boot reais ok, `/health` 200, índice `IX_products_status_platform_createdat` confirmado via `psql` no Postgres real.
+- Validação integrada real: login real (JWT), `GET /api/reports/products/summary` e `GET /api/products` exercitados contra dados reais (105 Published, breakdown por categoria/plataforma/status/subcategoria, filtros combinados AND, sem-match 200/total 0, não-regressão de `GetProducts` sem os 4 novos params). UI real via Playwright (login real, dados reais, imagem Docker de `homolog`): filtro de Categoria aplicado bate exatamente com a API (Total 17); "Limpar filtros" volta a 105; combinação sem resultado mostra estado vazio limpo; falha de rede simulada mostra erro claro + retry sem dado antigo; painel mobile (`mat-expansion-panel`) colapsado por padrão com badge de contagem confirmado via DOM real (ausente em desktop) — os 2 achados do Code Review anterior (colapso mobile, skeleton) confirmados corrigidos.
+- Gate visual: `npm run test:visual` (Playwright) rodado com `STAGING_URL` apontando para a imagem Docker real de `homolog` e `SCREENSHOTS_DIR={docs_path}/screenshots` — 8/8 passando, PNGs arquivados em `documentacoes/ISSUE-228-exibir-quantidade-produtos-publicados/screenshots/`. Header/sidenav únicos em todas as telas, sem duplicação, layout condizente com `ux-ui-spec.md`.
+- Todos os 16 cenários Given/When/Then de `criterios-aceite.md` (grupos 1–5) validados com evidência de execução real. Nenhuma issue encontrada. Relatório completo: `documentacoes/ISSUE-228-exibir-quantidade-produtos-publicados/relatorio-qa.md`.
+- Stack Docker derrubada (`docker compose down`) ao final da validação.
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|---|---|---|---|---|---|
@@ -185,3 +194,4 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 | 14 | Dev Angular (correção sub-issue #245 — colapso mobile + skeleton, PR #251) | Dev Angular | sonnet-5 | ~ | ~ | ~ |
 | 15 | Líder Técnico (merge PR #251 → desenv; confirma PR #250 atualizado) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
 | 16 | Code Review (PR #250 desenv→homolog, 2ª rodada) — APROVADO, merge homolog | Code Review | sonnet-5 | ~ | ~ | ~ |
+| 17 | QA (validação integrada real — APROVADO) | QA | sonnet-5 | ~ | ~ | ~ |
