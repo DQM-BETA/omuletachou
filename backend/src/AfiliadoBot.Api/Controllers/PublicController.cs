@@ -26,10 +26,12 @@ namespace AfiliadoBot.Api.Controllers;
 public class PublicController : ControllerBase
 {
     private readonly AfiliadoBotDbContext _db;
+    private readonly ProductSearchService _searchService;
 
-    public PublicController(AfiliadoBotDbContext db)
+    public PublicController(AfiliadoBotDbContext db, ProductSearchService searchService)
     {
         _db = db;
+        _searchService = searchService;
     }
 
     /// <summary>
@@ -42,6 +44,13 @@ public class PublicController : ControllerBase
     /// filtros de range de preco/desconto, sort por ultimo) segue a ordem das colunas dos 5
     /// indices compostos criados na Issue #168 (design.md secao 4.2), para o planner do Postgres
     /// poder aproveitar o indice composto correto por combinacao de filtro+sort.
+    /// Issue #260 (sub-issue #268, design.md secao 2.5/§3, especificacao-tecnica.md secao 3): novo
+    /// parametro opcional <c>q</c> — busca textual em 2 estagios (full-text, com fallback trigram
+    /// so quando o estagio 1 nao acha nada) sobre titulo/categoria/descricao. Quando <c>q</c> e
+    /// relevante (>= <see cref="SearchConstants.MinQueryLength"/> caracteres apos Trim), o
+    /// parametro <c>sort</c> e ignorado — a ordenacao passa a ser sempre por relevancia
+    /// (ts_rank/combined_score desc). <c>q</c> irrelevante (ausente/vazio/curto) preserva 100% do
+    /// comportamento atual (CA 1.2, nao-regressao).
     /// </summary>
     [HttpGet]
     public async Task<ActionResult<PagedResult<PublicDealDto>>> GetDeals(
@@ -49,6 +58,7 @@ public class PublicController : ControllerBase
         [FromQuery] string? category, [FromQuery] string? subcategory,
         [FromQuery] decimal? minPrice, [FromQuery] decimal? maxPrice,
         [FromQuery] decimal? minDiscount, [FromQuery] string? sort,
+        [FromQuery] string? q,
         CancellationToken ct)
     {
         var query = _db.Products.Where(p => p.Status == ProductStatus.Published);
@@ -63,6 +73,12 @@ public class PublicController : ControllerBase
             query = query.Where(p => p.SalePrice <= maxPrice.Value);
         if (minDiscount.HasValue)
             query = query.Where(p => p.DiscountPct >= minDiscount.Value);
+
+        if (ProductSearchService.IsRelevant(q))
+        {
+            var (paged, isApproximateSearch) = await _searchService.SearchAsync(query, q!, page, pageSize, ct);
+            return Ok(ToDtoPagedResult(paged, isApproximateSearch));
+        }
 
         var ordered = sort switch
         {
@@ -123,6 +139,18 @@ public class PublicController : ControllerBase
         IQueryable<Domain.Entities.Product> query, int? page, int? pageSize, CancellationToken ct)
     {
         var paged = await query.ToPagedResultAsync(page, pageSize, ct);
+        return ToDtoPagedResult(paged, isApproximateSearch: null);
+    }
+
+    /// <summary>
+    /// Issue #260 (sub-issue #268): variante sincrona reaproveitada pelo caminho de busca (<c>q</c>
+    /// relevante), que ja recebe o <c>PagedResult&lt;Product&gt;</c> materializado por
+    /// <see cref="ProductSearchService.SearchAsync"/> — propaga <paramref name="isApproximateSearch"/>
+    /// (null quando <c>q</c> nao foi usado, ver <see cref="ToDtoPagedResultAsync"/>).
+    /// </summary>
+    private PagedResult<PublicDealDto> ToDtoPagedResult(
+        PagedResult<Domain.Entities.Product> paged, bool? isApproximateSearch)
+    {
         var items = paged.Items.Select(p => PublicDealDto.FromProduct(p, Request)).ToList();
 
         return new PagedResult<PublicDealDto>
@@ -131,6 +159,7 @@ public class PublicController : ControllerBase
             Page = paged.Page,
             PageSize = paged.PageSize,
             TotalItems = paged.TotalItems,
+            IsApproximateSearch = isApproximateSearch,
         };
     }
 }

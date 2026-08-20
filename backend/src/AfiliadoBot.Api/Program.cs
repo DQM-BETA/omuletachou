@@ -35,6 +35,10 @@ builder.Services.AddControllers();
 builder.Services.AddDbContext<AfiliadoBotDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Issue #260 (sub-issue #268): busca textual em 2 estagios de PublicController.GetDeals — sem
+// estado, registrado igual ao precedente CollectorJob (concreto, sem interface dedicada).
+builder.Services.AddScoped<AfiliadoBot.Api.Public.ProductSearchService>();
+
 // Autenticacao JWT (Issue #11 / Sub-A). Fail-fast se a chave de assinatura estiver
 // ausente/vazia em QUALQUER ambiente — nunca sobe com uma chave fraca/default silenciosa
 // (especificacao-tecnica.md §2). Em Development, o valor vem de appsettings.Development.json
