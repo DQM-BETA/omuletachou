@@ -1,7 +1,7 @@
 ---
 issue: 229
 titulo: 'feat: exibir tag pequena de plataforma de origem nos cards de produto do site público'
-etapa_atual: Em Desenvolvimento
+etapa_atual: Code Review
 ultimo_agente: lider-tecnico
 openspec_change: repos/omuletachou/openspec/changes/issue-229-exibir-tag-plataforma
 tech_stacks: [dotnet, nextjs]
@@ -11,11 +11,11 @@ repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-229-exibir-tag-pequena-de-plataforma
 openspec_path: repos/omuletachou/openspec/changes/issue-229-exibir-tag-plataforma
 sub_issues: ['#253 (stack:dotnet, task_id:T-01)', '#254 (stack:nodejs, task_id:T-02)']
-desenv_tasks_merged: ['#253']
-sub_issues_frontend: {'#254': 'REABERTA — correção implementada em DealDetail.tsx (gap CA3); PR novo #258 feature→desenv aguardando merge do LT; PR #256 anterior (DealCard.tsx) já mergeado e aprovado'}
+desenv_tasks_merged: ['#253', '#254']
+sub_issues_frontend: {'#254': 'Corrigida e fechada novamente (2026-08-20) — PR #258 mergeado (squash) em desenv, cobre gap do DealDetail.tsx (CA3)'}
 pr_homologacao: 257
 pr_release: ~
-code_review_homolog_pr: REPROVADO (2026-08-20) — ver notas
+code_review_homolog_pr: pendente — nova rodada necessária no PR #257 após correção do #254 (PR #258 mergeado)
 qa_status: ~
 figma_url: ~
 blockers: nenhum
@@ -32,6 +32,7 @@ rota: normal
 | 5 | Code Review PR #257 (reprovado) | Code Review | sonnet-5 | ~ | ~ | ~ |
 | 6 | Mapeamento de falha (LT) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
 | 7 | Correção #254 (Dev, DealDetail.tsx) | Dev Node.js | sonnet-5 | ~ | ~ | ~ |
+| 8 | Merge PR #258 (correção #254) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
 
 ## Notas
 - **Rota:** promovida de `backlog` para `normal` pelo Gerente no Gate 1 (2026-08-20) — segue o pipeline completo a partir daqui.
@@ -68,5 +69,11 @@ Demais pontos do PR (backend #253, testes, build/boot via docker compose, integr
 - `website/components/DealDetail.test.tsx`: novos testes espelhando `DealCard.test.tsx` (CA 3, 4, 5, 7, 8) + teste garantindo que a tag do produto principal não se confunde com a dos relacionados.
 - `npm test`: 117/117 passando (suíte completa do `website/`), 0 regressão. `DealCard.tsx` e `DealDetail.tsx`: 100% de cobertura.
 - `npx next build`: compila e type-checa sem erros (evidência de boot/build, não suposição).
-- Push feito. **PR novo** feature→desenv (o #257 desenv→homolog segue aberto e #254 já havia sido mergeada uma vez via squash): https://github.com/DQM-BETA/omuletachou/pull/258
-- Próximo passo: Líder Técnico faz merge do PR #258 em `desenv` e decide sobre o PR #257 (reaproveitar ou reemitir desenv→homolog).
+- Push feito. PR feature→desenv: https://github.com/DQM-BETA/omuletachou/pull/258
+
+### Merge da correção — PR #258 (2026-08-20)
+- LT revisou PR #258: `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`, sem checks obrigatórios pendentes. Squash-merge executado: commit `b7d8a08c57defad887f18ea38747f6f7f07e766a`.
+- Sub-issue #254 fechada novamente (`gh issue close 254 --reason completed`).
+- PR #257 (`desenv→homolog`) reaproveitado (não recriado) — já absorveu o novo commit automaticamente (`headRefName: desenv`). Confirmado: último commit do PR #257 = `b7d8a08c...` (mesmo commit do merge #258), `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`.
+- `desenv_tasks_merged` atualizado para `['#253', '#254']` — todas as sub-issues concluídas novamente.
+- `etapa_atual` atualizado para `Code Review` — PR #257 pronto para nova rodada de Code Review.
