@@ -23,6 +23,8 @@
 - #262 (stack:nodejs, task_id:T-02) — Corrigir bug do slider de preço + digitar min/max (itens 2+3)
 - sub_issues_frontend: {}
 - desenv_tasks_merged: []
+- pr_261_feature_desenv: https://github.com/DQM-BETA/omuletachou/pull/263 (aberto, aguardando merge do LT)
+- pr_262_feature_desenv: https://github.com/DQM-BETA/omuletachou/pull/264 (aberto, aguardando merge do LT — fundir DEPOIS do #263, mesmo arquivo)
 - pr_homologacao: ~
 - pr_release: ~
 - code_review_homolog_pr: ~
@@ -74,6 +76,52 @@ ou trade-off de infraestrutura. Seguiu direto para o **Líder Técnico**.
   raiz do bug + decisões de correção)
 - `documentacoes/ISSUE-230-revisar-filtros-site-publico/especificacao-tecnica.md` (LT)
 - `openspec/changes/issue-230-revisar-filtros-site-publico/tasks.md` (LT — T-01, T-02)
+
+## Implementação — T-01 / Sub-issue #261 (concluída pelo Dev, 2026-08-20)
+- Branch `feature/ISSUE-261-remover-desconto-minimo` (worktree
+  `.worktrees/feature-ISSUE-261-remover-desconto-minimo`), base `desenv`.
+- PR feature→desenv: #263 — https://github.com/DQM-BETA/omuletachou/pull/263 (aberto, aguardando
+  merge do LT).
+- Removido o seletor "Desconto mínimo" de `FilterBar.tsx` + código órfão (state, handler, CSS,
+  referências em `page.tsx`/`lib/api.ts`) — checklist da especificação técnica cumprido
+  integralmente; grep confirmou ausência de qualquer referência residual a `minDiscount` fora do
+  teste de regressão dedicado.
+- Testes: 116/116 passando (100%), cobertura de `FilterBar.tsx` 92%/`page.tsx` 100% linhas/`api.ts`
+  100% (threshold do projeto é 80%). `npm run build` sucesso; `npm start` inicializa sem erro.
+- Sem ambiguidade/dúvida técnica — não precisou de decisão de arquitetura.
+- T-02 (sub-issue #262) segue pendente, mesmo arquivo (`FilterBar.tsx`) em região diferente
+  (`PriceGroup`) — LT funde sequencialmente conforme nota de dependência em `tasks.md`.
+
+## Implementação — T-02 / Sub-issue #262 (concluída pelo Dev, 2026-08-20)
+- Branch `feature/ISSUE-262-fix-slider-preco-minmax` (worktree
+  `.worktrees/feature-ISSUE-262-fix-slider-preco-minmax`), base `desenv`.
+- PR feature→desenv: #264 — https://github.com/DQM-BETA/omuletachou/pull/264 (aberto, aguardando
+  merge do LT — fundir **depois** do #263, mesmo arquivo `FilterBar.tsx`, regiões diferentes).
+- Causa raiz confirmada empiricamente (não só por tracing estático do LT): teste e2e Playwright
+  (`e2e/filter-bar-price.spec.ts`) rodado contra o app real (`npm run dev`) + API real (docker
+  compose local, dados reais do catálogo) confirma que 150 eventos `input` em sucessão apertada
+  no slider não navegam mais para a página de erro (CA 2.4).
+- Fix: estado local de rascunho (`minDraft`/`maxDraft`) desacoplado da URL a cada evento; commit
+  via `router.replace` ao soltar o gesto e/ou debounce de 250ms; clamp `min<=max` defensivo;
+  `website/app/error.tsx` como defesa em profundidade.
+- Campos numéricos min/max digitáveis, sincronizados bidirecionalmente com o slider, com
+  validação completa (CA 3.4-3.7).
+- **Bug arquitetural latente encontrado e corrigido durante o TDD** (fora do escopo original,
+  mas bloqueava a própria correção): `PriceGroup` era um componente aninhado
+  (`function PriceGroup() {}` declarado dentro do corpo de `FilterBar`) — o React desmonta/
+  remonta essa subárvore inteira a cada re-render do pai (nova identidade de função), o que
+  destruía o `<input type="range">` a cada `onChange` (perda de foco/pointer capture nativo) e
+  impedia o `onBlur` dos campos de texto de disparar. Convertido para valor JSX estável
+  (`const priceGroup = (...)`), mesmo padrão já usado em `groupCategory`/`groupSubcategory`/
+  `groupSort`. Não mexido em `DiscountGroup`/`Dropdown` (mesmo padrão, mas fora do escopo de
+  T-02 — região de T-01, sem overlap funcional).
+- Testes: 131/131 Jest passando (100%, suíte completa sem regressão), cobertura global 92.5%
+  stmts / 88.8% branch (threshold do projeto 80%). 13 casos novos em `FilterBar.test.tsx`
+  (CA 2.1-2.4, 3.1-3.7) + 3 em `app/error.test.tsx`. e2e: 4/4 novos + 5/5 existentes
+  (`visual.spec.ts`) passando contra app real. `npm run build` (corrigido 1 erro de lint
+  `prefer-const` encontrado só no build) e `npm start` sem erro.
+- Sem ambiguidade/dúvida técnica — não precisou de decisão de arquitetura além da correção do
+  bug de nested component (aplicação direta do padrão já existente no próprio arquivo).
 
 ## Notas
 - Diretório duplicado `documentacoes/ISSUE-230-revisar-filtros-site-público/` (com acento) —
