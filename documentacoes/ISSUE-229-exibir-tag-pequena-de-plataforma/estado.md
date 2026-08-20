@@ -1,8 +1,8 @@
 ---
 issue: 229
 titulo: 'feat: exibir tag pequena de plataforma de origem nos cards de produto do site público'
-etapa_atual: Aguardando PR release (LT)
-ultimo_agente: qa
+etapa_atual: Aguardando Gate 2
+ultimo_agente: lt
 openspec_change: repos/omuletachou/openspec/changes/issue-229-exibir-tag-plataforma
 tech_stacks: [dotnet, nextjs]
 repos:
@@ -14,7 +14,7 @@ sub_issues: ['#253 (stack:dotnet, task_id:T-01)', '#254 (stack:nodejs, task_id:T
 desenv_tasks_merged: ['#253', '#254']
 sub_issues_frontend: {'#254': 'Corrigida e fechada novamente (2026-08-20) — PR #258 mergeado (squash) em desenv, cobre gap do DealDetail.tsx (CA3)'}
 pr_homologacao: 257
-pr_release: ~
+pr_release: 259
 code_review_homolog_pr: 257 (aprovado 2ª rodada, merge commit 89beab1aeba9910d27ab18dedb98fbe587148733 — desenv→homolog)
 qa_status: aprovado
 figma_url: ~
@@ -35,6 +35,7 @@ rota: normal
 | 8 | Merge PR #258 (correção #254) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
 | 9 | Code Review PR #257 (2ª rodada, aprovado) | Code Review | sonnet-5 | ~ | ~ | ~ |
 | 10 | QA (aprovado) | QA | sonnet-5 | ~ | ~ | ~ |
+| 11 | PR release homolog→main (LT) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
 
 ## Notas
 - **Rota:** promovida de `backlog` para `normal` pelo Gerente no Gate 1 (2026-08-20) — segue o pipeline completo a partir daqui.
@@ -105,3 +106,9 @@ Demais pontos do PR (backend #253, testes, build/boot via docker compose, integr
 - Nenhuma mutação residual no Postgres (contagem de status idêntica antes/depois). Stack derrubada ao final.
 - Relatório completo: `docs_path/relatorio-qa.md`.
 - **Todos os 8 critérios de aceite aprovados.** `etapa_atual` atualizado para `Aguardando PR release (LT)`.
+
+### PR release homolog→main — #259 (2026-08-20)
+- Confirmado `desenv` 2 commits à frente de `homolog` (docs do QA: `relatorio-qa.md`, `screenshots/`, `estado.md`), já commitados em `desenv` (commit `2855dea`) — nada a commitar antes do PR.
+- PR criado: `homolog→main`, merge commit (nunca squash) — https://github.com/DQM-BETA/omuletachou/pull/259 — referencia Issue #229, sub-issues #253/#254, PR #257, `relatorio-qa.md`.
+- **Não mesclado** — aguardando aprovação humana do Gerente (Gate 2).
+- `etapa_atual` atualizado para `Aguardando Gate 2`.
