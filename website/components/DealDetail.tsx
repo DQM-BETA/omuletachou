@@ -1,5 +1,6 @@
 import type { Deal } from '@/lib/types';
 import { formatPriceBRL, resolveDealImageUrl } from '@/lib/format';
+import { getPlatformLabel } from '@/lib/platform';
 import DealCard from './DealCard';
 
 interface DealDetailProps {
@@ -10,6 +11,7 @@ interface DealDetailProps {
 export default function DealDetail({ deal, relatedDeals = [] }: DealDetailProps) {
   const hasDiscount = deal.discountPct > 0;
   const imageUrl = resolveDealImageUrl(deal);
+  const platformLabel = getPlatformLabel(deal.platform);
 
   return (
     <article className="deal-detail" data-testid="deal-detail">
@@ -25,6 +27,11 @@ export default function DealDetail({ deal, relatedDeals = [] }: DealDetailProps)
         </span>
 
         <div className="deal-detail__price">
+          {platformLabel && (
+            <span className="deal-card__platform" data-testid="platform-tag">
+              {platformLabel}
+            </span>
+          )}
           <span className="deal-detail__price-current">{formatPriceBRL(deal.salePrice)}</span>
           {hasDiscount && (
             <>
