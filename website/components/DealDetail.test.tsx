@@ -83,4 +83,66 @@ describe('DealDetail', () => {
     expect(screen.queryByRole('link', { name: /comprar agora/i })).not.toBeInTheDocument();
     expect(screen.getByText(/indisponível/i)).toBeInTheDocument();
   });
+
+  describe('tag de plataforma no produto principal (Issue #229, correção pós Code Review PR #257)', () => {
+    it.each([
+      ['Amazon', 'Amazon'],
+      ['MercadoLivre', 'Mercado Livre'],
+      ['Shopee', 'Shopee'],
+    ])('CA 3, 8: exibe a tag com o texto de exibição para platform=%s', (platform, label) => {
+      render(<DealDetail deal={buildDeal({ platform })} />);
+
+      const tag = screen.getByTestId('platform-tag');
+      expect(tag).toHaveTextContent(label);
+    });
+
+    it('CA 4: platform ausente (null) — tag não é renderizada', () => {
+      render(<DealDetail deal={buildDeal({ platform: null })} />);
+
+      expect(screen.queryByTestId('platform-tag')).not.toBeInTheDocument();
+    });
+
+    it('CA 4: platform ausente (undefined) — tag não é renderizada', () => {
+      render(<DealDetail deal={buildDeal({ platform: undefined })} />);
+
+      expect(screen.queryByTestId('platform-tag')).not.toBeInTheDocument();
+    });
+
+    it('CA 5: platform com valor não mapeado — tag não é renderizada e o valor cru não vaza para a tela', () => {
+      render(<DealDetail deal={buildDeal({ platform: 'Aliexpress' })} />);
+
+      expect(screen.queryByTestId('platform-tag')).not.toBeInTheDocument();
+      expect(screen.queryByText('Aliexpress')).not.toBeInTheDocument();
+    });
+
+    it('CA 7: a tag não é elemento interativo (sem href/role de link/botão/onClick)', () => {
+      render(<DealDetail deal={buildDeal({ platform: 'Amazon' })} />);
+
+      const tag = screen.getByTestId('platform-tag');
+      expect(tag.tagName).toBe('SPAN');
+      expect(tag).not.toHaveAttribute('href');
+      expect(tag).not.toHaveAttribute('onclick');
+      expect(tag).not.toHaveAttribute('tabindex');
+      expect(screen.queryByRole('link', { name: /amazon/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /amazon/i })).not.toBeInTheDocument();
+    });
+
+    it('CA 3: a tag do produto principal é distinta da tag dos relacionados (não depende de DealCard)', () => {
+      render(
+        <DealDetail
+          deal={buildDeal({ platform: 'Amazon' })}
+          relatedDeals={[
+            buildDeal({ slug: 'related-1', title: 'Related 1', platform: 'Shopee', salePrice: 49.9 }),
+          ]}
+        />
+      );
+
+      const tags = screen.getAllByTestId('platform-tag');
+      expect(tags).toHaveLength(2);
+
+      const mainPrice = screen.getByText('R$ 99,90').closest('.deal-detail__price');
+      expect(mainPrice).not.toBeNull();
+      expect(mainPrice?.querySelector('[data-testid="platform-tag"]')).toHaveTextContent('Amazon');
+    });
+  });
 });

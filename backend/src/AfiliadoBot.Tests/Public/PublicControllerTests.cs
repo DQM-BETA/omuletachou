@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -105,6 +106,7 @@ public class PublicControllerTests : IClassFixture<CustomWebApplicationFactory>
         {
             "title", "salePrice", "originalPrice", "discountPct", "affiliateLink",
             "mediaUrl", "mediaLocalPath", "slug", "category", "subcategory", "collectedAt",
+            "platform",
         };
 
         foreach (var property in item.EnumerateObject())
@@ -118,20 +120,24 @@ public class PublicControllerTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
-    public async Task GetDeals_JsonDeResposta_NuncaContemCampoPlatform()
+    public async Task GetDeals_JsonDeResposta_ContemCampoPlatformComValorCorreto()
     {
-        // CA 5.1 — assert negativo explicito: "platform" (ou equivalente) nao pode aparecer no
-        // contrato publico, mesmo que "Platform" continue existindo na entidade Product.
+        // Issue #229 (Gate 1): reversao parcial e intencional da #167 — "platform" volta a ser
+        // exposto no contrato publico, apenas como dado de exibicao (string bruta do enum, sem
+        // traducao — responsabilidade do frontend), nao mais como filtro/navegacao.
         var client = _factory.CreateClient();
         var seeded = await SeedPublishedProductAsync();
 
         var response = await client.GetAsync("/api/public/deals");
-        var json = await response.Content.ReadAsStringAsync();
-        json.Should().NotContain("platform", "Platform foi removido do contrato publico (CA 5.1)");
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var item = body.GetProperty("items")
+            .EnumerateArray()
+            .First(i => i.GetProperty("slug").GetString() == seeded.Slug);
+        item.GetProperty("platform").GetString().Should().Be("Amazon");
 
         var bySlugResponse = await client.GetAsync($"/api/public/deals/{seeded.Slug}");
-        var bySlugJson = await bySlugResponse.Content.ReadAsStringAsync();
-        bySlugJson.Should().NotContain("platform", "GetBySlug tambem usa PublicDealDto (CA 5.1)");
+        var bySlugBody = await bySlugResponse.Content.ReadFromJsonAsync<JsonElement>();
+        bySlugBody.GetProperty("platform").GetString().Should().Be("Amazon");
     }
 
     [Fact]
