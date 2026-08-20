@@ -164,6 +164,57 @@ main > p {
   }
 }
 
+/* Visualmente oculto, mas lido por leitores de tela — padrão utilitário comum, primeiro uso
+   neste projeto no `app/loading.tsx` (Issue #260, CA 2.2). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skeleton de loading (app/loading.tsx, Issue #260 CA 2.2) — reaproveita a grade `.deals-grid`
+   já existente, sem novo design system. */
+.deal-card-skeleton {
+  height: 280px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    90deg,
+    var(--color-neutral-100) 25%,
+    var(--color-neutral-200) 37%,
+    var(--color-neutral-100) 63%
+  );
+  background-size: 400% 100%;
+  animation: deals-skeleton-pulse 1.4s ease infinite;
+}
+
+@keyframes deals-skeleton-pulse {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+/* Banner de busca aproximada (Issue #260, CA 4.2) — visualmente distinto do resultado normal,
+   sem novo design system (reaproveita --color-primary-light/--color-primary-dark, mesmo par de
+   tons já usado nas pílulas de filtro ativo). */
+.deals-search-banner {
+  margin-block: var(--space-4) 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-sm);
+}
+
 .deals-empty {
   display: flex;
   flex-direction: column;
