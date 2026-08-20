@@ -70,4 +70,48 @@ describe('DealCard', () => {
     expect(screen.queryByRole('link', { name: /ver oferta/i })).not.toBeInTheDocument();
     expect(screen.getByText(/indisponível/i)).toBeInTheDocument();
   });
+
+  describe('tag de plataforma (Issue #229)', () => {
+    it.each([
+      ['Amazon', 'Amazon'],
+      ['MercadoLivre', 'Mercado Livre'],
+      ['Shopee', 'Shopee'],
+    ])('CA 1-3, 8: exibe a tag com o texto de exibição para platform=%s', (platform, label) => {
+      render(<DealCard deal={buildDeal({ platform })} />);
+
+      const tag = screen.getByTestId('platform-tag');
+      expect(tag).toHaveTextContent(label);
+    });
+
+    it('CA 4: platform ausente (null) — tag não é renderizada', () => {
+      render(<DealCard deal={buildDeal({ platform: null })} />);
+
+      expect(screen.queryByTestId('platform-tag')).not.toBeInTheDocument();
+    });
+
+    it('CA 4: platform ausente (undefined) — tag não é renderizada', () => {
+      render(<DealCard deal={buildDeal({ platform: undefined })} />);
+
+      expect(screen.queryByTestId('platform-tag')).not.toBeInTheDocument();
+    });
+
+    it('CA 5: platform com valor não mapeado — tag não é renderizada e o valor cru não vaza para a tela', () => {
+      render(<DealCard deal={buildDeal({ platform: 'Aliexpress' })} />);
+
+      expect(screen.queryByTestId('platform-tag')).not.toBeInTheDocument();
+      expect(screen.queryByText('Aliexpress')).not.toBeInTheDocument();
+    });
+
+    it('CA 7: a tag não é elemento interativo (sem href/role de link/botão/onClick)', () => {
+      render(<DealCard deal={buildDeal({ platform: 'Amazon' })} />);
+
+      const tag = screen.getByTestId('platform-tag');
+      expect(tag.tagName).toBe('SPAN');
+      expect(tag).not.toHaveAttribute('href');
+      expect(tag).not.toHaveAttribute('onclick');
+      expect(tag).not.toHaveAttribute('tabindex');
+      expect(screen.queryByRole('link', { name: /amazon/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /amazon/i })).not.toBeInTheDocument();
+    });
+  });
 });
