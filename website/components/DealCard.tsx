@@ -1,5 +1,6 @@
 import type { Deal } from '@/lib/types';
 import { formatPriceBRL, resolveDealImageUrl } from '@/lib/format';
+import { getPlatformLabel } from '@/lib/platform';
 
 interface DealCardProps {
   deal: Deal;
@@ -8,6 +9,7 @@ interface DealCardProps {
 export default function DealCard({ deal }: DealCardProps) {
   const hasDiscount = deal.discountPct > 0;
   const imageUrl = resolveDealImageUrl(deal);
+  const platformLabel = getPlatformLabel(deal.platform);
 
   return (
     <article className="deal-card" data-testid="deal-card">
@@ -30,10 +32,17 @@ export default function DealCard({ deal }: DealCardProps) {
       <h3 className="deal-card__title">{deal.title}</h3>
 
       <div className="deal-card__price">
-        <span className="deal-card__price-current">{formatPriceBRL(deal.salePrice)}</span>
-        {hasDiscount && (
-          <span className="deal-card__price-strike">{formatPriceBRL(deal.originalPrice)}</span>
+        {platformLabel && (
+          <span className="deal-card__platform" data-testid="platform-tag">
+            {platformLabel}
+          </span>
         )}
+        <div className="deal-card__price-row">
+          <span className="deal-card__price-current">{formatPriceBRL(deal.salePrice)}</span>
+          {hasDiscount && (
+            <span className="deal-card__price-strike">{formatPriceBRL(deal.originalPrice)}</span>
+          )}
+        </div>
       </div>
 
       {deal.affiliateLink ? (

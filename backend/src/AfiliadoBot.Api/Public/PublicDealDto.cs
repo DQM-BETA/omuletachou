@@ -7,12 +7,15 @@ namespace AfiliadoBot.Api.Public;
 /// DTO exposto por <c>PublicController</c> (Issue #11 / Sub-D). Contem APENAS os campos
 /// autorizados pelo Gerente no Gate 1 (CA-D2/CA-D3): Title, SalePrice, OriginalPrice,
 /// DiscountPct, AffiliateLink, MediaUrl, MediaLocalPath (como URL publica), Slug, Category,
-/// Subcategory, CollectedAt. NUNCA inclui ExternalId, AiScore, AiReason ou qualquer campo de
-/// app_settings — e um DTO explicito (nunca serializa a entidade Product diretamente).
-/// Issue #167 (CA 5.1/5.2/5.3): <c>Platform</c> foi removido deste contrato publico (higiene —
-/// a distincao de plataforma de origem nao e mais exposta ao consumidor publico). O DTO
-/// interno/dashboard (<c>ProductDtos.cs</c>, usado por <c>ProductsController</c>) NAO foi
-/// tocado e continua expondo <c>Platform</c> normalmente.
+/// Subcategory, CollectedAt, Platform. NUNCA inclui ExternalId, AiScore, AiReason ou qualquer
+/// campo de app_settings — e um DTO explicito (nunca serializa a entidade Product diretamente).
+/// Issue #167 (CA 5.1/5.2/5.3) removeu <c>Platform</c> deste contrato publico (higiene — a
+/// distincao de plataforma de origem deixou de ser exposta como filtro/navegacao). A Issue #229
+/// (Gate 1) reintroduziu o campo de forma parcial e intencional: agora ele volta como dado de
+/// exibicao (string bruta do enum, sem traducao — a tradução para texto amigavel e
+/// responsabilidade do frontend), nao mais como filtro/navegacao. O DTO interno/dashboard
+/// (<c>ProductDtos.cs</c>, usado por <c>ProductsController</c>) nunca foi tocado e sempre expos
+/// <c>Platform</c> normalmente.
 /// </summary>
 public class PublicDealDto
 {
@@ -27,6 +30,7 @@ public class PublicDealDto
     public string Category { get; init; } = string.Empty;
     public string? Subcategory { get; init; }
     public DateTime CollectedAt { get; init; }
+    public string? Platform { get; init; }
 
     /// <summary>
     /// Constroi o DTO a partir da entidade, convertendo MediaLocalPath (caminho fisico em disco,
@@ -55,6 +59,7 @@ public class PublicDealDto
             Category = product.Category,
             Subcategory = product.Subcategory,
             CollectedAt = product.CreatedAt,
+            Platform = product.Platform.ToString(),
         };
     }
 }
