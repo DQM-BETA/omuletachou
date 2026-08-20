@@ -1,3 +1,5 @@
+using System.Globalization;
+using AfiliadoBot.Api.Reports;
 using AfiliadoBot.Domain.Enums;
 using AfiliadoBot.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
@@ -95,5 +97,89 @@ public class ReportsController : ControllerBase
             week = weekCount,
             month = monthCount,
         });
+    }
+
+    /// <summary>
+    /// Issue #228/T-02: cards agregados da tela Reports (total + quebras por Plataforma/
+    /// Categoria/Status/Subcategoria) sobre o universo de produtos filtrado. Todos os filtros sao
+    /// opcionais e combinam em AND. Sem filtro de Status, o resultado NAO e restrito a Published —
+    /// o default de UX "Published quando vazio" e responsabilidade exclusiva do Angular
+    /// (design.md §2.3), nao deste endpoint. Filtro invalido (enum desconhecido) nunca retorna
+    /// 400 — apenas nao casa nenhum produto (postura defensiva ja usada em
+    /// ProductsController.GetProducts). Sem match: 200 OK, Total = 0 e as 4 listas vazias.
+    /// </summary>
+    [HttpGet("products/summary")]
+    public async Task<ActionResult<ProductsReportSummaryDto>> ProductsSummary(
+        [FromQuery] string? category,
+        [FromQuery] string? subcategory,
+        [FromQuery] string? platform,
+        [FromQuery] string? status,
+        [FromQuery] string? collectedFrom,
+        [FromQuery] string? collectedTo,
+        CancellationToken ct)
+    {
+        var query = _db.Products.AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(category))
+            query = query.Where(p => p.Category == category);
+
+        if (!string.IsNullOrWhiteSpace(subcategory))
+            query = query.Where(p => p.Subcategory == subcategory);
+
+        if (!string.IsNullOrWhiteSpace(platform))
+        {
+            query = Enum.TryParse<Platform>(platform, ignoreCase: true, out var platformFilter)
+                ? query.Where(p => p.Platform == platformFilter)
+                : query.Where(_ => false);
+        }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            query = Enum.TryParse<ProductStatus>(status, ignoreCase: true, out var statusFilter)
+                ? query.Where(p => p.Status == statusFilter)
+                : query.Where(_ => false);
+        }
+
+        // Janela [from, toExclusive) sobre CreatedAt (data de coleta, design.md §1/§2.4) —
+        // "yyyy-MM-dd" tratado como o dia UTC completo, inclusive nos dois limites (CA 2.5).
+        // Data invalida/nao parseavel e ignorada silenciosamente (mesma postura defensiva do
+        // resto do filtro, nunca 400).
+        if (!string.IsNullOrWhiteSpace(collectedFrom) &&
+            DateTime.TryParse(collectedFrom, CultureInfo.InvariantCulture, DateTimeStyles.None, out var fromParsed))
+        {
+            var from = DateTime.SpecifyKind(fromParsed.Date, DateTimeKind.Utc);
+            query = query.Where(p => p.CreatedAt >= from);
+        }
+
+        if (!string.IsNullOrWhiteSpace(collectedTo) &&
+            DateTime.TryParse(collectedTo, CultureInfo.InvariantCulture, DateTimeStyles.None, out var toParsed))
+        {
+            var toExclusive = DateTime.SpecifyKind(toParsed.Date.AddDays(1), DateTimeKind.Utc);
+            query = query.Where(p => p.CreatedAt < toExclusive);
+        }
+
+        var total = await query.CountAsync(ct);
+
+        var byPlatform = await query
+            .GroupBy(p => p.Platform)
+            .Select(g => new PlatformCountDto(g.Key.ToString(), g.Count()))
+            .ToListAsync(ct);
+
+        var byCategory = await query
+            .GroupBy(p => p.Category)
+            .Select(g => new CategoryCountDto(g.Key, g.Count()))
+            .ToListAsync(ct);
+
+        var byStatus = await query
+            .GroupBy(p => p.Status)
+            .Select(g => new StatusCountDto(g.Key.ToString(), g.Count()))
+            .ToListAsync(ct);
+
+        var bySubcategory = await query
+            .GroupBy(p => p.Subcategory)
+            .Select(g => new SubcategoryCountDto(g.Key, g.Count()))
+            .ToListAsync(ct);
+
+        return Ok(new ProductsReportSummaryDto(total, byPlatform, byCategory, byStatus, bySubcategory));
     }
 }

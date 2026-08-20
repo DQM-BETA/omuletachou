@@ -23,6 +23,8 @@ export interface ProductListItem {
   platform: Platform;
   slug: string;
   category: string;
+  /** Subcategoria do produto (Issue #228/#245, campo aditivo em ProductListItemDto). */
+  subcategory?: string | null;
   createdAt: string;
   ai_score?: number | null;
   ai_reason?: string | null;
@@ -52,6 +54,14 @@ export interface ProductDetail extends ProductListItem {
 export interface ProductsListParams {
   status?: string;
   platform?: string;
+  /** Filtro por Categoria exata (Issue #228/#245), aditivo/opcional. */
+  category?: string;
+  /** Filtro por Subcategoria exata (Issue #228/#245), aditivo/opcional. */
+  subcategory?: string;
+  /** Data de coleta inicial (`yyyy-MM-dd`, inclusive), Issue #228/#245. */
+  collectedFrom?: string;
+  /** Data de coleta final (`yyyy-MM-dd`, inclusive), Issue #228/#245. */
+  collectedTo?: string;
   page?: number;
   pageSize?: number;
 }

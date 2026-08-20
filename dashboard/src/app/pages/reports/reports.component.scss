@@ -38,3 +38,210 @@
 table {
   width: 100%;
 }
+
+// --- Relatório de produtos publicados (Issue #228/#245) ---
+
+.products-report {
+  margin-top: 32px;
+
+  h2 {
+    margin-bottom: 16px;
+  }
+}
+
+.filters-card {
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.date-tooltip-icon {
+  font-size: 16px;
+  height: 16px;
+  width: 16px;
+  vertical-align: middle;
+  cursor: help;
+  margin-left: 4px;
+}
+
+.filter-chips {
+  margin-top: 8px;
+}
+
+// --- Colapso mobile do bloco de filtros (ux-ui-spec.md §8) ---
+
+.filters-mobile-panel {
+  box-shadow: none;
+
+  ::ng-deep .mat-expansion-panel-body {
+    padding: 0 16px 16px;
+  }
+
+  .filters-row {
+    margin-top: 8px;
+  }
+}
+
+.filters-badge {
+  margin-left: 6px;
+  color: #ef5da8;
+  font-weight: 600;
+}
+
+// --- Skeleton de carregamento inicial (ux-ui-spec.md §4.3/§5.1) ---
+
+.skeleton-card {
+  height: 96px;
+  border-radius: 4px;
+}
+
+.skeleton-table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.skeleton-table-row {
+  height: 32px;
+  border-radius: 4px;
+}
+
+.shimmer {
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.06) 25%, rgba(0, 0, 0, 0.12) 37%, rgba(0, 0, 0, 0.06) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.breakdown-card mat-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.breakdown-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.breakdown-label {
+  flex: 0 0 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.breakdown-bar-track {
+  flex: 1;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.breakdown-bar-fill {
+  display: block;
+  height: 100%;
+  background-color: #5d5fef;
+  border-radius: 4px;
+}
+
+.breakdown-count {
+  flex: 0 0 auto;
+  font-weight: 600;
+}
+
+.products-table-card {
+  margin-bottom: 24px;
+}
+
+.table-wrapper {
+  position: relative;
+  overflow-x: auto;
+}
+
+.table-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.6);
+  z-index: 1;
+}
+
+.products-report-table {
+  width: 100%;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px;
+  color: rgba(0, 0, 0, 0.6);
+  text-align: center;
+}
+
+.status-success {
+  background-color: #2e7d32;
+  color: #fff;
+}
+
+.status-warning {
+  background-color: #f9a825;
+  color: #212121;
+}
+
+.status-danger {
+  background-color: #c62828;
+  color: #fff;
+}
+
+.status-neutral {
+  background-color: #607d8b;
+  color: #fff;
+}
+
+@media (max-width: 959px) {
+  .filters-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 599px) {
+  .filters-row {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-cards {
+    grid-template-columns: 1fr;
+  }
+}
