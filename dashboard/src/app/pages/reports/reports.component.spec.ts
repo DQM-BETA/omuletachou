@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 
 import { ReportsComponent } from './reports.component';
 import {
@@ -20,6 +21,7 @@ describe('ReportsComponent', () => {
   let reportsServiceSpy: jasmine.SpyObj<ReportsService>;
   let queueServiceSpy: jasmine.SpyObj<QueueService>;
   let productsServiceSpy: jasmine.SpyObj<ProductsService>;
+  let breakpointObserverSpy: jasmine.SpyObj<BreakpointObserver>;
 
   const totals: ReportsTotals = { today: 3, week: 12, month: 47 };
 
@@ -120,6 +122,7 @@ describe('ReportsComponent', () => {
     productsSummaryError?: boolean;
     productsListError?: boolean;
     categoriesError?: boolean;
+    mobile?: boolean;
   }): void {
     reportsServiceSpy = jasmine.createSpyObj('ReportsService', [
       'totals',
@@ -149,12 +152,19 @@ describe('ReportsComponent', () => {
         : of(options?.productsListResult ?? productsListResult)
     );
 
+    breakpointObserverSpy = jasmine.createSpyObj('BreakpointObserver', ['observe', 'isMatched']);
+    breakpointObserverSpy.observe.and.returnValue(of({ matches: !!options?.mobile, breakpoints: {} }));
+    breakpointObserverSpy.isMatched.and.callFake(
+      (query: string | string[]) => query === Breakpoints.Handset && !!options?.mobile
+    );
+
     TestBed.configureTestingModule({
       imports: [ReportsComponent, NoopAnimationsModule],
       providers: [
         { provide: ReportsService, useValue: reportsServiceSpy },
         { provide: QueueService, useValue: queueServiceSpy },
         { provide: ProductsService, useValue: productsServiceSpy },
+        { provide: BreakpointObserver, useValue: breakpointObserverSpy },
       ],
     });
 
@@ -532,5 +542,137 @@ describe('ReportsComponent', () => {
       expect(component.filterForm.get('category')?.value).toBe('');
       expect(component.activeFilterChips).toEqual([]);
     }));
+
+    describe('Colapso mobile do bloco de filtros (ux-ui-spec.md §8)', () => {
+      it('desktop/tablet: filtros ficam sempre expandidos, sem mat-expansion-panel', () => {
+        setup({ mobile: false });
+        fixture.detectChanges();
+
+        expect(component.isMobile).toBeFalse();
+        const compiled = fixture.nativeElement as HTMLElement;
+        expect(compiled.querySelector('[data-testid="filters-mobile-panel"]')).toBeFalsy();
+        expect(compiled.querySelector('[data-testid="products-filter-category"]')).toBeTruthy();
+      });
+
+      it('mobile (<600px): bloco de filtros fica dentro de mat-expansion-panel, colapsado por padrão', () => {
+        setup({ mobile: true });
+        fixture.detectChanges();
+
+        expect(component.isMobile).toBeTrue();
+        const compiled = fixture.nativeElement as HTMLElement;
+        const panel = compiled.querySelector('mat-expansion-panel[data-testid="filters-mobile-panel"]');
+        expect(panel).toBeTruthy();
+        expect(panel?.classList.contains('mat-expanded')).toBeFalse();
+        // Controles de filtro continuam presentes (dentro do panel), mesmo colapsado
+        expect(compiled.querySelector('[data-testid="products-filter-category"]')).toBeTruthy();
+      });
+
+      it('mobile: badge de contagem some quando não há filtro ativo', () => {
+        setup({ mobile: true });
+        fixture.detectChanges();
+
+        const compiled = fixture.nativeElement as HTMLElement;
+        expect(compiled.querySelector('[data-testid="filters-active-badge"]')).toBeFalsy();
+      });
+
+      it('mobile: badge exibe a contagem de filtros ativos (ex. "Filtros (2)")', fakeAsync(() => {
+        setup({ mobile: true });
+        fixture.detectChanges();
+
+        component.filterForm.patchValue({ category: 'Eletrônicos', platform: 'MercadoLivre' });
+        tick(150);
+        fixture.detectChanges();
+        tick(20);
+        fixture.detectChanges();
+
+        expect(component.activeFiltersCount).toBe(2);
+        const compiled = fixture.nativeElement as HTMLElement;
+        const badge = compiled.querySelector('[data-testid="filters-active-badge"]');
+        expect(badge).toBeTruthy();
+        expect(badge?.textContent).toContain('2');
+      }));
+    });
+
+    describe('Skeleton de carregamento inicial (ux-ui-spec.md §4.3/§5.1)', () => {
+      it('exibe skeleton de cards e tabela enquanto o primeiro forkJoin (summary+list) não resolve', () => {
+        setup();
+        const summarySubject = new Subject<ProductsReportSummary>();
+        const listSubject = new Subject<PagedResult<ProductListItem>>();
+        reportsServiceSpy.productsSummary.and.returnValue(summarySubject.asObservable());
+        productsServiceSpy.list.and.returnValue(listSubject.asObservable());
+
+        fixture.detectChanges();
+
+        expect(component.showInitialSkeleton).toBeTrue();
+        const compiled = fixture.nativeElement as HTMLElement;
+        expect(compiled.querySelector('[data-testid="products-summary-skeleton"]')).toBeTruthy();
+        expect(compiled.querySelector('[data-testid="products-table-skeleton"]')).toBeTruthy();
+        // Não mostra "0"/"Nenhum produto" prematuramente (CA 1.3/2.7 não devem "piscar")
+        expect(compiled.querySelector('[data-testid="products-total-card"]')).toBeFalsy();
+        expect(compiled.querySelector('[data-testid="products-table-empty"]')).toBeFalsy();
+
+        summarySubject.next(productsSummary);
+        listSubject.next(productsListResult);
+        summarySubject.complete();
+        listSubject.complete();
+        fixture.detectChanges();
+
+        expect(component.showInitialSkeleton).toBeFalse();
+        expect(compiled.querySelector('[data-testid="products-summary-skeleton"]')).toBeFalsy();
+        expect(compiled.querySelector('[data-testid="products-table-skeleton"]')).toBeFalsy();
+        expect(compiled.querySelector('[data-testid="products-total-card"]')?.textContent).toContain('10');
+      });
+
+      it('não exibe skeleton durante recálculo por troca de filtro (dado anterior permanece visível)', fakeAsync(() => {
+        setup();
+        fixture.detectChanges();
+        expect(component.productsSummaryData).toEqual(productsSummary);
+
+        component.filterForm.get('category')?.setValue('Eletrônicos');
+        tick(150);
+        fixture.detectChanges();
+
+        // productsSummaryData já foi carregado uma vez — não é mais "carga inicial"
+        expect(component.showInitialSkeleton).toBeFalse();
+        const compiled = fixture.nativeElement as HTMLElement;
+        expect(compiled.querySelector('[data-testid="products-summary-skeleton"]')).toBeFalsy();
+        tick(20);
+      }));
+
+      it('após erro, um novo retry volta a exibir o skeleton até resolver', fakeAsync(() => {
+        setup();
+        fixture.detectChanges();
+
+        reportsServiceSpy.productsSummary.and.returnValue(throwError(() => new Error('fail')));
+        component.filterForm.get('category')?.setValue('Eletrônicos');
+        tick(150);
+        fixture.detectChanges();
+        tick(20);
+        fixture.detectChanges();
+
+        expect(component.productsErrorMessage).toBeTruthy();
+        expect(component.productsSummaryData).toBeNull();
+
+        const summarySubject = new Subject<ProductsReportSummary>();
+        const listSubject = new Subject<PagedResult<ProductListItem>>();
+        reportsServiceSpy.productsSummary.and.returnValue(summarySubject.asObservable());
+        productsServiceSpy.list.and.returnValue(listSubject.asObservable());
+
+        component.retryProductsReport();
+        fixture.detectChanges();
+
+        expect(component.showInitialSkeleton).toBeTrue();
+        const compiled = fixture.nativeElement as HTMLElement;
+        expect(compiled.querySelector('[data-testid="products-summary-skeleton"]')).toBeTruthy();
+
+        summarySubject.next(productsSummary);
+        listSubject.next(productsListResult);
+        summarySubject.complete();
+        listSubject.complete();
+        fixture.detectChanges();
+
+        expect(component.showInitialSkeleton).toBeFalse();
+      }));
+    });
   });
 });
