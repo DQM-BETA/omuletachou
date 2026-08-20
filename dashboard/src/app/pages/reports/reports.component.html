@@ -94,8 +94,7 @@
         data-testid="products-filters-loading"
       ></mat-progress-bar>
 
-      <mat-card-title>Filtros</mat-card-title>
-      <mat-card-content>
+      <ng-template #filtersControls>
         <div class="filters-row">
           <mat-form-field appearance="outline">
             <mat-label>Categoria</mat-label>
@@ -169,7 +168,37 @@
             </button>
           </mat-chip>
         </mat-chip-set>
-      </mat-card-content>
+      </ng-template>
+
+      <!-- Desktop/tablet: bloco de filtros sempre expandido (ux-ui-spec.md §8) -->
+      <ng-container *ngIf="!isMobile">
+        <mat-card-title>Filtros</mat-card-title>
+        <mat-card-content>
+          <ng-container *ngTemplateOutlet="filtersControls"></ng-container>
+        </mat-card-content>
+      </ng-container>
+
+      <!-- Mobile (<600px): bloco colapsado por padrão, badge de contagem (ux-ui-spec.md §8) -->
+      <mat-expansion-panel
+        *ngIf="isMobile"
+        class="filters-mobile-panel"
+        [expanded]="false"
+        data-testid="filters-mobile-panel"
+      >
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            Filtros
+            <span
+              class="filters-badge"
+              *ngIf="activeFiltersCount > 0"
+              data-testid="filters-active-badge"
+              >({{ activeFiltersCount }})</span
+            >
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+
+        <ng-container *ngTemplateOutlet="filtersControls"></ng-container>
+      </mat-expansion-panel>
     </mat-card>
 
     <div
@@ -185,6 +214,22 @@
     </div>
 
     <ng-container *ngIf="!productsErrorMessage">
+      <!-- Skeleton de carregamento inicial (ux-ui-spec.md §4.3/§5.1) -->
+      <ng-container *ngIf="showInitialSkeleton; else productsResults">
+        <div class="summary-cards" data-testid="products-summary-skeleton">
+          <div class="skeleton-card shimmer" *ngFor="let i of skeletonCardIndexes"></div>
+        </div>
+
+        <mat-card class="products-table-card">
+          <mat-card-content>
+            <div class="skeleton-table" data-testid="products-table-skeleton">
+              <div class="skeleton-table-row shimmer" *ngFor="let i of skeletonRowIndexes"></div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </ng-container>
+
+      <ng-template #productsResults>
       <div class="summary-cards" data-testid="products-summary-cards">
         <mat-card class="total-card" data-testid="products-total-card">
           <mat-card-title>Total</mat-card-title>
@@ -297,6 +342,7 @@
           ></mat-paginator>
         </mat-card-content>
       </mat-card>
+      </ng-template>
     </ng-container>
   </div>
 </div>

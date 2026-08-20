@@ -4,6 +4,8 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { forkJoin, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged, filter } from 'rxjs/operators';
 
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -19,6 +21,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { NgChartsModule } from 'ng2-charts';
 import { ChartConfiguration, ChartData } from 'chart.js';
 
@@ -62,6 +65,7 @@ const PRODUCTS_REPORT_ERROR_MESSAGE =
     MatChipsModule,
     MatTooltipModule,
     MatPaginatorModule,
+    MatExpansionModule,
     NgChartsModule,
   ],
   templateUrl: './reports.component.html',
@@ -144,6 +148,14 @@ export class ReportsComponent implements OnInit, OnDestroy {
     { key: 'subcategory', title: 'Por Subcategoria' },
   ];
 
+  // Responsividade — colapso mobile do bloco de filtros (ux-ui-spec.md §8)
+  isMobile = false;
+  private breakpointSub?: Subscription;
+
+  // Skeleton de carregamento inicial (ux-ui-spec.md §4.3/§5.1)
+  readonly skeletonCardIndexes = [0, 1, 2, 3, 4];
+  readonly skeletonRowIndexes = [0, 1, 2, 3, 4, 5];
+
   private productsRequestSub?: Subscription;
   private pageRequestSub?: Subscription;
   private filterSub?: Subscription;
@@ -153,7 +165,8 @@ export class ReportsComponent implements OnInit, OnDestroy {
     private reportsService: ReportsService,
     private queueService: QueueService,
     private productsService: ProductsService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private breakpointObserver: BreakpointObserver
   ) {}
 
   ngOnInit(): void {
@@ -172,12 +185,17 @@ export class ReportsComponent implements OnInit, OnDestroy {
         this.productsPageIndex = 0;
         this.loadProductsReport();
       });
+
+    this.breakpointSub = this.breakpointObserver.observe([Breakpoints.Handset]).subscribe(() => {
+      this.isMobile = this.breakpointObserver.isMatched(Breakpoints.Handset);
+    });
   }
 
   ngOnDestroy(): void {
     this.filterSub?.unsubscribe();
     this.productsRequestSub?.unsubscribe();
     this.pageRequestSub?.unsubscribe();
+    this.breakpointSub?.unsubscribe();
   }
 
   loadReports(): void {
@@ -317,6 +335,16 @@ export class ReportsComponent implements OnInit, OnDestroy {
   get hasActiveFilters(): boolean {
     const v = this.filterForm.getRawValue();
     return !!(v.category || v.subcategory || v.platform || v.status || v.dateRange?.start || v.dateRange?.end);
+  }
+
+  get activeFiltersCount(): number {
+    return this.activeFilterChips.length;
+  }
+
+  /** Skeleton de carregamento inicial (primeira carga ou retry após erro) — evita "flash" de
+   *  estado vazio antes do primeiro forkJoin resolver (ux-ui-spec.md §4.3/§5.1). */
+  get showInitialSkeleton(): boolean {
+    return this.productsLoading && !this.productsSummaryData;
   }
 
   get activeFilterChips(): FilterChip[] {
