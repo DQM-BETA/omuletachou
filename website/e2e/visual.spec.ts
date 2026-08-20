@@ -102,7 +102,10 @@ test.describe('Visual — FilterBar (Issue #167 / Sub-D #171)', () => {
     await expect(page.getByRole('combobox', { name: 'Categoria', exact: true })).toBeVisible();
     await expect(page.getByRole('combobox', { name: 'Subcategoria' })).toBeVisible();
     await expect(page.getByRole('combobox', { name: 'Ordenar por' })).toBeVisible();
-    await expect(page.getByRole('button', { name: '10%+' })).toBeVisible();
+    // Filtro de desconto mínimo removido (Issue #230/#261) — o 3º controle agora é o slider de
+    // preço (Issue #230/#262), não mais os botões "10%+/30%+/50%+".
+    await expect(page.getByRole('slider', { name: 'Preço mínimo' })).toBeVisible();
+    await expect(page.getByRole('slider', { name: 'Preço máximo' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Limpar filtros' })).toBeVisible();
 
     await page.screenshot({

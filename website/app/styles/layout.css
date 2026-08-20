@@ -187,6 +187,36 @@ main > p {
   margin-bottom: var(--space-3);
 }
 
+/* Error Boundary de rota (app/error.tsx) — mesma composição visual de .deals-empty, sem novo
+   design system (defesa em profundidade documentada em design.md, ver Issue #230/#262). */
+.app-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: var(--space-6) var(--space-5);
+}
+
+.app-error__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: 360px;
+  text-align: center;
+  color: var(--color-neutral-600);
+}
+
+.app-error__content h1 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-neutral-900);
+}
+
+.app-error__content .filter-bar__apply {
+  padding-inline: var(--space-5);
+}
+
 .deals-pagination {
   display: flex;
   align-items: center;

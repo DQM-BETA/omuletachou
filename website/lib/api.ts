@@ -27,7 +27,6 @@ export interface DealFilters {
   subcategory?: string;
   minPrice?: number;
   maxPrice?: number;
-  minDiscount?: number;
   sort?: string;
 }
 
@@ -51,9 +50,6 @@ export async function fetchDeals(
   }
   if (filters?.maxPrice !== undefined) {
     params.set('maxPrice', String(filters.maxPrice));
-  }
-  if (filters?.minDiscount !== undefined) {
-    params.set('minDiscount', String(filters.minDiscount));
   }
   if (filters?.sort) {
     params.set('sort', filters.sort);
