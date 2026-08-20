@@ -12,7 +12,7 @@ docs_path: repos/omuletachou/documentacoes/ISSUE-229-exibir-tag-pequena-de-plata
 openspec_path: repos/omuletachou/openspec/changes/issue-229-exibir-tag-plataforma
 sub_issues: ['#253 (stack:dotnet, task_id:T-01)', '#254 (stack:nodejs, task_id:T-02)']
 desenv_tasks_merged: ['#253']
-sub_issues_frontend: {'#254': 'REABERTA — correção pendente em DealDetail.tsx (gap CA3); PR #256 anterior (DealCard.tsx) já mergeado e aprovado'}
+sub_issues_frontend: {'#254': 'REABERTA — correção implementada em DealDetail.tsx (gap CA3); PR novo #258 feature→desenv aguardando merge do LT; PR #256 anterior (DealCard.tsx) já mergeado e aprovado'}
 pr_homologacao: 257
 pr_release: ~
 code_review_homolog_pr: REPROVADO (2026-08-20) — ver notas
@@ -31,6 +31,7 @@ rota: normal
 | 4 | Refinamento Técnico (LT) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
 | 5 | Code Review PR #257 (reprovado) | Code Review | sonnet-5 | ~ | ~ | ~ |
 | 6 | Mapeamento de falha (LT) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
+| 7 | Correção #254 (Dev, DealDetail.tsx) | Dev Node.js | sonnet-5 | ~ | ~ | ~ |
 
 ## Notas
 - **Rota:** promovida de `backlog` para `normal` pelo Gerente no Gate 1 (2026-08-20) — segue o pipeline completo a partir daqui.
@@ -58,3 +59,14 @@ Demais pontos do PR (backend #253, testes, build/boot via docker compose, integr
 - `desenv_tasks_merged` revertido para `['#253']` (removido `#254` — precisa de novo merge após a correção).
 - `code_review_homolog_pr` marcado como reprovado; PR #257 permanece aberto (LT não fecha PR reprovado — Dev deve atualizar/reabrir conforme fluxo de merge da próxima rodada; se o Dev abrir novo PR feature→desenv, o LT fará novo merge→desenv e reemitirá o PR desenv→homolog, ou reaproveitará o #257 se ainda mergeável).
 - `etapa_atual` revertido para "Em Desenvolvimento".
+
+### Correção da sub-issue #254 implementada (2026-08-20)
+- Branch `feature/ISSUE-254-tag-plataforma-dealcard` reaproveitada (worktree existente, sincronizada com `desenv` via `git merge origin/desenv` antes de codar — não recriada).
+- `website/lib/platform.ts` (novo): `PLATFORM_LABELS`/`getPlatformLabel` extraídos como fonte única compartilhada entre `DealCard.tsx` e `DealDetail.tsx` (evita duplicar o mapeamento enum→texto; mantém CA 8).
+- `website/components/DealDetail.tsx`: tag `.deal-card__platform` (mesma classe reaproveitada) renderizada como primeiro filho de `.deal-detail__price`, condicional, sem `href`/`onClick`/`role`/`tabindex` (CA 7).
+- `website/app/styles/deal-detail.css`: `flex-basis: 100%` no chip, para preservar "linha própria acima do preço" dentro do container flex de `.deal-detail__price` (mesmo racional de CA 6 do `ux-ui-spec.md`).
+- `website/components/DealDetail.test.tsx`: novos testes espelhando `DealCard.test.tsx` (CA 3, 4, 5, 7, 8) + teste garantindo que a tag do produto principal não se confunde com a dos relacionados.
+- `npm test`: 117/117 passando (suíte completa do `website/`), 0 regressão. `DealCard.tsx` e `DealDetail.tsx`: 100% de cobertura.
+- `npx next build`: compila e type-checa sem erros (evidência de boot/build, não suposição).
+- Push feito. **PR novo** feature→desenv (o #257 desenv→homolog segue aberto e #254 já havia sido mergeada uma vez via squash): https://github.com/DQM-BETA/omuletachou/pull/258
+- Próximo passo: Líder Técnico faz merge do PR #258 em `desenv` e decide sobre o PR #257 (reaproveitar ou reemitir desenv→homolog).
