@@ -11,8 +11,8 @@
 
 ## Pipeline
 - rota: normal
-- etapa_atual: Code Review
-- ultimo_agente: lider-tecnico
+- etapa_atual: QA
+- ultimo_agente: code-review
 - status_comment_id: (gerenciado pelo Coordenador — não criado ainda por este agente)
 - tech_stacks: [nodejs]
 - repos:
@@ -25,9 +25,9 @@
 - desenv_tasks_merged: [261, 262]
 - pr_261_feature_desenv: https://github.com/DQM-BETA/omuletachou/pull/263 (MERGED squash em desenv, 2026-08-20; sub-issue #261 fechada)
 - pr_262_feature_desenv: https://github.com/DQM-BETA/omuletachou/pull/264 (MERGED squash em desenv, 2026-08-20, commit `99b801e`; sub-issue #262 fechada)
-- pr_homologacao: https://github.com/DQM-BETA/omuletachou/pull/265 (desenv→homolog, aberto 2026-08-20 — merge commit, NUNCA squash)
+- pr_homologacao: https://github.com/DQM-BETA/omuletachou/pull/265 (desenv→homolog, MERGED merge commit `7d343cd` em 2026-08-20T18:42:08Z)
 - pr_release: ~
-- code_review_homolog_pr: ~
+- code_review_homolog_pr: 265
 - qa_status: ~
 
 ## Resumo da demanda
@@ -207,3 +207,24 @@ ou trade-off de infraestrutura. Seguiu direto para o **Líder Técnico**.
 | 3 | Refinamento Técnico | lider-tecnico | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
 | 4 | Merge #263 + tentativa #264 (bloqueado) | lider-tecnico | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
 | 5 | Merge #264 + PR desenv→homolog | lider-tecnico | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
+| 6 | Code Review (PR #265) | code-review | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
+
+## Code Review — PR #265 (desenv→homolog), 2026-08-20 — APROVADO
+- Jest: `npm test -- --watchAll=false --coverage` → 130/130 passando, cobertura global 92.77%
+  stmts / 88.55% branch (threshold 80%).
+- Build/boot real: `docker compose build --no-cache website api` (sucesso) +
+  `docker compose up -d db api website` (3 containers healthy/Up). `curl :8080/health` → 200;
+  `curl :3000/` → 200 (HTML contém `filter-bar`); `?minPrice=100&maxPrice=500` → 200;
+  `?minPrice=900&maxPrice=100` (par invertido direto na URL) → 200, sem crash.
+- Integração real (teste crítico): `npx playwright test` rodado contra o container Docker real
+  (`reuseExistingServer: true` reaproveitou o container já no ar) → 9/9 passando, incluindo
+  `filter-bar-price.spec.ts` CA 2.4 (150 eventos `input` em sucessão apertada, sem `pageerror`,
+  sem cair no `error.tsx`/fallback genérico) — confirma causa raiz eliminada.
+- Checklist de veto: sem `.first()`/`.nth()`/`.last()` em specs e2e (grep completo); sem segredos
+  no diff; sem teste-lixo; cobertura ≥ 80%; segue design.md; cobre CA 1.1-1.2/2.1-2.5/3.1-3.7.
+- `/code-review` (plugin Anthropic): sem comentários/reviews postados no PR no momento da
+  revisão — nada a incorporar.
+- Evidência completa postada como comentário no PR #265.
+- Merge `desenv→homolog` executado: `gh pr merge 265 --merge` (merge commit `7d343cd`,
+  2026-08-20T18:42:08Z).
+
