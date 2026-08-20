@@ -20,11 +20,11 @@
 
 ## Sub-issues
 - #261 (stack:nodejs, task_id:T-01) — Remover filtro de desconto mínimo (item 1) — **CONCLUÍDA/MERGED**
-- #262 (stack:nodejs, task_id:T-02) — Corrigir bug do slider de preço + digitar min/max (itens 2+3) — **BLOQUEADA por conflito** (ver Notas)
+- #262 (stack:nodejs, task_id:T-02) — Corrigir bug do slider de preço + digitar min/max (itens 2+3) — **conflito RESOLVIDO, pronta para merge** (ver Notas)
 - sub_issues_frontend: {}
 - desenv_tasks_merged: [261]
 - pr_261_feature_desenv: https://github.com/DQM-BETA/omuletachou/pull/263 (MERGED squash em desenv, 2026-08-20; sub-issue #261 fechada)
-- pr_262_feature_desenv: https://github.com/DQM-BETA/omuletachou/pull/264 (aberto — CONFLICTING após merge do #263; `gh pr update-branch` falhou; conflito confirmado localmente em `website/components/FilterBar.tsx` e `website/app/styles/filter-bar.css` — dev precisa sincronizar com `desenv` e resolver manualmente, depois push)
+- pr_262_feature_desenv: https://github.com/DQM-BETA/omuletachou/pull/264 (aberto — conflito RESOLVIDO e branch sincronizada com `desenv`, 2026-08-20; `gh pr view` confirma `mergeStateStatus: CLEAN` / `mergeable: MERGEABLE`; pronto para merge pelo LT)
 - pr_homologacao: ~
 - pr_release: ~
 - code_review_homolog_pr: ~
@@ -127,6 +127,52 @@ ou trade-off de infraestrutura. Seguiu direto para o **Líder Técnico**.
   `prefer-const` encontrado só no build) e `npm start` sem erro.
 - Sem ambiguidade/dúvida técnica — não precisou de decisão de arquitetura além da correção do
   bug de nested component (aplicação direta do padrão já existente no próprio arquivo).
+
+## Resolução do conflito PR #264 (Dev, 2026-08-20)
+- Worktree existente `.worktrees/feature-ISSUE-262-fix-slider-preco-minmax` reutilizado (não
+  recriado). `git fetch origin desenv` + `git merge origin/desenv` (merge, não rebase — branch já
+  pushada e com PR aberto, rebase reescreveria histórico público desnecessariamente).
+- Conflito real em 2 arquivos, ambos resolvidos manualmente segundo a regra: manter 100% das
+  mudanças de `PriceGroup`/preço (T-02) + manter a remoção do `DiscountGroup` (T-01/#263), sem
+  reintroduzir o filtro de desconto:
+  - `website/components/FilterBar.tsx`: removidos `handleDiscountToggle` e as 2 chamadas
+    `<DiscountGroup />` (resíduo do lado HEAD, já que o componente/estado do desconto tinha sido
+    removido em `desenv` mas a branch de #262 ainda referenciava a função); removidos também
+    `handleMinPriceChange`/`handleMaxPriceChange` (resíduo do lado `origin/desenv` — handlers
+    antigos e simples, sem debounce, do preço, já superados pelos novos
+    `handleMin/MaxPriceSliderChange` + `commitMinPriceText`/`commitMaxPriceText` que já existiam na
+    branch de #262 fora da região de conflito). `priceGroup` (JSX) mantido nas 2 posições de
+    render (desktop row + drawer mobile), sem `<DiscountGroup />`.
+  - `website/app/styles/filter-bar.css`: mantido o CSS novo de `.filter-bar__price-inputs`/
+    `.filter-bar__price-input-field`/`.filter-bar__price-error`; removido o bloco
+    `.filter-bar__discount-group`/`.filter-bar__discount-btn*` (resíduo do lado HEAD).
+  - `documentacoes/.../estado.md`, `website/app/page.tsx`, `website/app/page.test.tsx`,
+    `website/lib/api.ts`, `website/lib/api.test.ts`, `website/components/FilterBar.test.tsx`:
+    auto-merge limpo (sem conflito), trazendo as mudanças de remoção de `minDiscount` do #261/#263
+    para dentro da branch de #262.
+- **Gate obrigatório (passo g do processo):** grep em todo `website/` por `minDiscount`/
+  `DiscountGroup`/`10%+`/`30%+`/`50%+`/`Desconto mínimo` pós-resolução — sem resíduo funcional.
+  Encontrado **1 teste e2e obsoleto** não relacionado ao merge em si, mas que quebraria por causa
+  dele: `website/e2e/visual.spec.ts` (`Desktop (>=1024px): os 5 controles em linha única, sem
+  drawer`) ainda esperava o botão `10%+` do `DiscountGroup` (já removido em `desenv` pelo #263, mas
+  esse teste Playwright não roda no Jest/CI local do Dev de #261 — só foi pego agora ao rodar a
+  suíte completa de Playwright). Corrigido: assert trocado para os 2 sliders de preço
+  (`getByRole('slider', { name: 'Preço mínimo' })`/`'Preço máximo'`), que agora ocupam a 3ª posição
+  dos 5 controles.
+- Testes pós-resolução: Jest 130/130 passando (100%, suíte completa, sem regressão). Playwright
+  `test:visual` rodado contra stack Docker real (`docker compose -p omuletachou-local up --build
+  db api website`, build a partir do worktree — não do repo raiz — para testar o código
+  efetivamente resolvido): 8/8 passando + 1 skip pré-existente (sem oferta ativa no catálogo de
+  teste, condição já existente no teste, não uma regressão) — inclui os 4 testes de
+  `filter-bar-price.spec.ts` (CA 2.1/2.2/2.4/3.1-3.3) e os 4 (de 5) de `visual.spec.ts`. Stack
+  Docker derrubada (`docker compose -p omuletachou-local down`) após a validação; arquivos locais
+  temporários (`docker-compose.override.yml`, `.env`, copiados do repo raiz só para o teste)
+  removidos do worktree antes do commit.
+- `npm run build` já validado dentro do build da imagem Docker do `website` (sucesso); container
+  `afiliado_website` respondeu HTTP 200 em `localhost:3000` — app inicializa sem erro.
+- Push: `feature/ISSUE-262-fix-slider-preco-minmax` (2 commits novos: merge de resolução +
+  correção do teste e2e obsoleto). `gh pr view 264` confirma `mergeStateStatus: CLEAN` /
+  `mergeable: MERGEABLE` — PR #264 pronto para merge pelo LT, sem necessidade de novo PR.
 
 ## Notas
 - Diretório duplicado `documentacoes/ISSUE-230-revisar-filtros-site-público/` (com acento) —
