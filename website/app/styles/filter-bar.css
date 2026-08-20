@@ -29,6 +29,29 @@
   min-width: 220px;
 }
 
+/* Busca textual (Issue #260) — mesma altura/borda/raio dos demais controles, sem CSS novo fora
+   do padrão já estabelecido (reaproveita os tokens de .filter-bar__price-input-field). */
+.filter-bar__group--search {
+  min-width: 200px;
+}
+
+.filter-bar__search-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-900);
+}
+
+.filter-bar__search-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
 .filter-bar__label {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);

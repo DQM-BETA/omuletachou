@@ -11,9 +11,9 @@
 
 ## Pipeline
 - rota: normal
-- etapa_atual: Code Review
-- ultimo_agente: lider-tecnico
-- status_comment_id: (gerenciado pelo Coordenador — não criado ainda por este agente)
+- etapa_atual: Concluído
+- ultimo_agente: coordenador
+- status_comment_id: 5360444175
 - tech_stacks: [nodejs]
 - repos:
   - omuletachou: https://github.com/DQM-BETA/omuletachou
@@ -25,10 +25,11 @@
 - desenv_tasks_merged: [261, 262]
 - pr_261_feature_desenv: https://github.com/DQM-BETA/omuletachou/pull/263 (MERGED squash em desenv, 2026-08-20; sub-issue #261 fechada)
 - pr_262_feature_desenv: https://github.com/DQM-BETA/omuletachou/pull/264 (MERGED squash em desenv, 2026-08-20, commit `99b801e`; sub-issue #262 fechada)
-- pr_homologacao: https://github.com/DQM-BETA/omuletachou/pull/265 (desenv→homolog, aberto 2026-08-20 — merge commit, NUNCA squash)
-- pr_release: ~
-- code_review_homolog_pr: ~
-- qa_status: ~
+- pr_homologacao: https://github.com/DQM-BETA/omuletachou/pull/265 (desenv→homolog, MERGED — merge commit `7d343cd`, confirmado presente em `homolog` na validação do QA em 2026-08-20)
+- pr_release: https://github.com/DQM-BETA/omuletachou/pull/266 (homolog→main, MERGED — merge commit `9aedc95`, 2026-08-20 19:04:32 UTC)
+- code_review_homolog_pr: 265 (Code Review aprovou e mergeou `desenv→homolog` via `gh pr merge 265 --merge`, commit `7d343cd`, 2026-08-20 — ver seção "Code Review — PR #265")
+- qa_status: **aprovado (2026-08-20)** — ver `relatorio-qa.md`
+- closedAt: 2026-08-20T19:04:37Z
 
 ## Resumo da demanda
 Escopo restrito aos itens 1-3 do pedido original (item 4 — busca inteligente — virou Issue #260,
@@ -76,6 +77,8 @@ ou trade-off de infraestrutura. Seguiu direto para o **Líder Técnico**.
   raiz do bug + decisões de correção)
 - `documentacoes/ISSUE-230-revisar-filtros-site-publico/especificacao-tecnica.md` (LT)
 - `openspec/changes/issue-230-revisar-filtros-site-publico/tasks.md` (LT — T-01, T-02)
+- `documentacoes/ISSUE-230-revisar-filtros-site-publico/relatorio-qa.md` (QA — validação integrada,
+  aprovado)
 
 ## Implementação — T-01 / Sub-issue #261 (concluída pelo Dev, 2026-08-20; MERGED pelo LT, 2026-08-20)
 - Branch `feature/ISSUE-261-remover-desconto-minimo` (worktree
@@ -180,6 +183,65 @@ ou trade-off de infraestrutura. Seguiu direto para o **Líder Técnico**.
   https://github.com/DQM-BETA/omuletachou/pull/265 (merge commit, NUNCA squash — a ser mergeado
   pelo Code Review).
 
+## Code Review — PR #265 (desenv→homolog), 2026-08-20 — APROVADO
+- Jest: `npm test -- --watchAll=false --coverage` → 130/130 passando, cobertura global 92.77%
+  stmts / 88.55% branch (threshold 80%).
+- Build/boot real: `docker compose build --no-cache website api` (sucesso) +
+  `docker compose up -d db api website` (3 containers healthy/Up). `curl :8080/health` → 200;
+  `curl :3000/` → 200 (HTML contém `filter-bar`); `?minPrice=100&maxPrice=500` → 200;
+  `?minPrice=900&maxPrice=100` (par invertido direto na URL) → 200, sem crash.
+- Integração real (teste crítico): `npx playwright test` rodado contra o container Docker real
+  (`reuseExistingServer: true` reaproveitou o container já no ar) → 9/9 passando, incluindo
+  `filter-bar-price.spec.ts` CA 2.4 (150 eventos `input` em sucessão apertada, sem `pageerror`,
+  sem cair no `error.tsx`/fallback genérico) — confirma causa raiz eliminada.
+- Checklist de veto: sem `.first()`/`.nth()`/`.last()` em specs e2e (grep completo); sem segredos
+  no diff; sem teste-lixo; cobertura ≥ 80%; segue design.md; cobre CA 1.1-1.2/2.1-2.5/3.1-3.7.
+- `/code-review` (plugin Anthropic): sem comentários/reviews postados no PR no momento da
+  revisão — nada a incorporar.
+- Evidência completa postada como comentário no PR #265.
+- Merge `desenv→homolog` executado: `gh pr merge 265 --merge` (merge commit `7d343cd`,
+  2026-08-20T18:42:08Z).
+
+## QA (2026-08-20) — APROVADO
+- Sincronização confirmada: `git fetch origin` + `git checkout homolog` + `git pull origin homolog`
+  trouxe o commit `7d343cd` (Merge pull request #265), presente no topo de `git log --oneline -5`.
+- Jest: 130/130 passando, cobertura 92.77% stmts / 88.55% branch (>= threshold 80%).
+- `docker compose build --no-cache website api` (a partir de `homolog`) + `docker compose up -d db
+  api website`: build e boot reais sem erro; `api` healthy; `website` HTTP 200; `api/health` HTTP
+  200.
+- Playwright (`npm run test:visual`, `STAGING_URL=http://localhost:3000` contra o container Docker
+  real, `SCREENSHOTS_DIR={docs_path}/screenshots`): **9/9 passando**, incluindo o teste crítico CA
+  2.4 (150 eventos de arrasto rápido no slider sem navegar para página de erro) contra a aplicação
+  real e catálogo real (105 itens).
+- Gate visual: 6 screenshots inspecionadas manualmente — header 1x por tela, sem duplicação
+  estrutural, seletor de desconto ausente, barra de filtros íntegra.
+- Grep confirmou ausência de código órfão de `minDiscount`/`DiscountGroup` no código-fonte
+  (CA 1.2). `website/app/error.tsx` inspecionado e funcional como defesa em profundidade.
+  Implementação de `commitPriceParams`/`router.replace`/debounce inspecionada e bate com a causa
+  raiz documentada em `design.md`.
+- Logs do container `afiliado_api` durante os testes confirmam o filtro `minPrice` aplicado na
+  query SQL real, sem exceções.
+- Todos os 17 critérios de aceite (`criterios-aceite.md`) validados com evidência — ver
+  `relatorio-qa.md` para a tabela completa. Nenhuma issue encontrada.
+- Observação não bloqueante: `tsc --noEmit` standalone falha por config pré-existente
+  (`@testing-library/jest-dom` ausente em `tsconfig.json`), não é regressão desta issue (afeta
+  também arquivos de teste não tocados por #230); o type-check real do `next build` passou.
+- Containers de validação (`db`, `api`, `website`) parados (`docker compose stop`) ao final.
+
+## PR Release + Gate 2 (2026-08-20)
+- Criado `homolog→main` #266 — https://github.com/DQM-BETA/omuletachou/pull/266 (merge commit,
+  NUNCA squash), referenciando Issue #230, sub-issues #261/#262, PR de Code Review #265 e
+  `relatorio-qa.md`.
+- **Gate 2 aprovado pelo Gerente** (2026-08-20 19:04:32 UTC)
+- Merge `homolog→main` executado: `gh pr merge 266 --merge` (merge commit `9aedc95`,
+  2026-08-20T19:04:32Z).
+- Issue #230 fechada com reason `completed` (2026-08-20T19:04:37Z).
+- Reconciliação de `estado.md`: os commits de Code Review (`code_review_homolog_pr: 265` e seção
+  "Code Review — PR #265") foram feitos em `desenv` (commit `ea7086a`) enquanto o QA validava a
+  partir de `homolog` (working tree local, sem esse commit) — divergência esperada entre branches,
+  não um conflito real. Este commit une as duas seções (Code Review + QA) e os campos do cabeçalho
+  num único `estado.md` consistente em `desenv`.
+
 ## Notas
 - Diretório duplicado `documentacoes/ISSUE-230-revisar-filtros-site-público/` (com acento) —
   confirmado como artefato órfão de stub inicial do Coordenador (backlog, pré-refinamento do PM),
@@ -198,12 +260,28 @@ ou trade-off de infraestrutura. Seguiu direto para o **Líder Técnico**.
   com `desenv` (`git merge origin/desenv` ou `git rebase origin/desenv`), resolver as duas
   divergências e dar push. Após o push, novo LT retomou o merge de #264 (concluído nesta invocação,
   ver "Merge #264 + PR desenv→homolog") e criou o PR `desenv→homolog` (#265).
+- **Campo `code_review_homolog_pr` não preenchido no `estado.md` visto pelo QA:** o QA encontrou o
+  PR #265 já mergeado em `homolog` no momento do spawn (barreira de sincronização confirmou o
+  commit `7d343cd`), mas a cópia de `estado.md` em `homolog` não tinha o registro formal do Code
+  Review. **Resolvido nesta invocação:** o Code Review de fato ocorreu e documentou sua evidência
+  em `estado.md` — só que o fez em `desenv` (commit `ea7086a`, anterior ao merge #265), branch que
+  o QA não consultou por trabalhar a partir de `homolog`. Campo `code_review_homolog_pr: 265` e a
+  seção "Code Review — PR #265" confirmados e reconciliados neste commit.
 
-## Custo (ledger)
+## Consolidação de Custo (2026-08-20, Gate 2 + Encerramento)
+- Issue criada: 2026-08-19 13:29:32 UTC
+- Issue fechada: 2026-08-20 19:04:37 UTC
+- **Tempo decorrido total:** 29h 35m 5s (1 dia, 5 horas, 35 minutos, 5 segundos)
+- **Observação:** O ledger da sessão principal não foi preenchido com dados de tokens/modelo por etapa (pendente de consolidação no HANDOFF de cada worker). A tabela abaixo aguarda atualização:
+
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|---|---|---|---|---|---|
-| 1 | PM Fase 1 | pm-analista-negocios | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
-| 2 | PM Fase 2 | pm-analista-negocios | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
-| 3 | Refinamento Técnico | lider-tecnico | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
-| 4 | Merge #263 + tentativa #264 (bloqueado) | lider-tecnico | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
-| 5 | Merge #264 + PR desenv→homolog | lider-tecnico | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
+| 1 | PM Fase 1 | pm-analista-negocios | Sonnet | (preencher) | - | - |
+| 2 | PM Fase 2 | pm-analista-negocios | Sonnet | (preencher) | - | - |
+| 3 | Refinamento Técnico | lider-tecnico | Sonnet | (preencher) | - | - |
+| 4 | Merge #263 + tentativa #264 (bloqueado) | lider-tecnico | Sonnet | (preencher) | - | - |
+| 5 | Merge #264 + PR desenv→homolog | lider-tecnico | Sonnet | (preencher) | - | - |
+| 6 | Code Review (PR #265) | code-review | Sonnet | (preencher) | - | - |
+| 7 | QA | qa | Sonnet | (preencher) | - | - |
+| 8 | Gate 2 + Encerramento | coordenador | Haiku | (preencher) | - | - |
+| | **TOTAIS** | | | **TBD** | | **TBD** |

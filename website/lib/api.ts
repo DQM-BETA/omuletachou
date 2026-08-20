@@ -28,6 +28,9 @@ export interface DealFilters {
   minPrice?: number;
   maxPrice?: number;
   sort?: string;
+  // Issue #260 (T-02/T-03) — busca textual inteligente (título > categoria > descrição,
+  // fallback fonético/fuzzy no backend). Ausente/vazio = comportamento 100% atual.
+  q?: string;
 }
 
 export async function fetchDeals(
@@ -53,6 +56,9 @@ export async function fetchDeals(
   }
   if (filters?.sort) {
     params.set('sort', filters.sort);
+  }
+  if (filters?.q) {
+    params.set('q', filters.q);
   }
   const url = `${API_BASE_URL}/api/public/deals?${params.toString()}`;
   const response = await fetch(url, { next: { revalidate: REVALIDATE_SECONDS } });
