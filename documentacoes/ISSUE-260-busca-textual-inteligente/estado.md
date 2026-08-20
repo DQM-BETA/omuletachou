@@ -1,7 +1,7 @@
 issue: 260
 titulo: feat: busca textual inteligente (fonética/fuzzy) na tela de produtos do site público
 rota: normal
-etapa_atual: Em Desenvolvimento
+etapa_atual: Code Review
 ultimo_agente: lider-tecnico
 openspec_change: repos/omuletachou/openspec/changes/issue-260-busca-textual-inteligente
 tech_stacks: [dotnet, nodejs]
@@ -12,12 +12,12 @@ docs_path: repos/omuletachou/documentacoes/ISSUE-260-busca-textual-inteligente
 openspec_path: repos/omuletachou/openspec/changes/issue-260-busca-textual-inteligente
 status_comment_id: ~
 sub_issues: [267 (stack:dotnet, task_id:T-01), 268 (stack:dotnet, task_id:T-02), 269 (stack:nodejs, task_id:T-03)]
-desenv_tasks_merged: [267, 269]
+desenv_tasks_merged: [267, 268, 269]
 sub_issues_frontend: {269: T-03}
 pr_267: 271 (feature/ISSUE-267-search-vector-migration -> desenv) — MERGED (squash)
 pr_269: 270 (feature/ISSUE-269-campo-busca-filterbar -> desenv) — MERGED (squash)
-pr_268: 272 (feature/ISSUE-268-endpoint-busca-2-estagios -> desenv) — ABERTO, aguardando merge do LT
-pr_homologacao: ~
+pr_268: 272 (feature/ISSUE-268-endpoint-busca-2-estagios -> desenv) — MERGED (squash)
+pr_homologacao: 273 (desenv -> homolog) — ABERTO, aguardando Code Review
 pr_release: ~
 code_review_homolog_pr: ~
 qa_status: ~
@@ -43,3 +43,4 @@ blockers: nenhum
 - Dev T-01 (2026-08-20, #267, PR #271 feature/ISSUE-267-search-vector-migration → desenv): migration `AddProductSearchVector` (extensões `unaccent`/`pg_trgm`, função `immutable_unaccent` IMMUTABLE, coluna gerada `search_vector` tsvector STORED com pesos A/B/C, índice GIN `IX_products_search_vector`) exatamente conforme `especificacao-tecnica.md` §1. `search_vector` mapeado como shadow property em `ProductConfiguration.cs` (`ConfigureSearchVector`, chamado à parte de `Configure`), aplicado **condicionalmente** em `AfiliadoBotDbContext.OnModelCreating` via `Database.IsNpgsql()` — necessário porque `NpgsqlTsVector` não é suportado pelo provider `InMemory` usado pela maioria dos testes existentes (`CustomWebApplicationFactory`); aplicar incondicionalmente quebrava ~325 testes não relacionados (corrigido antes do PR). Validado contra Postgres real (`postgres:16.14-alpine` via Docker): migration aplica do zero e sobre schema existente sem erro; `\d products` confirma coluna `generated always as (...) stored` + índice `gin`; `immutable_unaccent` confirmado IMMUTABLE (`provolatile='i'`); query real `search_vector @@ plainto_tsquery('portuguese','tenis')` casa com produto "Tênis..." (stemmer + unaccent funcionando); `dotnet run` sobe sem exceção com a migration aplicada; `dotnet ef migrations add` após a migration gera migration vazia (sem diff espúrio, CA cumprido). Testes novos em `ProductConfigurationTests.cs` (padrão Issue #228/#242) cobrindo shadow property + índice GIN. `dotnet test`: 495/495 passando (suíte completa, sem regressão).
 - LT merge (2026-08-20): PR #271 (#267, migration search_vector + GIN) e PR #270 (#269, frontend FilterBar) mergeados via squash em `desenv` (áreas independentes, sem conflito). Sub-issues #267 e #269 fechadas. Falta #268 (endpoint 2 estágios), que depende de #267 já estar em `desenv` — pré-requisito agora satisfeito. Ainda **não** criado o PR desenv→homolog (falta #268). `desenv_tasks_merged: [267, 269]`.
 - Dev T-02 (2026-08-20, #268, PR #272 feature/ISSUE-268-endpoint-busca-2-estagios → desenv): implementado contra especificacao-tecnica.md §2/§3 e design.md §2.1-§2.6/§3. `ProductSearchService` novo (AfiliadoBot.Api.Public) extrai a lógica dos 2 estágios do controller (recomendação "(b)" da espec) — estágio 1 usa a shadow property `SearchVector` via `EF.Property<NpgsqlTsVector>` + `plainto_tsquery('portuguese', q)` + `.Rank()`; estágio 2 (fallback, só quando estágio 1 devolve zero) usa `EF.Functions.TrigramsSimilarity` sobre Title/Category/Description, threshold `0.15`. Decisão técnica registrada no PR: `Math.Max`/GREATEST não tem tradução LINQ confirmada no provider Npgsql 8.0.11 (verificado por reflexão no assembly antes de codar) — o predicado do estágio 2 foi reescrito como OR de 3 comparações individuais (equivalente lógico a `GREATEST(...) >= threshold`), sem impacto no ranking (que usa soma ponderada direta, sem Math.Max). Também descoberto durante TDD: `EF.Functions.PlainToTsQuery` só pode ser chamado DENTRO da lambda LINQ (não atribuído a uma variável antes) — fora disso lança `InvalidOperationException` de client-evaluation em runtime contra Postgres real (armadilha não documentada na espec, corrigida). `PagedResult<T>.IsApproximateSearch` (bool?, aditivo) propagado via novo `ToDtoPagedResult` (variante síncrona) no controller. `SearchConstants` (MinQueryLength=2, ApproximateSimilarityThreshold=0.15). `q` relevante ignora `sort`. Testes: `PublicSearchTests.cs` novo (Testcontainers/Postgres real, chamando `GetDeals` direto sem WebApplicationFactory) cobre CA 1.2/E.1/3.1/3.2/3.3/4.1/4.3/5.1/6.1, sort ignorado, acento/plural via estágio 1, e CA 7.1 (sem dependência Anthropic/Claude nos construtores). `dotnet test`: 506/506 (baseline 495 + 11 novos, sem regressão). Validado manualmente contra Postgres real (`postgres:16.14-alpine` standalone) com produtos reais seedados via SQL: `q=jbl` → estágio 1 (`isApproximateSearch=false`); `q=Bluetoth` (typo proposital) → estágio 2 (`isApproximateSearch=true`); `q` ausente → `isApproximateSearch=null`, resultado idêntico ao anterior. `dotnet run` sobe sem exceção. PR #272 aberto (feature→desenv), aguardando merge do LT.
+- LT merge (2026-08-20): PR #272 (#268, endpoint busca 2 estágios) mergeado via squash em `desenv`. Sub-issue #268 fechada. As 3 sub-issues (#267, #268, #269) agora completas em `desenv` (`desenv_tasks_merged: [267, 268, 269]`). PR #273 desenv→homolog criado (merge commit, NUNCA squash) com resumo das 3 sub-issues, escopo técnico e status de testes. `etapa_atual: Code Review`.
