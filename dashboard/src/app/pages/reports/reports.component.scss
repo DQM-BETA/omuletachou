@@ -75,6 +75,60 @@ table {
   margin-top: 8px;
 }
 
+// --- Colapso mobile do bloco de filtros (ux-ui-spec.md §8) ---
+
+.filters-mobile-panel {
+  box-shadow: none;
+
+  ::ng-deep .mat-expansion-panel-body {
+    padding: 0 16px 16px;
+  }
+
+  .filters-row {
+    margin-top: 8px;
+  }
+}
+
+.filters-badge {
+  margin-left: 6px;
+  color: #ef5da8;
+  font-weight: 600;
+}
+
+// --- Skeleton de carregamento inicial (ux-ui-spec.md §4.3/§5.1) ---
+
+.skeleton-card {
+  height: 96px;
+  border-radius: 4px;
+}
+
+.skeleton-table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.skeleton-table-row {
+  height: 32px;
+  border-radius: 4px;
+}
+
+.shimmer {
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.06) 25%, rgba(0, 0, 0, 0.12) 37%, rgba(0, 0, 0, 0.06) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
 .summary-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

@@ -133,8 +133,21 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 
 **Fluxo de saída:** Dev Angular abre `feature/ISSUE-245-...` a partir de `desenv` atualizada, corrige os 2 itens, TDD dos cenários novos/ajustados, push, PR `feature→desenv`. Após o LT mergear esse PR (squash) em `desenv`, o PR #250 (`desenv→homolog`, ainda aberto) absorve o commit automaticamente — não é necessário recriar o PR de promoção. Code Review então reavalia o PR #250 atualizado.
 
+## Correção sub-issue #245 (Dev Angular — 2026-08-20)
+
+- Continuação de uma sessão anterior do Dev Angular que caiu por limite de spend do usuário antes de commitar (trabalho preservado no worktree, não perdido — 179/179 testes já validados por ela).
+- Branch `feature/ISSUE-245-filtros-relatorio-produtos` (mesmo worktree, já com `desenv` mesclada no commit `d83c7ad` — sub-issues #242/#243/#244 presentes).
+- Reconfirmados os 2 achados do Code Review já implementados no worktree (diff limpo vs. `origin/desenv`, só os 4 arquivos de `reports.component.*`):
+  1. **Bloqueante** — colapso mobile do bloco de filtros: `mat-expansion-panel` (`data-testid="filters-mobile-panel"`), colapsado por padrão (`[expanded]="false"`), badge de contagem (`activeFiltersCount`, `data-testid="filters-active-badge"`) só em `isMobile` (via `BreakpointObserver`/`Breakpoints.Handset`); desktop/tablet mantém o bloco sempre expandido, sem panel. Controles de filtro fatorados em `<ng-template #filtersControls>` reaproveitado nos dois branches (`*ngTemplateOutlet`).
+  2. **Secundário** — skeleton de carregamento inicial: `showInitialSkeleton` (`productsLoading && !productsSummaryData`) renderiza cards/tabela com `shimmer` no lugar do resultado, só na primeira carga (ou retry pós-erro) — troca de filtro com dado já carregado não reexibe skeleton.
+- Testes novos em `reports.component.spec.ts` (10 casos): colapso mobile/desktop, badge ausente/presente com contagem, skeleton na carga inicial, skeleton ausente em recálculo com dado prévio, skeleton reaparece em novo retry pós-erro.
+- `npm test` (Karma/Chrome Headless): **179/179 passando**, sem regressão (reconfirmado nesta sessão).
+- `ng build --configuration production`: build ok, sem erros (só warnings pré-existentes de orçamento de bundle CSS/JS, não relacionados a esta correção).
+- Nenhum arquivo backend tocado por esta correção (diff vs. `origin/desenv` restrito a `dashboard/src/app/pages/reports/`) — suíte `dotnet test` não fazia parte do escopo desta correção pontual de UI.
+- Commit `001de17` na branch (push feito, branch já tinha 9 commits de merge de `desenv` à frente do remoto antes desta correção — todos legítimos, confirmados via `git log origin/...HEAD`).
+- **PR novo criado:** #251 (`feature/ISSUE-245-filtros-relatorio-produtos` → `desenv`), já que o PR #249 (mesma direção) havia sido mergeado (squash) e fechado em 2026-08-19 — não é possível reabrir/reaproveitar um PR squash-mergeado. O PR #250 (`desenv→homolog`) segue aberto e absorverá o commit desta correção automaticamente assim que o LT mergear #251 em `desenv` (squash), sem necessidade de recriar #250.
+
 ## Correção Code Review — merge PR #251 (LT — 2026-08-20)
-- Dev Angular entregou a correção na sub-issue #245 (branch `feature/ISSUE-245-filtros-relatorio-produtos`, base `desenv` atualizada): bloco de filtros mobile em `mat-expansion-panel` colapsado por padrão com badge de contagem (ux-ui-spec.md §8), + skeleton de carregamento nos cards/tabela (ux-ui-spec.md §4.3/§5.1), com testes novos em `reports.component.spec.ts`.
 - PR https://github.com/DQM-BETA/omuletachou/pull/251 (feature→desenv) — **merged (squash) para desenv em 2026-08-20 pelo LT**, `mergedAt: 2026-08-20T12:20:24Z`.
 - Sub-issue #245 fechada novamente (`gh issue close --reason completed`).
 - PR #250 (desenv→homolog) confirmado atualizado automaticamente (mesma branch `desenv`) — 18 commits, `mergeStateStatus: CLEAN`, `mergeable: MERGEABLE`. Não foi necessário recriar o PR de promoção.
@@ -157,5 +170,5 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 | 11 | Líder Técnico (merge 4 sub-issues + PR #250 desenv→homolog) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
 | 12 | Code Review (PR #250 desenv→homolog) — REPROVADO | Code Review | sonnet-5 | ~ | ~ | ~ |
 | 13 | Líder Técnico (mapeamento falha CR, #245 reaberta) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
-| 14 | Dev Angular (correção sub-issue #245, PR #251) | Dev Angular | sonnet-5 | ~ | ~ | ~ |
+| 14 | Dev Angular (correção sub-issue #245 — colapso mobile + skeleton, PR #251) | Dev Angular | sonnet-5 | ~ | ~ | ~ |
 | 15 | Líder Técnico (merge PR #251 → desenv; confirma PR #250 atualizado) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
