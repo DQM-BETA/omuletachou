@@ -291,6 +291,58 @@
   box-shadow: 0 0 0 6px var(--color-primary-light);
 }
 
+/* Campos digitáveis de preço mínimo/máximo (item 3) — reaproveitam altura/borda/raio dos
+   .filter-bar__dropdown-trigger, sem CSS novo fora do padrão já estabelecido. */
+.filter-bar__price-inputs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.filter-bar__price-input-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 1;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.filter-bar__price-input-field:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.filter-bar__price-input-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-neutral-600);
+}
+
+.filter-bar__price-input-field input {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-900);
+}
+
+.filter-bar__price-input-field input:focus {
+  outline: none;
+}
+
+.filter-bar__price-error {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-danger, #e63946);
+}
+
 /* Botões de desconto mínimo */
 .filter-bar__discount-group {
   display: flex;

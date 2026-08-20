@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { CategoryTree } from '@/lib/types';
 
@@ -34,6 +34,22 @@ type RestrictiveKey = (typeof RESTRICTIVE_KEYS)[number];
 // default sensato de UI, sem fixar contrato de dado.
 const PRICE_MIN = 0;
 const PRICE_MAX = 5000;
+
+// Causa raiz do bug do slider (design.md §"Investigação do bug do item 2"): cada onChange do
+// range disparava router.push() síncrono direto na URL; um arrasto rápido gera dezenas de
+// chamadas/segundo, excedendo o throttle de history.pushState do Chromium (~100/10s) e lançando
+// um SecurityError não tratado (sem error.tsx na árvore app/, cai no fallback genérico do
+// Next.js). Correção: estado local de rascunho (min/maxDraft) desacoplado da URL durante o
+// arrasto; commit (router.replace, não push) só ao soltar o gesto e/ou após este debounce —
+// reduz o volume de navegações de "um por frame" para "um por gesto/pausa".
+const PRICE_COMMIT_DEBOUNCE_MS = 250;
+
+function clampToPriceRange(value: number): number {
+  if (Number.isNaN(value)) {
+    return PRICE_MIN;
+  }
+  return Math.min(PRICE_MAX, Math.max(PRICE_MIN, value));
+}
 
 // Distância de rolagem (px) a partir da qual o FAB reaparece (spec §5.2 — reabre o painel sem
 // precisar rolar de volta ao topo). `.filter-bar--mobile` é `position: sticky`, então medir seu
@@ -129,6 +145,193 @@ export default function FilterBar({ categories }: FilterBarProps) {
     [router, pathname, searchParams]
   );
 
+  // Commit de preço usa router.replace (não push, ver design.md) — ajustar a faixa de preço é
+  // refinamento contínuo do mesmo filtro, não deve empilhar entrada de histórico por ajuste, e
+  // reduz ainda mais a chance de bater no throttle de history.replaceState do browser.
+  const commitPriceParams = useCallback(
+    (nextMinPrice: number, nextMaxPrice: number) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (nextMinPrice <= PRICE_MIN) {
+        params.delete('minPrice');
+      } else {
+        params.set('minPrice', String(nextMinPrice));
+      }
+      if (nextMaxPrice >= PRICE_MAX) {
+        params.delete('maxPrice');
+      } else {
+        params.set('maxPrice', String(nextMaxPrice));
+      }
+      params.delete('page');
+      router.replace(`${pathname}?${params.toString()}`);
+    },
+    [router, pathname, searchParams]
+  );
+
+  // Estado local de "rascunho" do slider/campos de preço — desacoplado da URL a cada evento
+  // (causa raiz do bug, ver design.md). Inicializado a partir da URL; ressincronizado sempre que
+  // o valor efetivamente commitado na URL mudar por outra via (Limpar filtros, remover pílula,
+  // navegação/back-forward) — nunca durante um arrasto em andamento, já que nesse intervalo a URL
+  // não muda.
+  const [minDraft, setMinDraft] = useState<number>(minPrice);
+  const [maxDraft, setMaxDraft] = useState<number>(maxPrice);
+  const [minPriceText, setMinPriceText] = useState<string>(String(minPrice));
+  const [maxPriceText, setMaxPriceText] = useState<string>(String(maxPrice));
+  const [priceError, setPriceError] = useState<string | null>(null);
+
+  // Refs para o debounce ler sempre o valor mais recente (evita closure obsoleta do setTimeout).
+  const minDraftRef = useRef(minPrice);
+  const maxDraftRef = useRef(maxPrice);
+  const priceCommitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setMinDraft(minPrice);
+    setMinPriceText(String(minPrice));
+    minDraftRef.current = minPrice;
+  }, [minPrice]);
+
+  useEffect(() => {
+    setMaxDraft(maxPrice);
+    setMaxPriceText(String(maxPrice));
+    maxDraftRef.current = maxPrice;
+  }, [maxPrice]);
+
+  // Limpa qualquer debounce pendente ao desmontar (evita commit/navegação após unmount).
+  useEffect(
+    () => () => {
+      if (priceCommitTimer.current) {
+        clearTimeout(priceCommitTimer.current);
+      }
+    },
+    []
+  );
+
+  const commitPrice = useCallback(
+    (rawMin: number, rawMax: number) => {
+      let nextMin = clampToPriceRange(rawMin);
+      const nextMax = clampToPriceRange(rawMax);
+      if (nextMin > nextMax) {
+        // Clamp silencioso do cruzamento min/max no commit do slider (arrasto contínuo) — o
+        // caminho dos campos de texto (commitMinPriceText/commitMaxPriceText) bloqueia com
+        // mensagem em vez de clampar (CA 3.4).
+        nextMin = nextMax;
+      }
+      setMinDraft(nextMin);
+      setMaxDraft(nextMax);
+      setMinPriceText(String(nextMin));
+      setMaxPriceText(String(nextMax));
+      minDraftRef.current = nextMin;
+      maxDraftRef.current = nextMax;
+      setPriceError(null);
+      commitPriceParams(nextMin, nextMax);
+    },
+    [commitPriceParams]
+  );
+
+  const scheduleDebouncedPriceCommit = useCallback(() => {
+    if (priceCommitTimer.current) {
+      clearTimeout(priceCommitTimer.current);
+    }
+    priceCommitTimer.current = setTimeout(() => {
+      commitPrice(minDraftRef.current, maxDraftRef.current);
+    }, PRICE_COMMIT_DEBOUNCE_MS);
+  }, [commitPrice]);
+
+  const cancelDebouncedPriceCommit = useCallback(() => {
+    if (priceCommitTimer.current) {
+      clearTimeout(priceCommitTimer.current);
+      priceCommitTimer.current = null;
+    }
+  }, []);
+
+  const handleMinPriceSliderChange = (value: number) => {
+    minDraftRef.current = value;
+    setMinDraft(value);
+    setMinPriceText(String(value));
+    scheduleDebouncedPriceCommit();
+  };
+
+  const handleMaxPriceSliderChange = (value: number) => {
+    maxDraftRef.current = value;
+    setMaxDraft(value);
+    setMaxPriceText(String(value));
+    scheduleDebouncedPriceCommit();
+  };
+
+  // Ao soltar o gesto (mouse/touch/teclado) commit imediato — o debounce acima é rede de
+  // segurança cross-browser caso o evento de soltura não chegue de forma confiável.
+  const handlePriceSliderCommit = () => {
+    cancelDebouncedPriceCommit();
+    commitPrice(minDraftRef.current, maxDraftRef.current);
+  };
+
+  const handleMinPriceTextChange = (value: string) => {
+    setMinPriceText(value);
+  };
+
+  const handleMaxPriceTextChange = (value: string) => {
+    setMaxPriceText(value);
+  };
+
+  const commitMinPriceText = () => {
+    const raw = minPriceText.trim();
+    if (raw === '' || Number.isNaN(Number(raw))) {
+      // CA 3.6: entrada vazia/não numérica não lança exceção nem commita filtro inválido —
+      // reverte ao último valor válido.
+      setMinPriceText(String(minDraft));
+      return;
+    }
+    let value = Number(raw);
+    let message: string | null = null;
+    if (value < 0) {
+      // CA 3.5: valor negativo não é aplicado — normalizado para 0, com feedback visível.
+      value = 0;
+      message = 'O valor mínimo não pode ser negativo. Ajustado para R$ 0.';
+    }
+    value = clampToPriceRange(value); // CA 3.7: fora dos limites do catálogo — clamp sem erro.
+    if (value > maxDraft) {
+      // CA 3.4: min > max bloqueado com mensagem clara — não commita.
+      setMinPriceText(String(minDraft));
+      setPriceError('O valor mínimo não pode ser maior que o valor máximo.');
+      return;
+    }
+    // commitPrice limpa priceError internamente (caminho do slider não tem mensagem) — chamar
+    // setPriceError(message) depois, para a mensagem de valor negativo (se houver) prevalecer.
+    commitPrice(value, maxDraft);
+    setPriceError(message);
+  };
+
+  const commitMaxPriceText = () => {
+    const raw = maxPriceText.trim();
+    if (raw === '' || Number.isNaN(Number(raw))) {
+      setMaxPriceText(String(maxDraft));
+      return;
+    }
+    let value = Number(raw);
+    let message: string | null = null;
+    if (value < 0) {
+      value = 0;
+      message = 'O valor máximo não pode ser negativo. Ajustado para R$ 0.';
+    }
+    value = clampToPriceRange(value);
+    if (value < minDraft) {
+      setMaxPriceText(String(maxDraft));
+      setPriceError('O valor máximo não pode ser menor que o valor mínimo.');
+      return;
+    }
+    commitPrice(minDraft, value);
+    setPriceError(message);
+  };
+
+  const handlePriceTextKeyDown = (
+    event: KeyboardEvent<HTMLInputElement>,
+    commit: () => void
+  ) => {
+    if (event.key === 'Enter') {
+      commit();
+      event.currentTarget.blur();
+    }
+  };
+
   const handleCategoryChange = (value: string) => {
     updateParams({ category: value || undefined, subcategory: undefined });
     setOpenDropdown(null);
@@ -146,14 +349,6 @@ export default function FilterBar({ categories }: FilterBarProps) {
 
   const handleDiscountToggle = (value: number) => {
     updateParams({ minDiscount: minDiscount === String(value) ? undefined : String(value) });
-  };
-
-  const handleMinPriceChange = (value: string) => {
-    updateParams({ minPrice: value });
-  };
-
-  const handleMaxPriceChange = (value: string) => {
-    updateParams({ maxPrice: value });
   };
 
   const activeRestrictiveKeys = RESTRICTIVE_KEYS.filter((key) => searchParams.get(key));
@@ -258,18 +453,27 @@ export default function FilterBar({ categories }: FilterBarProps) {
     );
   }
 
-  function PriceGroup() {
-    return (
+  // Renderizado como valor JSX (não como componente aninhado `function PriceGroup() {}`) —
+  // mesmo padrão já usado em `groupCategory`/`groupSubcategory`/`groupSort` abaixo. Um
+  // componente declarado dentro do corpo de FilterBar ganha uma nova identidade de função a
+  // cada render do pai; o React trata isso como um tipo diferente e desmonta/remonta a
+  // subárvore inteira a cada re-render — inclusive os `<input type="range">`. Isso quebrava o
+  // próprio mecanismo desta correção: cada `onChange` do slider (que atualiza o estado local)
+  // remontava o `<input>`, destruindo o node DOM em pleno arrasto/digitação e derrubando o
+  // foco/pointer capture nativo do navegador (confirmado por teste: `onBlur` não disparava após
+  // um `onChange` porque o node antigo já estava desmontado). `priceGroup` como valor JSX simples
+  // preserva a identidade do elemento entre renders, corrigindo isso.
+  const priceGroup = (
       <div className="filter-bar__group filter-bar__group--price">
         <span className="filter-bar__label" id="filter-bar-price-label">
           Preço
         </span>
         <div className="filter-bar__price">
           <div className="filter-bar__price-values">
-            <span>{formatPrice(minPrice)}</span>
+            <span>{formatPrice(minDraft)}</span>
             <span>
-              {formatPrice(maxPrice)}
-              {maxPrice >= PRICE_MAX ? '+' : ''}
+              {formatPrice(maxDraft)}
+              {maxDraft >= PRICE_MAX ? '+' : ''}
             </span>
           </div>
           <div className="filter-bar__price-slider">
@@ -277,33 +481,79 @@ export default function FilterBar({ categories }: FilterBarProps) {
             <div
               className="filter-bar__price-range"
               style={{
-                left: `${(minPrice / PRICE_MAX) * 100}%`,
-                right: `${100 - (maxPrice / PRICE_MAX) * 100}%`,
+                left: `${(minDraft / PRICE_MAX) * 100}%`,
+                right: `${100 - (maxDraft / PRICE_MAX) * 100}%`,
               }}
             />
+            {/* Estado local (minDraft/maxDraft) durante o arrasto — nunca mais controlado
+                direto pela URL a cada evento (causa raiz do bug, ver design.md). O commit à URL
+                acontece só em handlePriceSliderCommit (soltura do gesto) e/ou no debounce
+                agendado por handleMin/MaxPriceSliderChange. */}
             <input
               type="range"
               aria-label="Preço mínimo"
               min={PRICE_MIN}
               max={PRICE_MAX}
-              value={minPrice}
+              value={minDraft}
               className="filter-bar__price-input"
-              onChange={(e) => handleMinPriceChange(e.target.value)}
+              onChange={(e) => handleMinPriceSliderChange(Number(e.target.value))}
+              onPointerUp={handlePriceSliderCommit}
+              onMouseUp={handlePriceSliderCommit}
+              onTouchEnd={handlePriceSliderCommit}
+              onKeyUp={handlePriceSliderCommit}
             />
             <input
               type="range"
               aria-label="Preço máximo"
               min={PRICE_MIN}
               max={PRICE_MAX}
-              value={maxPrice}
+              value={maxDraft}
               className="filter-bar__price-input"
-              onChange={(e) => handleMaxPriceChange(e.target.value)}
+              onChange={(e) => handleMaxPriceSliderChange(Number(e.target.value))}
+              onPointerUp={handlePriceSliderCommit}
+              onMouseUp={handlePriceSliderCommit}
+              onTouchEnd={handlePriceSliderCommit}
+              onKeyUp={handlePriceSliderCommit}
             />
           </div>
+          <div className="filter-bar__price-inputs">
+            <label className="filter-bar__price-input-field">
+              <span className="filter-bar__price-input-label">Mín.</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                aria-label="Preço mínimo (digitar)"
+                min={PRICE_MIN}
+                max={PRICE_MAX}
+                value={minPriceText}
+                onChange={(e) => handleMinPriceTextChange(e.target.value)}
+                onBlur={commitMinPriceText}
+                onKeyDown={(e) => handlePriceTextKeyDown(e, commitMinPriceText)}
+              />
+            </label>
+            <label className="filter-bar__price-input-field">
+              <span className="filter-bar__price-input-label">Máx.</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                aria-label="Preço máximo (digitar)"
+                min={PRICE_MIN}
+                max={PRICE_MAX}
+                value={maxPriceText}
+                onChange={(e) => handleMaxPriceTextChange(e.target.value)}
+                onBlur={commitMaxPriceText}
+                onKeyDown={(e) => handlePriceTextKeyDown(e, commitMaxPriceText)}
+              />
+            </label>
+          </div>
+          {priceError && (
+            <p className="filter-bar__price-error" role="alert">
+              {priceError}
+            </p>
+          )}
         </div>
       </div>
-    );
-  }
+  );
 
   function DiscountGroup() {
     return (
@@ -460,7 +710,7 @@ export default function FilterBar({ categories }: FilterBarProps) {
         <div className="filter-bar__row">
           {groupCategory}
           {groupSubcategory}
-          <PriceGroup />
+          {priceGroup}
           <DiscountGroup />
           {groupSort}
           <ClearButton />
@@ -520,7 +770,7 @@ export default function FilterBar({ categories }: FilterBarProps) {
                 <div className="filter-bar__drawer-body">
                   {groupCategory}
                   {groupSubcategory}
-                  <PriceGroup />
+                  {priceGroup}
                   <DiscountGroup />
                 </div>
                 <div className="filter-bar__drawer-footer">
