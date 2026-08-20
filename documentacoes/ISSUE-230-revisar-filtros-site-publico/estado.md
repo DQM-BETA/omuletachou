@@ -5,41 +5,87 @@
 - titulo: revisar filtros da tela de produtos do site público (desconto, preço) — item 4 (busca inteligente) separado para Issue #260
 - repo: DQM-BETA/omuletachou
 - repo_path: repos/omuletachou
-- docs_path: repos/omuletachou/documentacoes/ISSUE-230-revisar-filtros-site-publico/
-- openspec_change: repos/omuletachou/openspec/changes/issue-230-revisar-filtros-site-publico/
+- docs_path: repos/omuletachou/documentacoes/ISSUE-230-revisar-filtros-site-publico
+- openspec_change: repos/omuletachou/openspec/changes/issue-230-revisar-filtros-site-publico
+- openspec_path: repos/omuletachou/openspec/changes/issue-230-revisar-filtros-site-publico
 
 ## Pipeline
 - rota: normal
-- etapa_atual: Refinamento Técnico
-- ultimo_agente: pm-analista-negocios
+- etapa_atual: Em Desenvolvimento
+- ultimo_agente: lider-tecnico
 - status_comment_id: (gerenciado pelo Coordenador — não criado ainda por este agente)
+- tech_stacks: [nodejs]
+- repos:
+  - omuletachou: https://github.com/DQM-BETA/omuletachou
+
+## Sub-issues
+- #261 (stack:nodejs, task_id:T-01) — Remover filtro de desconto mínimo (item 1)
+- #262 (stack:nodejs, task_id:T-02) — Corrigir bug do slider de preço + digitar min/max (itens 2+3)
+- sub_issues_frontend: {}
+- desenv_tasks_merged: []
+- pr_homologacao: ~
+- pr_release: ~
+- code_review_homolog_pr: ~
+- qa_status: ~
 
 ## Resumo da demanda
-Escopo restrito aos itens 1-3 do pedido original (item 4 — busca inteligente — virou Issue #260, separada):
+Escopo restrito aos itens 1-3 do pedido original (item 4 — busca inteligente — virou Issue #260,
+separada):
 1. Remover filtro de desconto mínimo (10%+/30%+/50%+) da barra de filtros.
-2. Corrigir bug no filtro de preço (slider) — pista do Gerente: arrastar rápido leva a uma página de erro sem mensagem clara (provável exceção não tratada no client). Causa raiz a investigar/documentar no refinamento técnico.
-3. Permitir digitar preço mínimo/máximo (campos numéricos sincronizados com o slider), com validação de min > max e valores negativos.
+2. Corrigir bug no filtro de preço (slider) — causa raiz identificada no refinamento técnico (ver
+   `design.md`): rajada de `router.push()` sem debounce a cada `onChange` do range durante arrasto
+   rápido excede o throttle de `history.pushState` do Chromium (~100 chamadas/10s) →
+   `SecurityError` não tratado → sem `error.tsx` na árvore `app/` → Next.js cai no fallback de erro
+   genérico sem mensagem. Correção: estado local de rascunho + commit via `router.replace` no
+   soltar do gesto/debounce + clamp min<=max + `error.tsx` como defesa em profundidade.
+3. Permitir digitar preço mínimo/máximo (campos numéricos sincronizados com o slider), com
+   validação de min > max e valores negativos.
 
 ## Gate 1 — respondido pelo Gerente (2026-08-20)
 1. Escopo confirmado: separar item 4 (Issue #260). #230 fica só com itens 1-3.
-2. Item 4: já refletido na Issue #260 (decisão: sem chamada à IA por requisição — abordagem via banco).
+2. Item 4: já refletido na Issue #260 (decisão: sem chamada à IA por requisição — abordagem via
+   banco).
 3. Pista do bug do slider: arrastar rápido → página de erro sem mensagem.
 4. Definições de pronto confirmadas conforme propostas (ver proposal.md).
 5. Rota: `normal`.
 
 ## Ambiguidade arquitetural
-Avaliada como **inexistente**. Os 3 itens são mudanças de UI/bugfix pontuais no componente `filter-bar` já existente do `website/` (Next.js) — sem decisão de stack, integração externa nova ou trade-off de infraestrutura. Segue direto para o **Líder Técnico**.
+Avaliada como **inexistente**. Os 3 itens são mudanças de UI/bugfix pontuais no componente
+`filter-bar` já existente do `website/` (Next.js) — sem decisão de stack, integração externa nova
+ou trade-off de infraestrutura. Seguiu direto para o **Líder Técnico**.
 
-## Documentos produzidos na Fase 2
-- `openspec/changes/issue-230-revisar-filtros-site-publico/proposal.md`
-- `documentacoes/ISSUE-230-revisar-filtros-site-publico/criterios-aceite.md` (Given/When/Then por item, incluindo o caso obrigatório "arrastar rápido → página de erro" no item 2)
+## Refinamento técnico (concluído 2026-08-20)
+- Causa raiz do bug do slider (item 2) determinada por tracing estático completo do código (LT não
+  executa aplicação — fora de escopo de ferramentas do papel); reprodução empírica ao vivo fica a
+  cargo do Dev via teste e2e Playwright (`filter-bar-price.spec.ts`), exigido como critério de
+  aceite de T-02 (reproduz o crash pré-fix e comprova a ausência dele pós-fix).
+- Avaliação de split: itens 2+3 mantidos numa única sub-issue (T-02) por tocarem a mesma região de
+  código (`PriceGroup`, mesmo mecanismo estado-local→commit→URL) — separar criaria dependência
+  forte e risco de retrabalho. Item 1 isolado em sub-issue própria (T-01), sem overlap funcional.
+- UX/UI dedicado avaliado como **desnecessário**: os campos de texto min/max (item 3) reaproveitam
+  100% os tokens/padrões já existentes em `filter-bar.css` (mesma altura/borda dos
+  `dropdown-trigger`), composição trivial do design system já estabelecido — não há tela/fluxo novo
+  que justifique spec visual dedicada.
+
+## Documentos produzidos
+- `openspec/changes/issue-230-revisar-filtros-site-publico/proposal.md` (PM)
+- `documentacoes/ISSUE-230-revisar-filtros-site-publico/criterios-aceite.md` (PM)
+- `openspec/changes/issue-230-revisar-filtros-site-publico/design.md` (LT — investigação da causa
+  raiz do bug + decisões de correção)
+- `documentacoes/ISSUE-230-revisar-filtros-site-publico/especificacao-tecnica.md` (LT)
+- `openspec/changes/issue-230-revisar-filtros-site-publico/tasks.md` (LT — T-01, T-02)
 
 ## Notas
-- Diretório duplicado encontrado em `documentacoes/ISSUE-230-revisar-filtros-site-público/` (com acento, criado em 2026-08-19) — parece artefato órfão de uma execução anterior; não foi tocado por este agente (fora do escopo de limpeza do PM). Sinalizar ao LT/DevOps para avaliar remoção.
-- openspec change criado via `npx @fission-ai/openspec new change` — nome exigido em kebab-case minúsculo (`issue-230-...`, não `ISSUE-230-...`); path real difere do padrão usado em docs_path (que mantém `ISSUE-230` maiúsculo por convenção da squad).
+- Diretório duplicado `documentacoes/ISSUE-230-revisar-filtros-site-público/` (com acento) —
+  confirmado como artefato órfão de stub inicial do Coordenador (backlog, pré-refinamento do PM),
+  sem conteúdo não capturado no diretório correto (sem acento). **Removido** por este agente.
+- openspec change criado via `npx @fission-ai/openspec new change` — nome exigido em kebab-case
+  minúsculo (`issue-230-...`, não `ISSUE-230-...`); path real difere do padrão usado em docs_path
+  (que mantém `ISSUE-230` maiúsculo por convenção da squad).
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|---|---|---|---|---|---|
 | 1 | PM Fase 1 | pm-analista-negocios | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
 | 2 | PM Fase 2 | pm-analista-negocios | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
+| 3 | Refinamento Técnico | lider-tecnico | Sonnet | (preencher pela sessão principal via usage do HANDOFF) | - | - |
