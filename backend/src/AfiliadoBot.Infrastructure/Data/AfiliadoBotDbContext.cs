@@ -1,4 +1,5 @@
 using AfiliadoBot.Domain.Entities;
+using AfiliadoBot.Infrastructure.Data.Configurations;
 using Microsoft.EntityFrameworkCore;
 
 namespace AfiliadoBot.Infrastructure.Data;
@@ -18,6 +19,16 @@ public class AfiliadoBotDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AfiliadoBotDbContext).Assembly);
+
+        // Issue #260 (sub-issue #267): search_vector (tsvector gerado + indice GIN) usa o tipo
+        // Npgsql-especifico NpgsqlTsVector, que o provider InMemory (usado por boa parte da suite
+        // de testes que nao precisa de Postgres real, ex. CustomWebApplicationFactory) nao sabe
+        // mapear. So configurado quando o provider ativo do DbContext e o Npgsql.
+        if (Database.IsNpgsql())
+        {
+            modelBuilder.Entity<Product>(ProductConfiguration.ConfigureSearchVector);
+        }
+
         base.OnModelCreating(modelBuilder);
     }
 }
