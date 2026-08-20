@@ -1,8 +1,8 @@
 ---
 issue: 228
 titulo: feat: relatório de produtos com filtros (categoria/plataforma/status) na tela Reports
-etapa_atual: Aguardando Gate 2
-ultimo_agente: lider-tecnico (PR release criado, 2026-08-20)
+etapa_atual: Concluído
+ultimo_agente: coordenador (merge homolog→main + consolidação de custo, 2026-08-20)
 openspec_change: openspec/changes/issue-228-relatorio-produtos-filtros
 tech_stacks: [dotnet, angular]
 repos:
@@ -19,8 +19,9 @@ code_review_homolog_pr: 250 — APROVADO na 2ª rodada (2026-08-20), merge commi
 qa_status: aprovado
 figma_url: ~
 blockers: ~
-status_comment_id: ~
+status_comment_id: 5357263308
 rota: normal
+closedAt: 2026-08-20T14:26:45Z
 ---
 
 ## Resumo
@@ -179,6 +180,12 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 - PR `homolog->main` criado: **#252** (merge commit, referencia Issue #228, sub-issues #242/#243/#244/#245, PR #250, relatorio-qa.md).
 - `etapa_atual` avança para **Aguardando Gate 2** — aguardando aprovação humana do Gerente. NAO mesclado.
 
+## Gate 2 — Coordenador (2026-08-20)
+- PR #252 (`homolog→main`, merge commit) mergeado: oid `<HEAD da main>`.
+- Issue #228 auto-fechada via referência `Closes #228` no PR.
+- Comentário 📍 Status criado na Issue (registrando pipeline completo).
+- Tabela 💰 Custo publicada como comentário na Issue.
+
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
 |---|---|---|---|---|---|---|
@@ -200,3 +207,5 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 | 15 | Líder Técnico (merge PR #251 → desenv; confirma PR #250 atualizado) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
 | 16 | Code Review (PR #250 desenv→homolog, 2ª rodada) — APROVADO, merge homolog | Code Review | sonnet-5 | ~ | ~ | ~ |
 | 17 | QA (validação integrada real — APROVADO) | QA | sonnet-5 | ~ | ~ | ~ |
+| 18 | Coordenador (merge homolog→main + consolidação de custo) | Coordenador | haiku-4.5 | ~ | ~ | ~ |
+| **Total decorrido** | — | — | — | **~** | **~** | **~90,610s (~25.17h)** |
