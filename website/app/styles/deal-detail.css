@@ -80,6 +80,19 @@
   margin-block: var(--space-2);
 }
 
+/*
+  Tag de plataforma (Issue #229, correção pós Code Review PR #257): reaproveita a classe
+  `.deal-card__platform` (definida em deal-card.css, sem dependência do DealCard) para manter
+  texto/estilo idênticos entre telas (CA 8). `.deal-detail__price` é um container flex row
+  (align-items: baseline); sem este override o chip ficaria na mesma linha do preço. O
+  `ux-ui-spec.md` exige linha própria acima do preço (mesmo raciocínio de CA 6 do DealCard: não
+  disputar espaço horizontal com os números) — `flex-basis: 100%` força a quebra de linha dentro
+  do flex-wrap já existente no container, empurrando o preço para a linha seguinte.
+*/
+.deal-detail__price > .deal-card__platform {
+  flex-basis: 100%;
+}
+
 .deal-detail__price-current {
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-black);

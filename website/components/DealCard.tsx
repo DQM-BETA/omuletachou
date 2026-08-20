@@ -1,22 +1,15 @@
 import type { Deal } from '@/lib/types';
 import { formatPriceBRL, resolveDealImageUrl } from '@/lib/format';
+import { getPlatformLabel } from '@/lib/platform';
 
 interface DealCardProps {
   deal: Deal;
 }
 
-// Mapeamento enum -> texto de exibição (definido pelo UX/UI, ver docs_path/ux-ui-spec.md da
-// Issue #229). Nome completo, sem abreviação; nunca exibir o valor bruto do enum na tela.
-const PLATFORM_LABELS: Record<string, string> = {
-  Amazon: 'Amazon',
-  MercadoLivre: 'Mercado Livre',
-  Shopee: 'Shopee',
-};
-
 export default function DealCard({ deal }: DealCardProps) {
   const hasDiscount = deal.discountPct > 0;
   const imageUrl = resolveDealImageUrl(deal);
-  const platformLabel = deal.platform ? PLATFORM_LABELS[deal.platform] : undefined;
+  const platformLabel = getPlatformLabel(deal.platform);
 
   return (
     <article className="deal-card" data-testid="deal-card">
