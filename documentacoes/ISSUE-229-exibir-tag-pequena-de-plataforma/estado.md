@@ -1,8 +1,8 @@
 ---
 issue: 229
 titulo: 'feat: exibir tag pequena de plataforma de origem nos cards de produto do site público'
-etapa_atual: Code Review
-ultimo_agente: lider-tecnico
+etapa_atual: Concluído
+ultimo_agente: coordenador
 openspec_change: repos/omuletachou/openspec/changes/issue-229-exibir-tag-plataforma
 tech_stacks: [dotnet, nextjs]
 repos:
@@ -14,13 +14,15 @@ sub_issues: ['#253 (stack:dotnet, task_id:T-01)', '#254 (stack:nodejs, task_id:T
 desenv_tasks_merged: ['#253', '#254']
 sub_issues_frontend: {'#254': 'Corrigida e fechada novamente (2026-08-20) — PR #258 mergeado (squash) em desenv, cobre gap do DealDetail.tsx (CA3)'}
 pr_homologacao: 257
-pr_release: ~
-code_review_homolog_pr: pendente — nova rodada necessária no PR #257 após correção do #254 (PR #258 mergeado)
-qa_status: ~
+pr_release: 259
+code_review_homolog_pr: 257 (aprovado 2ª rodada, merge commit 89beab1aeba9910d27ab18dedb98fbe587148733 — desenv→homolog)
+qa_status: aprovado
 figma_url: ~
 blockers: nenhum
-status_comment_id: ~
+status_comment_id: 5359472824
 rota: normal
+createdAt: 2026-08-19T13:22:54Z
+closedAt: 2026-08-20T17:33:25Z
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
@@ -33,6 +35,9 @@ rota: normal
 | 6 | Mapeamento de falha (LT) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
 | 7 | Correção #254 (Dev, DealDetail.tsx) | Dev Node.js | sonnet-5 | ~ | ~ | ~ |
 | 8 | Merge PR #258 (correção #254) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
+| 9 | Code Review PR #257 (2ª rodada, aprovado) | Code Review | sonnet-5 | ~ | ~ | ~ |
+| 10 | QA (aprovado) | QA | sonnet-5 | ~ | ~ | ~ |
+| 11 | PR release homolog→main (LT) | Líder Técnico | sonnet-5 | ~ | ~ | ~ |
 
 ## Notas
 - **Rota:** promovida de `backlog` para `normal` pelo Gerente no Gate 1 (2026-08-20) — segue o pipeline completo a partir daqui.
@@ -77,3 +82,41 @@ Demais pontos do PR (backend #253, testes, build/boot via docker compose, integr
 - PR #257 (`desenv→homolog`) reaproveitado (não recriado) — já absorveu o novo commit automaticamente (`headRefName: desenv`). Confirmado: último commit do PR #257 = `b7d8a08c...` (mesmo commit do merge #258), `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`.
 - `desenv_tasks_merged` atualizado para `['#253', '#254']` — todas as sub-issues concluídas novamente.
 - `etapa_atual` atualizado para `Code Review` — PR #257 pronto para nova rodada de Code Review.
+
+### Code Review — PR #257, 2ª rodada (2026-08-20) — APROVADO
+- Foco: apenas o ponto que reprovou (CA 3, `DealDetail.tsx`), com confirmação rápida de não-regressão no resto.
+- `dotnet test`: 490/490 passando. `npm test` (website): 117/117 passando (109 anteriores + 8 novos de `DealDetail.test.tsx`).
+- `docker compose build --no-cache api website` (sem cache antigo) + `docker compose up -d db api website`: 3 containers saudáveis, `/health` → 200, home → 200.
+- Validação ao vivo: produto real `cabo-hdmi-5m-metros-preto-premium-4k-blindado-gold-3d-full-mlb50912025` (mesmo da 1ª rodada) setado via SQL para `platform=Amazon`; confirmado na API (`GetBySlug`) e no HTML renderizado de `/oferta/{slug}` — tag "Amazon" agora aparece como primeiro filho de `.deal-detail__price` (produto principal), distinta das tags "Mercado Livre" dos produtos relacionados em `.deal-card__price`. Dado revertido, stack derrubada, sem alteração residual.
+- Checklist de veto: compila/sobe OK, integração real OK (Postgres real + HTML server-rendered), conformidade com CA 3 OK, sem specs Playwright tocados (N/A para `.first()`), sem teste-lixo/segredo, cobertura 100% nos 2 componentes declarada e plausível.
+- Nenhum achado adicional do plugin `/code-review` postado nesta rodada.
+- Evidência completa postada como comentário no PR: https://github.com/DQM-BETA/omuletachou/pull/257#issuecomment-5358200879
+- **Merge `desenv→homolog` executado** (merge commit, não squash): `89beab1aeba9910d27ab18dedb98fbe587148733`. PR #257 `MERGED`.
+- `etapa_atual` atualizado para `QA`.
+
+### QA — aprovado (2026-08-20)
+- Sincronização: `git fetch`/`checkout homolog`/`pull` — confirmado commit `89beab1a` no topo do histórico de `homolog` antes de validar.
+- `dotnet test`: 490/490. `npm test` (website): 117/117. `npx tsc --noEmit`: gap pré-existente de tipos `@testing-library/jest-dom` em `tsconfig.json` (afeta arquivos não relacionados a esta issue — não é regressão); `npx next build` compila e type-checa limpo.
+- `npm run test:visual` (Playwright, mobile-chromium): 5/5 passando. Screenshots arquivados em `docs_path/screenshots/` (`home.png`, `categoria.png`, `deal-detail.png`, `filter-bar-*.png`).
+- Gate visual: header 1x por tela, sem footer no projeto (pré-existente, não é regressão), tag "Mercado Livre" discreta e legível em todas as telas, condiz com `ux-ui-spec.md`.
+- Validação integrada real: `docker compose build --no-cache api website` + `up -d db api website` (3 containers healthy) contra dado real do Postgres em `homolog` (12 produtos `status=Published`, todos `platform=MercadoLivre`). HTTP real (curl) confirmou SSR:
+  - Home: 12/12 cards com tag.
+  - `/categoria/Geral`: 4/4 cards com tag.
+  - `/oferta/microfone-hollyland-lark-m2-...`: tag do produto principal confirmada como primeiro filho de `.deal-detail__price` (CA3, o gap que reprovou a 1ª rodada de CR) — distinta das tags dos produtos relacionados na seção "Mais ofertas".
+- CA4/CA5 (produto sem plataforma/valor não mapeado) validados via teste unitário (`DealDetail.test.tsx`/`DealCard.test.tsx`, 100% cobertura) — não reproduzível em dado real pois a coluna `platform` é `NOT NULL` no schema atual.
+- CA7: `<span data-testid="platform-tag">` sem `href`/`onclick`/`tabindex`; `FilterBar.tsx` sem nenhuma menção a "platform" (0 ocorrências) — sem regressão da Issue #167.
+- Nenhuma mutação residual no Postgres (contagem de status idêntica antes/depois). Stack derrubada ao final.
+- Relatório completo: `docs_path/relatorio-qa.md`.
+- **Todos os 8 critérios de aceite aprovados.** `etapa_atual` atualizado para `Aguardando PR release (LT)`.
+
+### PR release homolog→main — #259 (2026-08-20)
+- Confirmado `desenv` 2 commits à frente de `homolog` (docs do QA: `relatorio-qa.md`, `screenshots/`, `estado.md`), já commitados em `desenv` (commit `2855dea`) — nada a commitar antes do PR.
+- PR criado: `homolog→main`, merge commit (nunca squash) — https://github.com/DQM-BETA/omuletachou/pull/259 — referencia Issue #229, sub-issues #253/#254, PR #257, `relatorio-qa.md`.
+- **Não mesclado** — aguardando aprovação humana do Gerente (Gate 2).
+- `etapa_atual` atualizado para `Aguardando Gate 2`.
+
+### Gate 2 aprovado e merge executado (2026-08-20)
+- Merge `homolog→main` via merge commit (não squash): PR #259 mergeado em 2026-08-20 17:33:24Z.
+- Issue #229 auto-fechada (via `Closes #229` no corpo do PR).
+- Consolidação de custo: tabelas de status e custo postadas como comentários na Issue.
+- `etapa_atual` atualizado para `Concluído`.
