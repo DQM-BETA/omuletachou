@@ -24,8 +24,9 @@ const SORT_OPTIONS: DropdownOption[] = [
 ];
 
 // Filtros "restritivos" — contam para o badge/estado de "Limpar filtros" e geram pílula.
-// `sort` não conta (reordena, não restringe — decisão de UX registrada na spec §6.4).
-const RESTRICTIVE_KEYS = ['category', 'subcategory', 'minPrice', 'maxPrice'] as const;
+// `sort` não conta (reordena, não restringe — decisão de UX registrada na spec §6.4). `q`
+// (Issue #260) entra aqui: busca textual também restringe a listagem.
+const RESTRICTIVE_KEYS = ['category', 'subcategory', 'minPrice', 'maxPrice', 'q'] as const;
 type RestrictiveKey = (typeof RESTRICTIVE_KEYS)[number];
 
 // Fora de escopo visual (spec §6.2): limites reais viriam do catálogo; usados aqui como
@@ -41,6 +42,13 @@ const PRICE_MAX = 5000;
 // arrasto; commit (router.replace, não push) só ao soltar o gesto e/ou após este debounce —
 // reduz o volume de navegações de "um por frame" para "um por gesto/pausa".
 const PRICE_COMMIT_DEBOUNCE_MS = 250;
+
+// Debounce da busca textual (Issue #260, design.md §3) — reaproveita exatamente o mecanismo do
+// preço (draft local + debounce + router.replace), mas com um intervalo maior: o slider é um
+// gesto contínuo de arrasto (muitos eventos por segundo), enquanto digitação tem pausas naturais
+// maiores entre palavras/palavras-chave — 350ms evita disparar uma navegação a cada tecla sem
+// deixar a busca perceptivelmente lenta.
+const SEARCH_COMMIT_DEBOUNCE_MS = 350;
 
 function clampToPriceRange(value: number): number {
   if (Number.isNaN(value)) {
@@ -86,6 +94,7 @@ export default function FilterBar({ categories }: FilterBarProps) {
   const minPriceParam = searchParams.get('minPrice');
   const maxPriceParam = searchParams.get('maxPrice');
   const sort = searchParams.get('sort') ?? '';
+  const q = searchParams.get('q') ?? '';
 
   const minPrice = minPriceParam !== null ? Number(minPriceParam) : PRICE_MIN;
   const maxPrice = maxPriceParam !== null ? Number(maxPriceParam) : PRICE_MAX;
@@ -201,6 +210,72 @@ export default function FilterBar({ categories }: FilterBarProps) {
     },
     []
   );
+
+  // Busca textual (Issue #260, design.md §3/§5.3) — mesmo mecanismo de draft+debounce+
+  // router.replace do preço acima, reaproveitado 1:1: estado local desacoplado da URL a cada
+  // tecla, ref para o debounce ler sempre o valor mais recente (evita closure obsoleta), commit
+  // via router.replace (não push — digitar é refinamento contínuo do mesmo filtro).
+  const [searchDraft, setSearchDraft] = useState<string>(q);
+  const searchDraftRef = useRef(q);
+  const searchCommitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Ressincroniza o rascunho quando `q` muda por outra via (Limpar filtros, pílula removida,
+  // navegação/back-forward) — mesmo padrão de minPrice/maxPrice acima.
+  useEffect(() => {
+    setSearchDraft(q);
+    searchDraftRef.current = q;
+  }, [q]);
+
+  useEffect(
+    () => () => {
+      if (searchCommitTimer.current) {
+        clearTimeout(searchCommitTimer.current);
+      }
+    },
+    []
+  );
+
+  const commitSearch = useCallback(
+    (value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      const trimmed = value.trim();
+      if (trimmed === '') {
+        params.delete('q');
+      } else {
+        params.set('q', value);
+      }
+      params.delete('page'); // qualquer mudança de filtro reseta a paginação
+      router.replace(`${pathname}?${params.toString()}`);
+    },
+    [router, pathname, searchParams]
+  );
+
+  const scheduleDebouncedSearchCommit = useCallback(() => {
+    if (searchCommitTimer.current) {
+      clearTimeout(searchCommitTimer.current);
+    }
+    searchCommitTimer.current = setTimeout(() => {
+      commitSearch(searchDraftRef.current);
+    }, SEARCH_COMMIT_DEBOUNCE_MS);
+  }, [commitSearch]);
+
+  const handleSearchChange = (value: string) => {
+    searchDraftRef.current = value;
+    setSearchDraft(value);
+    scheduleDebouncedSearchCommit();
+  };
+
+  // Remoção via pílula (CA — mesmo padrão de removeFilter/preço): commit imediato, sem esperar
+  // o debounce.
+  const clearSearch = () => {
+    if (searchCommitTimer.current) {
+      clearTimeout(searchCommitTimer.current);
+      searchCommitTimer.current = null;
+    }
+    searchDraftRef.current = '';
+    setSearchDraft('');
+    commitSearch('');
+  };
 
   const commitPrice = useCallback(
     (rawMin: number, rawMax: number) => {
@@ -607,9 +682,41 @@ export default function FilterBar({ categories }: FilterBarProps) {
             </button>
           </span>
         )}
+        {q && (
+          <span className="filter-bar__pill">
+            &quot;{q}&quot;
+            <button
+              type="button"
+              className="filter-bar__pill-remove"
+              aria-label={`Remover busca ${q}`}
+              onClick={clearSearch}
+            >
+              ✕
+            </button>
+          </span>
+        )}
       </div>
     );
   }
+
+  // Renderizado como valor JSX (não componente aninhado) pelo mesmo motivo de `priceGroup`
+  // acima: preservar a identidade do elemento entre renders, para não perder foco durante a
+  // digitação a cada `onChange` que atualiza o estado local (`searchDraft`).
+  const searchGroup = (
+    <div className="filter-bar__group filter-bar__group--search">
+      <span className="filter-bar__label" id="filter-bar-search-label">
+        Buscar
+      </span>
+      <input
+        type="search"
+        aria-label="Buscar produtos"
+        placeholder="Buscar produtos..."
+        className="filter-bar__search-input"
+        value={searchDraft}
+        onChange={(e) => handleSearchChange(e.target.value)}
+      />
+    </div>
+  );
 
   const groupCategory = (
     <div className="filter-bar__group">
@@ -662,6 +769,7 @@ export default function FilterBar({ categories }: FilterBarProps) {
     >
       {isDesktop ? (
         <div className="filter-bar__row">
+          {searchGroup}
           {groupCategory}
           {groupSubcategory}
           {priceGroup}
@@ -721,6 +829,7 @@ export default function FilterBar({ categories }: FilterBarProps) {
                   </button>
                 </div>
                 <div className="filter-bar__drawer-body">
+                  {searchGroup}
                   {groupCategory}
                   {groupSubcategory}
                   {priceGroup}
