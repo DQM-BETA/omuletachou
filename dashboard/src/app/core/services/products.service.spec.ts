@@ -72,6 +72,61 @@ describe('ProductsService', () => {
     req.flush({ items: [], page: 2, pageSize: 10, totalItems: 0, totalPages: 0 });
   });
 
+  it('Issue #228/#245 — list() envia category/subcategory/collectedFrom/collectedTo quando informados', () => {
+    service
+      .list({
+        category: 'Eletrônicos',
+        subcategory: 'Celulares',
+        collectedFrom: '2026-01-01',
+        collectedTo: '2026-01-31',
+        page: 1,
+      })
+      .subscribe();
+
+    const req = httpMock.expectOne(
+      (r) =>
+        r.url === '/api/products' &&
+        r.params.get('category') === 'Eletrônicos' &&
+        r.params.get('subcategory') === 'Celulares' &&
+        r.params.get('collectedFrom') === '2026-01-01' &&
+        r.params.get('collectedTo') === '2026-01-31'
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush({ items: [], page: 1, pageSize: 20, totalItems: 0, totalPages: 0 });
+  });
+
+  it('Issue #228/#245 — item retornado por list() traz subcategory (pode ser null)', () => {
+    const mockResponse: PagedResult<ProductListItem> = {
+      items: [
+        {
+          id: '1',
+          title: 'Produto X',
+          salePrice: 100,
+          originalPrice: 150,
+          discountPct: 33,
+          status: 'Published',
+          platform: 'MercadoLivre',
+          slug: 'produto-x',
+          category: 'Eletrônicos',
+          subcategory: null,
+          createdAt: '2026-07-01T00:00:00Z',
+        },
+      ],
+      page: 1,
+      pageSize: 20,
+      totalItems: 1,
+      totalPages: 1,
+    };
+
+    let result: PagedResult<ProductListItem> | undefined;
+    service.list({}).subscribe((res) => (result = res));
+
+    const req = httpMock.expectOne((r) => r.url === '/api/products');
+    req.flush(mockResponse);
+
+    expect(result?.items[0].subcategory).toBeNull();
+  });
+
   it('list() não envia parâmetros undefined (cleanParams)', () => {
     service.list({ status: undefined, platform: undefined }).subscribe();
 

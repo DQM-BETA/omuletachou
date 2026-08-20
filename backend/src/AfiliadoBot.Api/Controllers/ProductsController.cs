@@ -28,12 +28,19 @@ public class ProductsController : ControllerBase
     /// <summary>
     /// CA-B1 (paginacao default), CA-B2 (filtros status/platform). Filtro invalido (fora do
     /// enum) nao gera 400 — apenas nao retorna itens, mantendo page/pageSize normalizados no
-    /// envelope de resposta.
+    /// envelope de resposta. Issue #228/T-03: 4 novos filtros opcionais aditivos (category,
+    /// subcategory, collectedFrom, collectedTo) — mesmas regras de ReportsController.ProductsSummary
+    /// (especificacao-tecnica.md §3). Sem eles, comportamento identico ao anterior (nao-regressao
+    /// de ProductsComponent, que continua sem filtro implicito de status).
     /// </summary>
     [HttpGet]
     public async Task<ActionResult<PagedResult<ProductListItemDto>>> GetProducts(
         [FromQuery] string? status,
         [FromQuery] string? platform,
+        [FromQuery] string? category,
+        [FromQuery] string? subcategory,
+        [FromQuery] DateOnly? collectedFrom,
+        [FromQuery] DateOnly? collectedTo,
         [FromQuery] int? page,
         [FromQuery] int? pageSize,
         CancellationToken ct)
@@ -52,6 +59,28 @@ public class ProductsController : ControllerBase
             query = Enum.TryParse<Platform>(platform, ignoreCase: true, out var platformFilter)
                 ? query.Where(p => p.Platform == platformFilter)
                 : query.Where(_ => false);
+        }
+
+        if (!string.IsNullOrWhiteSpace(category))
+        {
+            query = query.Where(p => p.Category == category);
+        }
+
+        if (!string.IsNullOrWhiteSpace(subcategory))
+        {
+            query = query.Where(p => p.Subcategory == subcategory);
+        }
+
+        if (collectedFrom.HasValue)
+        {
+            var from = collectedFrom.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+            query = query.Where(p => p.CreatedAt >= from);
+        }
+
+        if (collectedTo.HasValue)
+        {
+            var toExclusive = collectedTo.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc).AddDays(1);
+            query = query.Where(p => p.CreatedAt < toExclusive);
         }
 
         var pagedProducts = await query
@@ -78,7 +107,8 @@ public class ProductsController : ControllerBase
                 p.AiReason,
                 p.CreatedAt,
                 p.SourceUrl,
-                BuildDestinations(p, destinationsByProduct.GetValueOrDefault(p.Id))))
+                BuildDestinations(p, destinationsByProduct.GetValueOrDefault(p.Id)),
+                p.Subcategory))
             .ToList();
 
         var result = new PagedResult<ProductListItemDto>
