@@ -70,7 +70,7 @@ describe('Home page', () => {
     expect(screen.getByTestId('filter-bar-mock')).toBeInTheDocument();
   });
 
-  it('CA 7.1/7.2/7.3: repassa os filtros da URL (category/subcategory/preço/desconto/sort) para fetchDeals', async () => {
+  it('CA 7.1/7.2/7.3: repassa os filtros da URL (category/subcategory/preço/sort) para fetchDeals', async () => {
     fetchDealsMock.mockResolvedValueOnce(pagedResult([buildDeal()]));
 
     await Home({
@@ -79,7 +79,6 @@ describe('Home page', () => {
         subcategory: 'Celulares',
         minPrice: '100',
         maxPrice: '500',
-        minDiscount: '30',
         sort: 'price_asc',
       },
     });
@@ -89,7 +88,6 @@ describe('Home page', () => {
       subcategory: 'Celulares',
       minPrice: 100,
       maxPrice: 500,
-      minDiscount: 30,
       sort: 'price_asc',
     });
   });
@@ -118,7 +116,7 @@ describe('Home page', () => {
   it('CA 7.5: exibe estado vazio orientado a filtro, com CTA "Ver todas as ofertas", quando há filtro ativo sem resultado', async () => {
     fetchDealsMock.mockResolvedValueOnce(pagedResult([]));
 
-    const jsx = await Home({ searchParams: { minDiscount: '90' } });
+    const jsx = await Home({ searchParams: { minPrice: '900' } });
     render(jsx);
 
     expect(screen.getByTestId('deals-empty')).toBeInTheDocument();
