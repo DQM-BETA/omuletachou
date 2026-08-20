@@ -24,6 +24,11 @@ export interface PagedResult<T> {
   pageSize: number;
   totalItems: number;
   totalPages: number;
+  // Issue #260 (T-02/T-03) — sinaliza busca textual (`q`) resolvida pelo estágio 2 (fallback
+  // fonético/fuzzy, `pg_trgm`), em vez de match exato do estágio 1 (full-text). `null`/ausente
+  // quando `q` não foi usado nesta consulta (default do backend, não-regressão); `false` quando
+  // `q` foi usado mas resolvido no estágio 1 (ou resultou em lista vazia — "vazio genuíno").
+  isApproximateSearch?: boolean | null;
 }
 
 /** Contagem de produtos ativos de uma subcategoria (GET /api/public/categories, CA 6.7). */

@@ -2,6 +2,7 @@ using AfiliadoBot.Domain.Entities;
 using AfiliadoBot.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NpgsqlTypes;
 
 namespace AfiliadoBot.Infrastructure.Data.Configurations;
 
@@ -159,5 +160,37 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .WithOne(x => x.Product)
             .HasForeignKey(x => x.ProductId)
             .OnDelete(DeleteBehavior.Cascade);
+    }
+
+    /// <summary>
+    /// Issue #260 (sub-issue #267, design.md secao 2.2/2.4, especificacao-tecnica.md secao 1):
+    /// coluna gerada (GENERATED ALWAYS ... STORED) que combina titulo/categoria/descricao em um
+    /// unico tsvector ponderado (A/B/C) para full-text search em portugues. Shadow property (nao
+    /// exposta em Product) mapeada com o MESMO SQL aplicado via migrationBuilder.Sql na migration
+    /// AddProductSearchVector — necessario para o model snapshot do EF nao tentar "corrigir"/
+    /// recriar a coluna gerada em migrations futuras (CA "sem diff espurio").
+    /// immutable_unaccent(text) e um wrapper IMMUTABLE proprio (criado na mesma migration) em
+    /// torno de unaccent(text), que e apenas STABLE e por isso nao pode ser usada direto dentro
+    /// de uma coluna gerada (design.md secao 2.4).
+    /// Chamado a parte de <see cref="Configure"/> (nao dentro dele) porque o tipo Npgsql-especifico
+    /// NpgsqlTsVector nao e suportado pelo provider InMemory (usado por boa parte da suite de
+    /// testes, ex. CustomWebApplicationFactory) — aplicar isso incondicionalmente quebra a
+    /// validacao do modelo para qualquer teste que nao use Postgres real. Chamado condicionalmente
+    /// por <c>AfiliadoBotDbContext.OnModelCreating</c> (somente quando <c>Database.IsNpgsql()</c>).
+    /// </summary>
+    public static void ConfigureSearchVector(EntityTypeBuilder<Product> builder)
+    {
+        builder.Property<NpgsqlTsVector>("SearchVector")
+            .HasColumnName("search_vector")
+            .HasColumnType("tsvector")
+            .HasComputedColumnSql(
+                "setweight(to_tsvector('portuguese', immutable_unaccent(title)), 'A') || " +
+                "setweight(to_tsvector('portuguese', immutable_unaccent(category)), 'B') || " +
+                "setweight(to_tsvector('portuguese', immutable_unaccent(description)), 'C')",
+                stored: true);
+
+        builder.HasIndex("SearchVector")
+            .HasDatabaseName("IX_products_search_vector")
+            .HasMethod("gin");
     }
 }

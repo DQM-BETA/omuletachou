@@ -50,6 +50,10 @@ function openDrawer(): void {
   fireEvent.click(screen.getByRole('button', { name: /^Filtros/ }));
 }
 
+// Espelha SEARCH_COMMIT_DEBOUNCE_MS (não exportado do componente) — só o valor numérico importa
+// para o teste, não uma referência à constante interna.
+const SEARCH_COMMIT_DEBOUNCE_MS = 350;
+
 describe('FilterBar', () => {
   beforeEach(() => {
     mockPush.mockReset();
@@ -390,6 +394,132 @@ describe('FilterBar', () => {
       const params = lastPushedParams();
       expect(params.get('minPrice')).toBeNull();
       expect(params.get('maxPrice')).toBeNull();
+    });
+  });
+
+  // ISSUE-269 (T-03): campo de busca textual — mesmo mecanismo de draft+debounce+
+  // router.replace já usado no PriceGroup (Issue #230), reaproveitado 1:1.
+  describe('SearchGroup — campo de busca textual (Issue #260)', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      act(() => {
+        jest.runOnlyPendingTimers();
+      });
+      jest.useRealTimers();
+    });
+
+    it('CA 1.1: campo de busca visível na filter-bar, sem substituir os filtros existentes', () => {
+      render(<FilterBar categories={categories} />);
+      openDrawer();
+
+      expect(screen.getByRole('searchbox', { name: 'Buscar produtos' })).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Categoria' })).toBeInTheDocument();
+    });
+
+    it('CA 2.1: digitar não navega a cada tecla (fica em estado local até o debounce)', () => {
+      render(<FilterBar categories={categories} />);
+      openDrawer();
+
+      const input = screen.getByRole('searchbox', { name: 'Buscar produtos' });
+      fireEvent.change(input, { target: { value: 'ten' } });
+
+      expect(mockReplace).not.toHaveBeenCalled();
+      expect(input).toHaveValue('ten');
+
+      fireEvent.change(input, { target: { value: 'tenis' } });
+      expect(mockReplace).not.toHaveBeenCalled();
+    });
+
+    it('CA 2.1: após o debounce, navega com `q` via router.replace (não push, sem empilhar histórico)', () => {
+      render(<FilterBar categories={categories} />);
+      openDrawer();
+
+      fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar produtos' }), {
+        target: { value: 'tenis' },
+      });
+
+      act(() => {
+        jest.advanceTimersByTime(SEARCH_COMMIT_DEBOUNCE_MS);
+      });
+
+      expect(lastReplacedParams().get('q')).toBe('tenis');
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+
+    it('mudança de filtro via busca também reseta a paginação (params.delete("page"))', () => {
+      setSearchParams('page=3');
+      render(<FilterBar categories={categories} />);
+      openDrawer();
+
+      fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar produtos' }), {
+        target: { value: 'fone' },
+      });
+      act(() => {
+        jest.advanceTimersByTime(SEARCH_COMMIT_DEBOUNCE_MS);
+      });
+
+      expect(lastReplacedParams().get('page')).toBeNull();
+    });
+
+    it('campo vazio remove `q` da URL', () => {
+      setSearchParams('q=tenis');
+      render(<FilterBar categories={categories} />);
+      openDrawer();
+
+      fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar produtos' }), {
+        target: { value: '' },
+      });
+      act(() => {
+        jest.advanceTimersByTime(SEARCH_COMMIT_DEBOUNCE_MS);
+      });
+
+      expect(lastReplacedParams().get('q')).toBeNull();
+    });
+
+    it('pílula de busca aparece com o termo ativo e conta para "Limpar filtros"', () => {
+      setSearchParams('q=tenis');
+      render(<FilterBar categories={categories} />);
+      openDrawer();
+
+      expect(screen.getByText('"tenis"')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Limpar filtros' })).not.toBeDisabled();
+    });
+
+    it('remover a pílula de busca commita `q` vazio imediatamente, sem esperar o debounce', () => {
+      setSearchParams('q=tenis');
+      render(<FilterBar categories={categories} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Remover busca tenis' }));
+
+      expect(lastReplacedParams().get('q')).toBeNull();
+    });
+
+    it('"Limpar filtros" também remove a busca ativa', () => {
+      setSearchParams('q=tenis&category=Eletrônicos');
+      render(<FilterBar categories={categories} />);
+      openDrawer();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+
+      const params = lastPushedParams();
+      expect(params.get('q')).toBeNull();
+      expect(params.get('category')).toBeNull();
+    });
+
+    it('resincroniza o rascunho quando `q` muda externamente (ex. "Limpar filtros"/back-forward)', () => {
+      setSearchParams('q=tenis');
+      const { rerender } = render(<FilterBar categories={categories} />);
+      openDrawer();
+
+      expect(screen.getByRole('searchbox', { name: 'Buscar produtos' })).toHaveValue('tenis');
+
+      setSearchParams('');
+      rerender(<FilterBar categories={categories} />);
+
+      expect(screen.getByRole('searchbox', { name: 'Buscar produtos' })).toHaveValue('');
     });
   });
 

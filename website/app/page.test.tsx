@@ -129,4 +129,100 @@ describe('Home page', () => {
 
     await expect(Home({ searchParams: {} })).rejects.toThrow('API indisponível');
   });
+
+  // ISSUE-269 (T-03) — busca textual: propagação de `q` + 3 estados de resultado.
+  describe('busca textual (Issue #260)', () => {
+    it('repassa `q` da URL para fetchDeals junto com os demais filtros', async () => {
+      fetchDealsMock.mockResolvedValueOnce(pagedResult([buildDeal()]));
+
+      await Home({ searchParams: { q: 'tenis' } });
+
+      expect(fetchDealsMock).toHaveBeenCalledWith(1, 12, {
+        category: undefined,
+        subcategory: undefined,
+        minPrice: undefined,
+        maxPrice: undefined,
+        sort: undefined,
+        q: 'tenis',
+      });
+    });
+
+    it('CA 1.2/não-regressão: sem `q` na URL, nenhum banner/estado novo aparece', async () => {
+      fetchDealsMock.mockResolvedValueOnce(pagedResult([buildDeal()]));
+
+      const jsx = await Home({ searchParams: {} });
+      render(jsx);
+
+      expect(screen.queryByTestId('deals-search-approximate')).not.toBeInTheDocument();
+    });
+
+    it('CA 4.2: isApproximateSearch === true exibe banner de resultados aproximados', async () => {
+      fetchDealsMock.mockResolvedValueOnce(
+        pagedResult([buildDeal()], { isApproximateSearch: true })
+      );
+
+      const jsx = await Home({ searchParams: { q: 'tenus' } });
+      render(jsx);
+
+      expect(screen.getByTestId('deals-search-approximate')).toHaveTextContent(
+        'Resultados aproximados para "tenus"'
+      );
+      expect(screen.getByTestId('deals-grid')).toBeInTheDocument();
+    });
+
+    it('isApproximateSearch === false (match exato) não exibe o banner', async () => {
+      fetchDealsMock.mockResolvedValueOnce(
+        pagedResult([buildDeal()], { isApproximateSearch: false })
+      );
+
+      const jsx = await Home({ searchParams: { q: 'tenis' } });
+      render(jsx);
+
+      expect(screen.queryByTestId('deals-search-approximate')).not.toBeInTheDocument();
+    });
+
+    it('CA 5.1: items.length === 0 com `q` presente exibe mensagem de vazio genuíno, distinta da mensagem de "sem filtros"', async () => {
+      fetchDealsMock.mockResolvedValueOnce(pagedResult([]));
+
+      const jsx = await Home({ searchParams: { q: 'xyzabc' } });
+      render(jsx);
+
+      expect(screen.getByTestId('deals-empty')).toBeInTheDocument();
+      expect(screen.getByText('Nenhum produto encontrado para "xyzabc".')).toBeInTheDocument();
+      expect(
+        screen.queryByText(/nenhuma oferta encontrada com esses filtros/i)
+      ).not.toBeInTheDocument();
+    });
+
+    it('busca vazia + filtro de preço ativo continua usando a mensagem "sem filtros" já existente', async () => {
+      fetchDealsMock.mockResolvedValueOnce(pagedResult([]));
+
+      const jsx = await Home({ searchParams: { minPrice: '900' } });
+      render(jsx);
+
+      expect(screen.getByText(/nenhuma oferta encontrada com esses filtros/i)).toBeInTheDocument();
+    });
+
+    it('CA 6.1: `q` combinado com filtros ativos é repassado junto ao fetchDeals (sem filtro client-side por cima)', async () => {
+      fetchDealsMock.mockResolvedValueOnce(pagedResult([buildDeal()]));
+
+      await Home({ searchParams: { q: 'tenis', category: 'Eletrônicos', minPrice: '100' } });
+
+      expect(fetchDealsMock).toHaveBeenCalledWith(
+        1,
+        12,
+        expect.objectContaining({ q: 'tenis', category: 'Eletrônicos', minPrice: 100 })
+      );
+    });
+
+    it('paginação preserva `q` na querystring dos links', async () => {
+      fetchDealsMock.mockResolvedValueOnce(pagedResult([buildDeal()], { totalPages: 3 }));
+
+      const jsx = await Home({ searchParams: { q: 'tenis', page: '1' } });
+      render(jsx);
+
+      const nextLink = screen.getByRole('link', { name: /próxima/i });
+      expect(nextLink).toHaveAttribute('href', '?q=tenis&page=2');
+    });
+  });
 });
