@@ -1,8 +1,8 @@
 ---
 issue: 228
 titulo: feat: relatório de produtos com filtros (categoria/plataforma/status) na tela Reports
-etapa_atual: Aguardando PR release (LT)
-ultimo_agente: qa (aprovado, 2026-08-20)
+etapa_atual: Aguardando Gate 2
+ultimo_agente: lider-tecnico (PR release criado, 2026-08-20)
 openspec_change: openspec/changes/issue-228-relatorio-produtos-filtros
 tech_stacks: [dotnet, angular]
 repos:
@@ -14,7 +14,7 @@ sub_issues: ["#242 (stack:dotnet, task_id:T-01)", "#243 (stack:dotnet, task_id:T
 desenv_tasks_merged: ["#242", "#243", "#244", "#245"]
 sub_issues_frontend: {"#245": "T-04"}
 pr_homologacao: 250
-pr_release: ~
+pr_release: 252
 code_review_homolog_pr: 250 — APROVADO na 2ª rodada (2026-08-20), merge commit desenv→homolog concluído (oid 5f639ad)
 qa_status: aprovado
 figma_url: ~
@@ -173,6 +173,11 @@ Comentário com as respostas: https://github.com/DQM-BETA/omuletachou/issues/228
 - Gate visual: `npm run test:visual` (Playwright) rodado com `STAGING_URL` apontando para a imagem Docker real de `homolog` e `SCREENSHOTS_DIR={docs_path}/screenshots` — 8/8 passando, PNGs arquivados em `documentacoes/ISSUE-228-exibir-quantidade-produtos-publicados/screenshots/`. Header/sidenav únicos em todas as telas, sem duplicação, layout condizente com `ux-ui-spec.md`.
 - Todos os 16 cenários Given/When/Then de `criterios-aceite.md` (grupos 1–5) validados com evidência de execução real. Nenhuma issue encontrada. Relatório completo: `documentacoes/ISSUE-228-exibir-quantidade-produtos-publicados/relatorio-qa.md`.
 - Stack Docker derrubada (`docker compose down`) ao final da validação.
+
+## PR release — LT (2026-08-20)
+- QA aprovado (2026-08-20) — docs commitadas em `desenv` (`relatorio-qa.md` + `screenshots/`), estado.md atualizado.
+- PR `homolog->main` criado: **#252** (merge commit, referencia Issue #228, sub-issues #242/#243/#244/#245, PR #250, relatorio-qa.md).
+- `etapa_atual` avança para **Aguardando Gate 2** — aguardando aprovação humana do Gerente. NAO mesclado.
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tools | Tempo (s) |
