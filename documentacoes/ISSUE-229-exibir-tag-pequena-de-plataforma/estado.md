@@ -1,8 +1,8 @@
 ---
 issue: 229
 titulo: 'feat: exibir tag pequena de plataforma de origem nos cards de produto do site público'
-etapa_atual: Em Desenvolvimento
-ultimo_agente: ux-ui
+etapa_atual: Code Review
+ultimo_agente: lider-tecnico
 openspec_change: repos/omuletachou/openspec/changes/issue-229-exibir-tag-plataforma
 tech_stacks: [dotnet, nextjs]
 repos:
@@ -11,9 +11,9 @@ repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-229-exibir-tag-pequena-de-plataforma
 openspec_path: repos/omuletachou/openspec/changes/issue-229-exibir-tag-plataforma
 sub_issues: ['#253 (stack:dotnet, task_id:T-01)', '#254 (stack:nodejs, task_id:T-02)']
-desenv_tasks_merged: []
-sub_issues_frontend: {}
-pr_homologacao: ~
+desenv_tasks_merged: ['#253', '#254']
+sub_issues_frontend: {'#254': 'PR #256 (feature/ISSUE-254-tag-plataforma-dealcard -> desenv), merged'}
+pr_homologacao: 257
 pr_release: ~
 code_review_homolog_pr: ~
 qa_status: ~
@@ -44,3 +44,6 @@ rota: normal
 - **UX/UI necessário:** demanda envolve UI (texto exato + estilo da tag, consultando o design system do Figma) — sinalizado no HANDOFF (`proximo: UX/UI`) antes dos devs, conforme instrução do Gerente.
 - Docs escritas: `openspec_path/design.md` (resumido, LT), `docs_path/especificacao-tecnica.md`, `openspec_path/tasks.md` (T-01/T-02).
 - **UX/UI concluído (2026-08-20):** `ux-ui-spec.md` escrito. Decisões: tag de texto neutra (sem distinção de cor por plataforma), nome completo ("Amazon", "Mercado Livre", "Shopee"), posicionada em linha própria acima do bloco de preço (evita aperto em mobile), oculta quando `platform` ausente/não mapeado, não interativa. Usa tokens já existentes em `deal-card.css`. Comentário: https://github.com/DQM-BETA/omuletachou/issues/254#issuecomment-5357731168
+- **Dev #253 concluído (2026-08-20):** `PublicDealDto.Platform` (`string?`) reexposto via `product.Platform.ToString()` em `GetDeals`/`GetBySlug`. Teste `GetDeals_JsonDeResposta_NuncaContemCampoPlatform` substituído por `GetDeals_JsonDeResposta_ContemCampoPlatformComValorCorreto`. `dotnet test`: 490/490 passando. Validado contra Postgres real via `docker compose` (produto seedado com `Platform=MercadoLivre` → `GET /api/public/deals` e `/deals/{slug}` retornaram `"platform":"MercadoLivre"`). PR feature→desenv: https://github.com/DQM-BETA/omuletachou/pull/255
+- **Dev #254 concluído (2026-08-20):** `Deal.platform?: string | null` reintroduzido em `types.ts`; `DealCard.tsx` com `PLATFORM_LABELS` (Amazon/Mercado Livre/Shopee) e tag `<span className="deal-card__platform">` como primeiro filho de `.deal-card__price` (linha própria acima do preço — markup de preço movido para novo `.deal-card__price-row`), oculta se `platform` ausente/`null`/não mapeado, sem `href`/`onClick`/`tabindex`. `deal-card.css`: nova classe `.deal-card__platform` só com tokens já existentes (`--color-neutral-100/600`, `--font-size-xs`, `--space-*`, `--radius-sm`; nunca `--color-primary`). Testes novos cobrindo CA 1-8 (exibição das 3 plataformas, ocultação com `null`/`undefined`/valor não mapeado, não-interatividade). `npm test`: 109/109 passando, 100% cobertura em `DealCard.tsx`. `npm run build` e `npm start` (boot) validados — servidor sobe sem erro (500 na home é fetch para hostname Docker `api`, indisponível localmente, não relacionado à mudança). Desenvolvido/testado com mocks (`buildDeal`), conforme dependência documentada; integração real com API depende do merge de #253 (já concluído). PR feature→desenv: https://github.com/DQM-BETA/omuletachou/pull/256
+- **Merge LT (2026-08-20):** PR #255 (#253, backend) squash-merged para `desenv` primeiro, depois PR #256 (#254, frontend) squash-merged — respeitando a dependência (frontend integra o campo real exposto pelo backend). Ambas sub-issues fechadas. PR desenv→homolog criado via merge commit: https://github.com/DQM-BETA/omuletachou/pull/257
