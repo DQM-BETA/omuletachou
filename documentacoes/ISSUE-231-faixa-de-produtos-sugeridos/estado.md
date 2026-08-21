@@ -456,8 +456,8 @@ confirmar os 17 specs passando, incluindo a CA 1.1 com uma categoria real, antes
       #280, reabriu a sub-issue.
 - [x] Dev #280 (T-05, stack:nodejs): corrigir `website/e2e/suggested-carousel.spec.ts` (removido
       `encodeURIComponent` redundante, seguindo padrão de `visual.spec.ts`), suíte Playwright
-      reexecutada contra site real, novo PR aberto para `desenv`.
-- [ ] Líder Técnico: merge do novo PR de #280 → `desenv`, novo Code Review do PR #286.
+      reexecutada contra site real, PR #287 aberto para `desenv`.
+- [ ] Líder Técnico: merge do PR #287 (#280) → `desenv`, novo Code Review do PR #286.
 
 ## Dev — correção da sub-issue #280 (T-05, fix pós-Code Review, concluído 2026-08-21)
 
@@ -499,10 +499,11 @@ confirmar os 17 specs passando, incluindo a CA 1.1 com uma categoria real, antes
     da validação anterior do Dev/CR, dados reais do catálogo) — `/health` → `200`, páginas
     renderizando corretamente durante toda a validação (evidência de boot, não suposição; nenhum
     código de app foi alterado por este fix, então não há necessidade de rebuild de imagem).
-- Push da branch `feature/ISSUE-280-carrossel-sugeridos` (4 commits: merge de sincronização com
-  `desenv` + fix do teste). Novo PR `feature/ISSUE-280-carrossel-sugeridos → desenv` aberto (PR
-  #286 `desenv→homolog` segue aberto e inalterado; a sub-issue #280 já havia sido mergeada uma vez
-  via squash antes da reprovação do CR).
+- Push da branch `feature/ISSUE-280-carrossel-sugeridos` (5 commits: merge de sincronização com
+  `desenv` + fix do teste + estado.md). **PR #287** (`feature/ISSUE-280-carrossel-sugeridos →
+  desenv`) aberto (PR #286 `desenv→homolog` segue aberto e inalterado; a sub-issue #280 já havia
+  sido mergeada uma vez via squash antes da reprovação do CR — este é um PR novo para o commit de
+  correção).
 
 ---
 
@@ -524,3 +525,4 @@ _Atualizado: 2026-08-21 — Líder Técnico (PR #284 mergeado em desenv via squa
 _Atualizado: 2026-08-21 — Dev (sub-issue #280/T-05 concluída: lib/suggested.ts + SuggestedProductsCarousel.tsx + app/page.tsx + suggested-carousel.css + e2e, 176/176 testes passando (sem regressão, eram 156), next build/lint/start validados, PR #285 aberto; última sub-issue pendente de #231; proximo: Líder Técnico para merge→desenv e, com todas as sub-issues concluídas, PR desenv→homolog)_
 _Atualizado: 2026-08-21 — Líder Técnico (PR #285 mergeado em desenv via squash, commit f5eafc620c152cbf13babd442cfc9e89ffa0c528, sub-issue #280 fechada, desenv_tasks_merged: [#276, #277, #278, #279, #280] — todas concluídas; PR #286 desenv→homolog criado via merge commit; etapa_atual: Code Review; proximo: sessão principal roda /code-review + spawna Code Review)_
 _Atualizado: 2026-08-21 — Líder Técnico (Code Review reprovou PR #286: bug isolado em website/e2e/suggested-carousel.spec.ts, double-encoding de categoria em encodeURIComponent sobre valor já codificado de getRealCategoriaAndSlug; app aprovado sem ressalvas. Mapeado para sub-issue #280, reaberta com comentário de correção; desenv_tasks_merged volta a [#276, #277, #278, #279]; etapa_atual: Em Desenvolvimento; proximo: Dev (nodejs, sub-issue #280) corrigir o teste e2e)_
+_Atualizado: 2026-08-21 — Dev (correção da sub-issue #280 concluída: encodeURIComponent redundante removido de suggested-carousel.spec.ts, CA 1.1 validada de fato contra staging real ("Em alta em Casa e Cozinha"), 16/17 specs Playwright passando (1 falha pré-existente/fora de escopo em visual.spec.ts, não relacionada, arquivo sem diff nesta branch), 176/176 testes Jest passando, next lint sem erros; blockers limpo; PR #287 feature→desenv aberto; proximo: Líder Técnico para merge do PR #287 e novo Code Review do PR #286)_
