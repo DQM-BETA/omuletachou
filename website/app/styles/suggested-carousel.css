@@ -1,0 +1,168 @@
+/*
+  Faixa/carrossel de produtos sugeridos (Issue #231, sub-issue #280, T-05).
+  Ver documentacoes/ISSUE-231-faixa-de-produtos-sugeridos/ux-ui-spec.md §3-§9.
+
+  Sem lib de carrossel nova (já decidido no refinamento técnico) — `overflow-x: auto` +
+  `scroll-snap` + `scrollBy()` programático nos handlers das setas (component
+  SuggestedProductsCarousel.tsx). Reaproveita tokens/valores já existentes em tokens.css e
+  deal-card.css — nenhuma cor/fonte/espaçamento novo introduzido.
+*/
+
+.suggested-carousel {
+  margin-block: var(--space-6) var(--space-5);
+}
+
+.suggested-carousel__title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-neutral-900);
+  line-height: var(--line-height-tight);
+  margin-bottom: var(--space-4);
+}
+
+.suggested-carousel__wrapper {
+  position: relative;
+}
+
+.suggested-carousel__track {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-inline: var(--space-4);
+  padding-block: var(--space-1);
+}
+
+.suggested-carousel__track::-webkit-scrollbar {
+  display: none;
+}
+
+.suggested-carousel__item {
+  flex: 0 0 70%;
+  scroll-snap-align: start;
+}
+
+/* Tablet — 2 itens totalmente visíveis, ~40% de peek do 3º (ux-ui-spec.md §4). */
+@media (min-width: 640px) {
+  .suggested-carousel__track {
+    gap: 16px;
+    padding-inline: var(--space-5);
+  }
+
+  .suggested-carousel__item {
+    flex-basis: calc(50% - 8px);
+  }
+}
+
+/* Desktop — 4 itens totalmente visíveis, ~15% de peek do 5º (ux-ui-spec.md §4). Padding lateral
+   igual ao container do grid principal (layout.css). */
+@media (min-width: 1024px) {
+  .suggested-carousel__track {
+    padding-inline: var(--space-6);
+  }
+
+  .suggested-carousel__item {
+    flex-basis: calc(23% - 12px);
+  }
+}
+
+.suggested-carousel__arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 12px; /* expande a área de toque real para 44x44 (ux-ui-spec.md §5, WCAG) */
+  background-clip: content-box;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background-color: var(--color-surface);
+  color: var(--color-neutral-900);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-50%);
+  transition: box-shadow .15s ease, background-color .15s ease, opacity .15s ease;
+}
+
+.suggested-carousel__arrow--left {
+  left: 8px;
+}
+
+.suggested-carousel__arrow--right {
+  right: 8px;
+}
+
+@media (min-width: 640px) {
+  .suggested-carousel__arrow--left {
+    left: -4px;
+  }
+
+  .suggested-carousel__arrow--right {
+    right: -4px;
+  }
+}
+
+@media (hover: hover) {
+  .suggested-carousel__arrow:not(:disabled):hover {
+    box-shadow: var(--shadow-md);
+    background-color: var(--color-neutral-100);
+  }
+}
+
+.suggested-carousel__arrow:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.suggested-carousel__arrow:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Skeleton (ux-ui-spec.md §6) — mesmo padrão de shimmer já usado em .deal-card-skeleton
+   (layout.css), sem novo sistema visual. */
+.suggested-carousel__title-skeleton {
+  width: 160px;
+  height: var(--font-size-xl);
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--color-neutral-100) 25%,
+    var(--color-neutral-200) 37%,
+    var(--color-neutral-100) 63%
+  );
+  background-size: 400% 100%;
+  animation: deals-skeleton-pulse 1.4s ease infinite;
+}
+
+.suggested-carousel__item-skeleton {
+  flex: 0 0 70%;
+  height: 280px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    90deg,
+    var(--color-neutral-100) 25%,
+    var(--color-neutral-200) 37%,
+    var(--color-neutral-100) 63%
+  );
+  background-size: 400% 100%;
+  animation: deals-skeleton-pulse 1.4s ease infinite;
+}
+
+@media (min-width: 640px) {
+  .suggested-carousel__item-skeleton {
+    flex-basis: calc(50% - 8px);
+  }
+}
+
+@media (min-width: 1024px) {
+  .suggested-carousel__item-skeleton {
+    flex-basis: calc(23% - 12px);
+  }
+}

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import DealCard from '@/components/DealCard';
 import FilterBar from '@/components/FilterBar';
+import SuggestedProductsCarousel from '@/components/SuggestedProductsCarousel';
 import { fetchCategories, fetchDeals, type DealFilters } from '@/lib/api';
 
 export const revalidate = 300;
@@ -111,6 +112,15 @@ export default async function Home({ searchParams }: HomePageProps) {
           ))}
         </section>
       )}
+
+      {/*
+        Issue #231 (sub-issue #280, T-05) — faixa/carrossel de produtos sugeridos, abaixo do
+        grid principal e acima da paginação (ux-ui-spec.md §1: aparece tanto no caso normal
+        quanto no fallback de grid vazio, CA 1.1/1.2). `hasResults` é o mesmo cálculo já usado
+        pela página (`deals.length > 0`); o backend decide a lógica de fallback/corte mínimo —
+        este componente só consome (design.md §6).
+      */}
+      <SuggestedProductsCarousel category={filters.category} hasResults={deals.length > 0} />
 
       <nav className="deals-pagination" aria-label="Paginação de ofertas">
         {hasPrevious && (
