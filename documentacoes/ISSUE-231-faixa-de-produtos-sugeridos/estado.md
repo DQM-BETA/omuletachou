@@ -30,7 +30,7 @@ pr_release: ~
 code_review_homolog_pr: ~
 qa_status: ~
 figma_url: "https://www.figma.com/design/yi6YkNAy9HfHus2oiPi3G7/Diego-Mulet-s-team-library (consultado — apenas conteúdo padrão de template do Figma, sem frames/tokens reais do projeto; ver ux-ui-spec.md §0)"
-blockers: "PR #283 (#278) em conflito com desenv (mesmo arquivo PublicProductsController.cs alterado por #277, já mergeado). gh pr update-branch falhou (conflito não trivial de sincronizar via API). Fora do escopo do LT resolver (não edita código) — devolvido ao Dev responsável por #278 para rebase/merge manual com desenv e push."
+blockers: ~
 status_comment_id: ~
 ---
 
@@ -243,6 +243,35 @@ issue mexe em `discount_pct`.
 - Suíte de testes **não executada pelo LT** (fora do escopo do LT — rodar/validar código de
   aplicação é responsabilidade do Dev/Code Review, não do LT).
 
+## Dev — resolução do conflito do PR #283 (#278, concluído 2026-08-21)
+
+- `git fetch origin desenv` + `git merge origin/desenv` no worktree existente
+  (`.worktrees/feature-ISSUE-278-endpoint-suggested`). 2 conflitos, ambos `add/add` (mesmo
+  arquivo criado nos dois lados do merge sequencial já sinalizado em `tasks.md`):
+  - `PublicProductsController.cs`: resolvido mantendo **ambas** as actions no mesmo controller —
+    `RegisterClick` (POST `{id}/click`, #277) e `GetSuggested` (GET `suggested`, #278) — usings
+    unificados (`AfiliadoBot.Api.Public`, `AfiliadoBot.Domain.Entities`, `AfiliadoBot.Domain.Enums`,
+    `Microsoft.EntityFrameworkCore`), doc-comment de classe consolidado com a versão de #277 (menciona
+    ambos os recursos "product" por id) e as constantes/campo `SuggestedLimit`/`SuggestedMinimumToShow`
+    de #278 preservados.
+  - `PublicProductsControllerTests.cs`: resolvido mantendo os 2 conjuntos de testes (helpers
+    `SeedProductAsync` de #277 + `SeedPublishedProductAsync`/`SeedPendingProductAsync` de #278, sem
+    colisão de nomes) na mesma classe `PublicProductsControllerTests`, doc-comment de classe
+    consolidado citando os dois escopos (CA 2.1-2.4 de #277 + T-03 de #278).
+- `dotnet build`: sucesso, 0 erros (1 warning pré-existente do Hangfire, não relacionado).
+- `dotnet test`: **539/539 passando (100%)**, sem regressão (esperado ~540+; 531 de #277 + 8 novos
+  de #278 = 539 — o "540+" da estimativa original incluía uma contagem aproximada, confirmado exato).
+- Boot real confirmado: `dotnet publish` da branch mergeada, container efêmero
+  (`omuletachou-api:latest` como runtime base, dll publicada montada) conectado ao Postgres real
+  `afiliado_db` via rede Docker `omuletachou_omuletachou_net`, `Jwt__SigningKey`/`ConnectionStrings`
+  via `.env` local. Log limpo: migrations aplicadas, Hangfire instalado/iniciado, `Application
+  started` sem exceção. Endpoints das duas actions testados ponta a ponta contra dados reais:
+  `GET /api/public/products/suggested?hasResults=false` → `200` com produtos reais do catálogo;
+  `POST /api/public/products/{id-inexistente}/click` → `202`; `GET /health` → `200`. Container e
+  build de publicação removidos após validação.
+- Push da branch `feature/ISSUE-278-endpoint-suggested` (merge commit com `desenv`) para o remoto.
+  PR #283 já existente, não recriado.
+
 ## Próximos passos
 
 - [x] Arquiteto: completar `design.md`.
@@ -254,11 +283,11 @@ issue mexe em `discount_pct`.
 - [x] Dev #277 (T-02): endpoint `POST /api/public/products/{id}/click` — PR #282 aberto.
 - [x] Dev #278 (T-03): endpoint `GET /api/public/products/suggested` — PR #283 aberto.
 - [x] Líder Técnico: merge PR #282 (#277) → `desenv` (squash), sub-issue #277 fechada.
-- [ ] **Dev #278 (T-03): resolver conflito do PR #283 com `desenv`** — sincronizar a branch
-      `feature/ISSUE-278-endpoint-suggested` com `desenv` localmente (merge ou rebase), mantendo as
-      duas actions (`RegisterClick` de #277 + `GetSuggested` de #278) em
-      `PublicProductsController.cs`, rodar a suíte completa (~534-540 testes esperados, sem
-      regressão) e fazer push da branch. Depois disso o LT tenta o merge de #283 novamente.
+- [x] Dev #278 (T-03): conflito do PR #283 com `desenv` resolvido — branch
+      `feature/ISSUE-278-endpoint-suggested` sincronizada (merge com `desenv`), ambas as actions
+      (`RegisterClick` de #277 + `GetSuggested` de #278) mantidas em `PublicProductsController.cs`,
+      539/539 testes passando, boot real validado, branch pushada. PR #283 pronto para o LT tentar
+      o merge novamente.
 - [ ] Dev(s): implementar T-04/T-05 (#279, #280, independentes de schema; T-05 consome
       `ux-ui-spec.md`, depende de T-02+T-03 mergeados). Ver `tasks.md` para ordem de merge restante.
 
@@ -275,3 +304,4 @@ _Atualizado: 2026-08-21 — Líder Técnico (PR #281 mergeado em desenv via squa
 _Atualizado: 2026-08-21 — Dev (sub-issue #277/T-02 concluída: endpoint POST /api/public/products/{id}/click, 531/531 testes passando, validado contra Postgres real, PR #282 aberto; proximo: Líder Técnico para merge→desenv)_
 _Atualizado: 2026-08-21 — Dev (sub-issue #278/T-03 concluída: endpoint GET /api/public/products/suggested + Id no PublicDealDto, 534/534 testes passando, validado contra Postgres real, PR #283 aberto; proximo: Líder Técnico para merge→desenv de #277 e #278)_
 _Atualizado: 2026-08-21 — Líder Técnico (PR #282 mergeado em desenv via squash, sub-issue #277 fechada, desenv_tasks_merged: [#276, #277]; PR #283 (#278) em conflito real com desenv em PublicProductsController.cs — gh pr merge e gh pr update-branch falharam; resolução de código é escopo do Dev, não do LT; proximo: Dev(s) resolver conflito do #283 e depois LT tenta merge novamente)_
+_Atualizado: 2026-08-21 — Dev (conflito do PR #283 com desenv resolvido: merge local mantendo RegisterClick de #277 + GetSuggested de #278 no mesmo controller, 539/539 testes passando, boot real validado contra Postgres, branch pushada; proximo: Líder Técnico para merge de #283)_

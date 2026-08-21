@@ -104,7 +104,7 @@ public class PublicControllerTests : IClassFixture<CustomWebApplicationFactory>
 
         var allowedProperties = new[]
         {
-            "title", "salePrice", "originalPrice", "discountPct", "affiliateLink",
+            "id", "title", "salePrice", "originalPrice", "discountPct", "affiliateLink",
             "mediaUrl", "mediaLocalPath", "slug", "category", "subcategory", "collectedAt",
             "platform",
         };
