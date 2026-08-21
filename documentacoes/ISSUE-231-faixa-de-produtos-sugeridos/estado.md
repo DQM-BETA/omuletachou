@@ -23,6 +23,7 @@ desenv_tasks_merged:
   - "#276"
   - "#277"
   - "#278"
+  - "#279"
 sub_issues_frontend:
   T-04: "#279"
   T-05: "#280"
@@ -282,6 +283,50 @@ issue mexe em `discount_pct`.
   `desenv→homolog` ainda (nem todas as sub-issues estão concluídas).
 - `blockers` limpo (conflito do PR #283 já resolvido e mergeado pelo Dev na invocação anterior).
 
+## Dev — sub-issue #279 (T-04, concluído 2026-08-21)
+
+- Novo `website/lib/tracking.ts` (`'use client'`): `trackProductClick(productId)` — dispara
+  `navigator.sendBeacon('/api/public/products/{id}/click')` (fire-and-forget), fallback
+  `fetch(..., { keepalive: true })` com catch silencioso (CA 2.4) quando `sendBeacon` não existe.
+- Novo `website/components/DealCardLink.tsx` (`'use client'`) — extrai o `<a>` CTA de
+  `DealCard.tsx`, chama `trackProductClick` no `onClick`, mantém `href`/`target="_blank"`/
+  `rel="nofollow"` idênticos ao atual (destino do clique não muda). `DealCard.tsx` permanece
+  Server Component, boundary client isolado só no CTA.
+- `website/lib/types.ts` (`Deal`): `+ id: string`, consumindo o `Id` já exposto por
+  `PublicDealDto` (T-03/#278, já em `desenv`).
+- Gate g: todos os `buildDeal`/mocks de `Deal` nos testes existentes (8 arquivos: `page.test.tsx`,
+  `sitemap.test.ts`, `categoria/[categoria]/page.test.tsx`, `seo.test.ts`,
+  `related-deals.test.ts`, `oferta/[slug]/page.test.tsx`, `DealDetail.test.tsx`, `api.test.ts`)
+  atualizados com `id` — sem regressão de tipo/comportamento.
+- TDD: `lib/tracking.test.ts` novo (sendBeacon chamado com URL correta, não chama fetch quando
+  sendBeacon disponível, fallback fetch+keepalive, catch silencioso da falha), novo
+  `components/DealCardLink.test.tsx` (href/target/rel preservados, `trackProductClick` chamado
+  com o `id` do produto ao clicar), teste adicional em `DealCard.test.tsx` (integração ponta a
+  ponta: clique no CTA real do card chama o tracking e preserva o link). Suíte completa:
+  **19 suítes / 156 testes, 100% passando** (sem regressão). Cobertura global 92.96%
+  stmts/89.42% branches/92.43% funcs/94.63% lines (≥ 80% mantida; `tracking.ts` e
+  `DealCardLink.tsx` 100%).
+- `npx next build` (produção, inclui type-check + lint do Next) e `npx next lint`: ambos sem
+  erros. `npx next start` local confirmado subindo (200, "Ready") — único erro observado no log
+  é `ENOTFOUND api` (hostname docker-only do backend, ambiente sem `docker compose` local, não é
+  regressão desta mudança).
+- Nota: `npx tsc --noEmit` bruto acusa erros pré-existentes de tipos do jest-dom
+  (`toBeInTheDocument`/`toHaveAttribute` etc. não reconhecidos) em vários arquivos de teste
+  **não tocados por esta sub-issue** — confirmado que os mesmos erros já existem no checkout de
+  `desenv` antes desta mudança (`next build`, que é o gate real, não os reporta — só `tsc` cru).
+  Não é regressão, registrado para eventual limpeza futura de infra (fora de escopo).
+- PR #284 (`feature/ISSUE-279-rastreio-clique-card` → `desenv`) aberto, pronto para merge do LT.
+
+## Líder Técnico — merge sub-issue #279 (concluído 2026-08-21)
+
+- PR #284 mergeado via **squash** em `desenv` (`gh pr merge 284 --squash`, confirmado `state: MERGED`,
+  commit `b4ef817e6ebc2aa623ba25086d1db9eda30787aa`).
+- Sub-issue #279 fechada (`gh issue close 279 --reason completed`).
+- `desenv_tasks_merged: ["#276", "#277", "#278", "#279"]`. Falta só #280 (carrossel) — **NÃO**
+  criado PR `desenv→homolog` ainda (nem todas as sub-issues estão concluídas).
+- #280 (T-05, carrossel) agora **desbloqueada de fato**: depende de `DealCardLink.tsx` (extraído
+  por #279) estar em `desenv`, o que já ocorreu neste merge.
+
 ## Próximos passos
 
 - [x] Arquiteto: completar `design.md`.
@@ -299,10 +344,13 @@ issue mexe em `discount_pct`.
       539/539 testes passando, boot real validado, branch pushada. PR #283 pronto para o LT tentar
       o merge novamente.
 - [x] Líder Técnico: merge PR #283 (#278) → `desenv` (squash), sub-issue #278 fechada.
-- [ ] Dev(s): implementar T-04/T-05 (#279, #280, independentes de schema; T-05 consome
-      `ux-ui-spec.md`, depende de T-02+T-03 mergeados — já estão em `desenv`). Ver `tasks.md` para
-      ordem de merge restante.
-- [ ] Líder Técnico: quando #279 e #280 estiverem mergeadas, criar PR `desenv→homolog`.
+- [x] Dev #279 (T-04): rastreio de clique no card (frontend) — `lib/tracking.ts` +
+      `DealCardLink.tsx` + `Deal.id`, 156/156 testes passando, `next build`/`next start` validados,
+      PR #284 aberto.
+- [x] Líder Técnico: merge PR #284 (#279) → `desenv` (squash), sub-issue #279 fechada.
+- [ ] Dev #280 (T-05): faixa/carrossel de produtos sugeridos — pendente (desbloqueada, depende de
+      `DealCardLink.tsx` já em `desenv`).
+- [ ] Líder Técnico: quando #280 estiver mergeada, criar PR `desenv→homolog`.
 
 ---
 
@@ -319,3 +367,5 @@ _Atualizado: 2026-08-21 — Dev (sub-issue #278/T-03 concluída: endpoint GET /a
 _Atualizado: 2026-08-21 — Líder Técnico (PR #282 mergeado em desenv via squash, sub-issue #277 fechada, desenv_tasks_merged: [#276, #277]; PR #283 (#278) em conflito real com desenv em PublicProductsController.cs — gh pr merge e gh pr update-branch falharam; resolução de código é escopo do Dev, não do LT; proximo: Dev(s) resolver conflito do #283 e depois LT tenta merge novamente)_
 _Atualizado: 2026-08-21 — Dev (conflito do PR #283 com desenv resolvido: merge local mantendo RegisterClick de #277 + GetSuggested de #278 no mesmo controller, 539/539 testes passando, boot real validado contra Postgres, branch pushada; proximo: Líder Técnico para merge de #283)_
 _Atualizado: 2026-08-21 — Líder Técnico (PR #283 mergeado em desenv via squash, commit 162bad7a488c4f71ee9499c983c034b73343d415, sub-issue #278 fechada, desenv_tasks_merged: [#276, #277, #278]; blockers limpo; faltam #279/#280 (frontend), NÃO criado PR desenv→homolog ainda; proximo: Dev(s) para #279 e #280)_
+_Atualizado: 2026-08-21 — Dev (sub-issue #279/T-04 concluída: lib/tracking.ts + DealCardLink.tsx + Deal.id, 156/156 testes passando (sem regressão), next build/lint/start validados, PR #284 aberto; proximo: Líder Técnico para merge→desenv)_
+_Atualizado: 2026-08-21 — Líder Técnico (PR #284 mergeado em desenv via squash, commit b4ef817e6ebc2aa623ba25086d1db9eda30787aa, sub-issue #279 fechada, desenv_tasks_merged: [#276, #277, #278, #279]; falta só #280 (carrossel), NÃO criado PR desenv→homolog ainda; proximo: Dev (nodejs, sub-issue #280))_
