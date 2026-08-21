@@ -1,8 +1,8 @@
 ---
 issue: 231
 titulo: feat: rastreio de cliques + faixa de produtos sugeridos (site público)
-etapa_atual: Code Review
-ultimo_agente: lider-tecnico
+etapa_atual: QA
+ultimo_agente: code-review
 openspec_change: openspec/changes/issue-231-faixa-de-produtos-sugeridos
 tech_stacks:
   - Backend (ASP.NET Core 8.0)
@@ -30,7 +30,7 @@ sub_issues_frontend:
   T-05: "#280"
 pr_homologacao: 286
 pr_release: ~
-code_review_homolog_pr: "286 (reprovado 2026-08-21 — bug no teste e2e suggested-carousel.spec.ts, double-encoding de categoria; app aprovado; fix mergeado via PR #287, aguardando novo Code Review)"
+code_review_homolog_pr: "286 (aprovado 2026-08-21, 2ª rodada — fix do bug de double-encoding do teste e2e confirmado via execução real; merge desenv→homolog concluído, merge commit 24b39641e86b78aa0263b6140abb0ef9121ea38b)"
 qa_status: ~
 figma_url: "https://www.figma.com/design/yi6YkNAy9HfHus2oiPi3G7/Diego-Mulet-s-team-library (consultado — apenas conteúdo padrão de template do Figma, sem frames/tokens reais do projeto; ver ux-ui-spec.md §0)"
 blockers: ~
@@ -475,7 +475,7 @@ confirmar os 17 specs passando, incluindo a CA 1.1 com uma categoria real, antes
 
 - PR #287 mergeado via **squash** em `desenv` (`gh pr merge 287 --squash`, confirmado `state:
   MERGED`, commit `5dc299e4f5701686b33fddc498b7dbc4692506fb`).
-- Sub-issue #280 fechada novamente (`gh issue close 280 --reason completed`).
+- Sub-issue #280 fechada (`gh issue close 280 --reason completed`).
 - `desenv_tasks_merged: ["#276", "#277", "#278", "#279", "#280"]` — todas as 5 sub-issues de #231
   concluídas outra vez.
 - PR #286 (`desenv→homolog`) confirmado `mergeable: MERGEABLE` / `mergeStateStatus: CLEAN` após o
@@ -483,6 +483,41 @@ confirmar os 17 specs passando, incluindo a CA 1.1 com uma categoria real, antes
   PR.
 - `etapa_atual: Code Review` (novamente). `blockers` limpo. `code_review_homolog_pr` anotado com o
   status do fix.
+
+## Code Review (2ª rodada) aprovou o PR #286 — merge desenv→homolog concluído (concluído 2026-08-21)
+
+**Veredito: APROVADO.** Escopo desta rodada: confirmar via execução real que o fix do bug de
+double-encoding (PR #287) resolve a falha da 1ª rodada, e que a CA 1.1 (categoria com resultados)
+é de fato exercitada — não apenas o fallback.
+
+**Evidência executada:**
+- `docker compose build --no-cache api website` + `docker compose up -d api website db`: build e
+  boot limpos, `/health` → `200`, `/` → `200`, log sem exceção.
+- `dotnet test`: **539/539 passando** (sem regressão face à 1ª rodada).
+- `npm test` (website): **176/176 passando** (sem regressão).
+- Diff do PR confirmado: `suggested-carousel.spec.ts` não faz mais `encodeURIComponent()` sobre
+  `categoria` (já vem codificada de `helpers.ts`), com comentário explicando o porquê.
+- `STAGING_URL=http://localhost:3000 npx playwright test e2e/suggested-carousel.spec.ts` → **3/3
+  passando**.
+- Verificação direta (spec de debug temporário, removido após uso): navegação real para
+  `/?category=Brinquedos` (categoria real do sitemap) renderizou o carrossel com o heading real
+  **"Em alta em Brinquedos"**, confirmando que a CA 1.1 é exercitada de verdade (não cai em
+  fallback por engano).
+- Suíte Playwright completa: **17/17 specs passando** nesta execução, incluindo o teste de
+  "Detalhe de oferta" de `visual.spec.ts` (a falha do bug de normalização NFC/NFD reportada pelo
+  Dev não se manifestou nesta rodada — é intermitente, depende do slug não-determinístico sorteado
+  do catálogo real).
+- Confirmado que o bug de normalização Unicode em `app/oferta/[slug]/page.tsx` é **pré-existente**,
+  não introduzido por este PR: diff do PR #286 nesse arquivo e em `lib/api.ts` não contém nenhuma
+  alteração de lógica (só `page.test.tsx` ganhou o campo `id` no mock). Não bloqueia a aprovação;
+  registrado como sugestão de melhoria fora de escopo.
+- `.first()` em `suggested-carousel.spec.ts`: único uso é um CTA dentro de uma lista de N produtos
+  (elemento não-estrutural), mesmo veredito da 1ª rodada — não é veto.
+- `/code-review` (plugin Anthropic): sem comentários/reviews novos no PR — nada a incorporar.
+
+**Ação:** PR #286 mergeado via **merge commit** (não squash) em `homolog`
+(`24b39641e86b78aa0263b6140abb0ef9121ea38b`). Resumo postado como comentário no PR
+(https://github.com/DQM-BETA/omuletachou/pull/286#issuecomment-5373946712). `etapa_atual: QA`.
 
 ## Próximos passos
 
@@ -511,15 +546,19 @@ confirmar os 17 specs passando, incluindo a CA 1.1 com uma categoria real, antes
 - [x] Líder Técnico: merge PR #285 (#280) → `desenv` (squash), sub-issue #280 fechada. Todas as
       sub-issues de #231 concluídas — PR #286 `desenv→homolog` criado.
 - [x] Sessão principal: `/code-review` no PR #286 + spawn do agente Code Review.
-- [x] Code Review: PR #286 **reprovado** — bug no teste e2e novo (`suggested-carousel.spec.ts`,
-      double-encoding de categoria). App aprovado sem ressalvas. Líder Técnico mapeou a falha para
-      #280, reabriu a sub-issue.
+- [x] Code Review: PR #286 **reprovado** (1ª rodada) — bug no teste e2e novo
+      (`suggested-carousel.spec.ts`, double-encoding de categoria). App aprovado sem ressalvas.
+      Líder Técnico mapeou a falha para #280, reabriu a sub-issue.
 - [x] Dev #280 (T-05, stack:nodejs): corrigir `website/e2e/suggested-carousel.spec.ts` (removido
       `encodeURIComponent` redundante, seguindo padrão de `visual.spec.ts`), suíte Playwright
       reexecutada contra site real, PR #287 aberto para `desenv`.
 - [x] Líder Técnico: merge do PR #287 (#280) → `desenv` (squash), sub-issue #280 fechada
       novamente. PR #286 confirmado `MERGEABLE`/`CLEAN`, absorveu o fix automaticamente.
-- [ ] Sessão principal: novo Code Review do PR #286 (agente Code Review).
+- [x] Code Review (2ª rodada): PR #286 **aprovado** — fix confirmado via execução real (CA 1.1
+      exercitada de verdade, "Em alta em Brinquedos"), 539/539 + 176/176 sem regressão, 17/17
+      specs Playwright passando. Merge `desenv→homolog` concluído (merge commit
+      `24b39641e86b78aa0263b6140abb0ef9121ea38b`). `etapa_atual: QA`.
+- [ ] Sessão principal: spawnar QA.
 
 ---
 
@@ -543,3 +582,5 @@ _Atualizado: 2026-08-21 — Líder Técnico (PR #285 mergeado em desenv via squa
 _Atualizado: 2026-08-21 — Líder Técnico (Code Review reprovou PR #286: bug isolado em website/e2e/suggested-carousel.spec.ts, double-encoding de categoria em encodeURIComponent sobre valor já codificado de getRealCategoriaAndSlug; app aprovado sem ressalvas. Mapeado para sub-issue #280, reaberta com comentário de correção; desenv_tasks_merged volta a [#276, #277, #278, #279]; etapa_atual: Em Desenvolvimento; proximo: Dev (nodejs, sub-issue #280) corrigir o teste e2e)_
 _Atualizado: 2026-08-21 — Dev (correção da sub-issue #280 concluída: encodeURIComponent redundante removido de suggested-carousel.spec.ts, CA 1.1 validada de fato contra staging real ("Em alta em Casa e Cozinha"), 16/17 specs Playwright passando (1 falha pré-existente/fora de escopo em visual.spec.ts, não relacionada, arquivo sem diff nesta branch), 176/176 testes Jest passando, next lint sem erros; blockers limpo; PR #287 feature→desenv aberto; proximo: Líder Técnico para merge do PR #287 e novo Code Review do PR #286)_
 _Atualizado: 2026-08-21 — Líder Técnico (PR #287 mergeado em desenv via squash, commit 5dc299e4f5701686b33fddc498b7dbc4692506fb, sub-issue #280 fechada novamente, desenv_tasks_merged: [#276, #277, #278, #279, #280] — todas concluídas outra vez; PR #286 confirmado MERGEABLE/CLEAN, absorveu o fix automaticamente; etapa_atual: Code Review; proximo: sessão principal spawna novo Code Review do PR #286)_
+_Atualizado: 2026-08-21 — Code Review 2ª rodada (PR #286 aprovado: fix do double-encoding confirmado via execução real, CA 1.1 exercitada de verdade ("Em alta em Brinquedos"), 539/539 dotnet test + 176/176 npm test sem regressão, 17/17 specs Playwright passando; bug de normalização NFC/NFD em app/oferta/[slug]/page.tsx confirmado pré-existente/fora de escopo; merge desenv→homolog concluído via merge commit 24b39641e86b78aa0263b6140abb0ef9121ea38b; etapa_atual: QA; proximo: sessão principal spawna QA)_
+</content>
