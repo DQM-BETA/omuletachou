@@ -2,6 +2,7 @@ import { fetchDeals, fetchDeal, fetchCategories } from './api';
 import type { CategoryTree, Deal, PagedResult } from './types';
 
 const mockDeal: Deal = {
+  id: '11111111-1111-1111-1111-111111111111',
   title: 'Fone Bluetooth XYZ',
   salePrice: 99.9,
   originalPrice: 149.9,
