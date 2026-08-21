@@ -2,7 +2,7 @@
 issue: 231
 titulo: feat: rastreio de cliques + faixa de produtos sugeridos (site público)
 etapa_atual: Em Desenvolvimento
-ultimo_agente: ux-ui
+ultimo_agente: lider-tecnico
 openspec_change: openspec/changes/issue-231-faixa-de-produtos-sugeridos
 tech_stacks:
   - Backend (ASP.NET Core 8.0)
@@ -19,7 +19,8 @@ sub_issues:
   - "#278 (stack:dotnet, task_id:T-03) — Endpoint GET /api/public/products/suggested"
   - "#279 (stack:nodejs, task_id:T-04) — Rastreio de clique no card (frontend)"
   - "#280 (stack:nodejs, task_id:T-05) — Faixa/carrossel de produtos sugeridos (frontend)"
-desenv_tasks_merged: []
+desenv_tasks_merged:
+  - "#276"
 sub_issues_frontend:
   T-04: "#279"
   T-05: "#280"
@@ -143,14 +144,47 @@ issue mexe em `discount_pct`.
   mensagens de "nada aqui" quando o grid principal também está vazio).
 - Checklist de heurísticas de Nielsen verificável pelo QA incluído (§10 da spec).
 
+## Dev — sub-issue #276 (T-01, concluído 2026-08-21)
+
+- `Product.cs`: `+ ClickCount` (int, default 0) e método de domínio `RegisterClick()`.
+- Nova entidade `ProductClick.cs` (id long, ProductId uuid, ClickedAt timestamptz), sem navegação
+  para `Product` (padrão `JobRun`).
+- `ProductConfiguration.cs`: `+ click_count` + 2 índices compostos novos
+  (`IX_products_status_category_clickcount`, `IX_products_status_clickcount`).
+- Nova `ProductClickConfiguration.cs`: mapeia `product_clicks` (FK cascade) + índice em
+  `product_id`.
+- `AfiliadoBotDbContext.cs`: `+ DbSet<ProductClick> ProductClicks`.
+- Migration `AddProductClicksAndClickCount` gerada via `dotnet ef migrations add`, **aplicada e
+  validada contra Postgres real** (`docker exec afiliado_db psql` — coluna, tabela, FK e os 3
+  índices confirmados via `\d`/`\di`).
+- TDD: testes novos em `ProductTests.cs` (RegisterClick), `ProductClickTests.cs` (entidade nova),
+  `ProductConfigurationTests.cs` (índices/coluna novos), `ProductClickConfigurationTests.cs`
+  (mapeamento completo). Suíte completa: 526/526 passando (100%, sem regressão).
+- Boot da aplicação confirmado sem exceção: imagem buildada a partir da branch, container efêmero
+  conectado ao Postgres real via rede Docker (`omuletachou_omuletachou_net`), `/health` → 200,
+  Hangfire/DI inicializaram normalmente. Container/imagem de teste removidos após validação.
+- PR #281 (`feature/ISSUE-276-schema-product-clicks` → `desenv`) aberto, pronto para merge do LT.
+
+## Líder Técnico — merge sub-issue #276 (concluído 2026-08-21)
+
+- PR #281 mergeado via **squash** em `desenv` (commit `f9ff443240b073c55cc09cfa53cb8826fffa769f`).
+- Sub-issue #276 fechada (`gh issue close 276 --reason completed`).
+- `desenv_tasks_merged: ["#276"]`. Faltam #277, #278, #279, #280 — **NÃO** criado PR
+  `desenv→homolog` ainda.
+- #277 (T-02) e #278 (T-03) agora **desbloqueadas**: dependiam de T-01 estar em `desenv` (schema
+  `ProductClick`/`ClickCount` disponível).
+
 ## Próximos passos
 
 - [x] Arquiteto: completar `design.md`.
 - [x] Líder Técnico: refinamento técnico + task breakdown + sub-issues.
 - [x] UX/UI: `ux-ui-spec.md` da sub-issue #280 (T-05) — posição, título, layout responsivo, estados
       (loading/vazio/erro), setas de navegação, heurísticas de Nielsen.
-- [ ] Dev(s): implementar T-01 a T-05 (ver `tasks.md` para ordem de dependência/merge; T-05 consome
-      `ux-ui-spec.md`).
+- [x] Dev #276 (T-01): schema `ProductClick` + `Product.ClickCount` + índices — PR #281 aberto.
+- [x] Líder Técnico: merge PR #281 → `desenv` (squash), sub-issue #276 fechada.
+- [ ] Dev(s): implementar T-02 e T-03 (#277, #278 — agora desbloqueadas) e T-04/T-05 (#279, #280,
+      independentes de schema; T-05 consome `ux-ui-spec.md`). Ver `tasks.md` para ordem de
+      dependência/merge restante.
 
 ---
 
@@ -160,3 +194,5 @@ _Atualizado: 2026-08-21 — PM (levantamento Fase 1 postado na Issue, blocker #2
 _Atualizado: 2026-08-21 — PM (Fase 2: PRD completo, escopo restrito aos itens 1-2 após split para Issue #275, ambiguidade arquitetural identificada, proximo: Arquiteto)_
 _Atualizado: 2026-08-21 — Líder Técnico (design.md do Arquiteto commitado + investigação discount_pct registrada + especificacao-tecnica.md + tasks.md + 5 sub-issues criadas: #276-#280; proximo: UX/UI depois Dev(s))_
 _Atualizado: 2026-08-21 — UX/UI (ux-ui-spec.md concluído para a sub-issue #280/T-05; proximo: Dev(s))_
+_Atualizado: 2026-08-21 — Dev (sub-issue #276/T-01 concluída: schema ProductClick + Product.ClickCount + índices, migration aplicada/validada contra Postgres real, PR #281 aberto; proximo: Líder Técnico para merge→desenv)_
+_Atualizado: 2026-08-21 — Líder Técnico (PR #281 mergeado em desenv via squash, sub-issue #276 fechada, desenv_tasks_merged: [#276]; proximo: Dev(s) para #277 e #278)_
