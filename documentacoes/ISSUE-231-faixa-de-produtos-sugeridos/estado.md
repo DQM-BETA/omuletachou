@@ -22,6 +22,7 @@ sub_issues:
 desenv_tasks_merged:
   - "#276"
   - "#277"
+  - "#278"
 sub_issues_frontend:
   T-04: "#279"
   T-05: "#280"
@@ -272,6 +273,15 @@ issue mexe em `discount_pct`.
 - Push da branch `feature/ISSUE-278-endpoint-suggested` (merge commit com `desenv`) para o remoto.
   PR #283 já existente, não recriado.
 
+## Líder Técnico — merge sub-issue #278 (concluído 2026-08-21)
+
+- PR #283 mergeado via **squash** em `desenv` (`gh pr merge 283 --squash`, confirmado `state: MERGED`,
+  commit `162bad7a488c4f71ee9499c983c034b73343d415`).
+- Sub-issue #278 fechada (`gh issue close 278 --reason completed`).
+- `desenv_tasks_merged: ["#276", "#277", "#278"]`. Faltam #279, #280 (frontend) — **NÃO** criado PR
+  `desenv→homolog` ainda (nem todas as sub-issues estão concluídas).
+- `blockers` limpo (conflito do PR #283 já resolvido e mergeado pelo Dev na invocação anterior).
+
 ## Próximos passos
 
 - [x] Arquiteto: completar `design.md`.
@@ -288,8 +298,11 @@ issue mexe em `discount_pct`.
       (`RegisterClick` de #277 + `GetSuggested` de #278) mantidas em `PublicProductsController.cs`,
       539/539 testes passando, boot real validado, branch pushada. PR #283 pronto para o LT tentar
       o merge novamente.
+- [x] Líder Técnico: merge PR #283 (#278) → `desenv` (squash), sub-issue #278 fechada.
 - [ ] Dev(s): implementar T-04/T-05 (#279, #280, independentes de schema; T-05 consome
-      `ux-ui-spec.md`, depende de T-02+T-03 mergeados). Ver `tasks.md` para ordem de merge restante.
+      `ux-ui-spec.md`, depende de T-02+T-03 mergeados — já estão em `desenv`). Ver `tasks.md` para
+      ordem de merge restante.
+- [ ] Líder Técnico: quando #279 e #280 estiverem mergeadas, criar PR `desenv→homolog`.
 
 ---
 
@@ -305,3 +318,4 @@ _Atualizado: 2026-08-21 — Dev (sub-issue #277/T-02 concluída: endpoint POST /
 _Atualizado: 2026-08-21 — Dev (sub-issue #278/T-03 concluída: endpoint GET /api/public/products/suggested + Id no PublicDealDto, 534/534 testes passando, validado contra Postgres real, PR #283 aberto; proximo: Líder Técnico para merge→desenv de #277 e #278)_
 _Atualizado: 2026-08-21 — Líder Técnico (PR #282 mergeado em desenv via squash, sub-issue #277 fechada, desenv_tasks_merged: [#276, #277]; PR #283 (#278) em conflito real com desenv em PublicProductsController.cs — gh pr merge e gh pr update-branch falharam; resolução de código é escopo do Dev, não do LT; proximo: Dev(s) resolver conflito do #283 e depois LT tenta merge novamente)_
 _Atualizado: 2026-08-21 — Dev (conflito do PR #283 com desenv resolvido: merge local mantendo RegisterClick de #277 + GetSuggested de #278 no mesmo controller, 539/539 testes passando, boot real validado contra Postgres, branch pushada; proximo: Líder Técnico para merge de #283)_
+_Atualizado: 2026-08-21 — Líder Técnico (PR #283 mergeado em desenv via squash, commit 162bad7a488c4f71ee9499c983c034b73343d415, sub-issue #278 fechada, desenv_tasks_merged: [#276, #277, #278]; blockers limpo; faltam #279/#280 (frontend), NÃO criado PR desenv→homolog ainda; proximo: Dev(s) para #279 e #280)_
