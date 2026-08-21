@@ -32,7 +32,7 @@ pr_release: ~
 code_review_homolog_pr: "286 (reprovado 2026-08-21 — bug no teste e2e suggested-carousel.spec.ts, double-encoding de categoria; app aprovado)"
 qa_status: ~
 figma_url: "https://www.figma.com/design/yi6YkNAy9HfHus2oiPi3G7/Diego-Mulet-s-team-library (consultado — apenas conteúdo padrão de template do Figma, sem frames/tokens reais do projeto; ver ux-ui-spec.md §0)"
-blockers: "PR #286 reprovado pelo Code Review — sub-issue #280 reaberta, aguardando fix de website/e2e/suggested-carousel.spec.ts (double-encoding de categoria em getRealCategoriaAndSlug/encodeURIComponent)"
+blockers: ~
 status_comment_id: ~
 ---
 
@@ -454,10 +454,55 @@ confirmar os 17 specs passando, incluindo a CA 1.1 com uma categoria real, antes
 - [x] Code Review: PR #286 **reprovado** — bug no teste e2e novo (`suggested-carousel.spec.ts`,
       double-encoding de categoria). App aprovado sem ressalvas. Líder Técnico mapeou a falha para
       #280, reabriu a sub-issue.
-- [ ] Dev #280 (T-05, stack:nodejs): corrigir `website/e2e/suggested-carousel.spec.ts` (remover
-      `encodeURIComponent` redundante, seguir padrão de `visual.spec.ts`), reexecutar suíte
-      Playwright completa contra site real, abrir novo PR para `desenv`.
+- [x] Dev #280 (T-05, stack:nodejs): corrigir `website/e2e/suggested-carousel.spec.ts` (removido
+      `encodeURIComponent` redundante, seguindo padrão de `visual.spec.ts`), suíte Playwright
+      reexecutada contra site real, novo PR aberto para `desenv`.
 - [ ] Líder Técnico: merge do novo PR de #280 → `desenv`, novo Code Review do PR #286.
+
+## Dev — correção da sub-issue #280 (T-05, fix pós-Code Review, concluído 2026-08-21)
+
+- Worktree existente sincronizado com `desenv` (`git fetch` + `git merge origin/desenv`, sem
+  conflito).
+- `website/e2e/suggested-carousel.spec.ts` (linha ~19-22): removido `encodeURIComponent()`
+  redundante sobre `categoria` (retornado já URL-encoded por `getRealCategoriaAndSlug`/
+  `helpers.ts`, a partir do `sitemap.xml`) — mesmo padrão já usado em `visual.spec.ts`. Comentário
+  adicionado explicando o porquê (evitar reincidência).
+- Gate g: `Grep` por `encodeURIComponent`/`getRealCategoriaAndSlug` em todo `website/e2e/` —
+  confirmado que era a única ocorrência do bug (nenhum outro spec com o mesmo padrão).
+- **Validação real contra staging** (containers Docker já em execução — `afiliado_website`
+  porta 3000, `afiliado_api` porta 8080, dados reais do catálogo, sem mock):
+  - `STAGING_URL=http://localhost:3000 npx playwright test e2e/suggested-carousel.spec.ts` →
+    **3/3 passando**.
+  - Validação adicional (spec temporário, removido após uso) confirmando que a CA 1.1 agora
+    exercita de verdade o cenário "categoria com resultados": categoria real do sitemap
+    (`Casa e Cozinha`, single-encoded) → `GET /?category=Casa%20e%20Cozinha` → título renderizado
+    **"Em alta em Casa e Cozinha"** (não mais o fallback "Em alta na loja"). Confirmado também via
+    `curl` no endpoint do backend: `?categories=Casa%20e%20Cozinha&hasResults=true` retorna
+    produtos reais da categoria.
+  - Suíte Playwright completa (`npx playwright test`, `STAGING_URL=http://localhost:3000`): **16/17
+    specs passando** (todos os specs de `suggested-carousel.spec.ts`, `search.spec.ts`,
+    `filter-bar-price.spec.ts` e a maioria de `visual.spec.ts`). **1 falha em `visual.spec.ts`**
+    ("Detalhe de oferta exibe mídia, preço e CTA estilizados") — **investigada e confirmada
+    pré-existente/fora de escopo**: `app/oferta/[slug]/page.tsx` e `lib/api.ts` (arquivos
+    envolvidos) **não têm nenhum diff contra `origin/desenv`** nesta branch (`git log
+    origin/desenv..HEAD -- website/app/oferta website/lib/api.ts` vazio); reproduzível apenas
+    quando o slug real do catálogo (primeiro item do `sitemap.xml`, não determinístico — catálogo
+    vem de scraping real sem seed fixo) contém caractere acentuado (ex. "peças") — slugs sem
+    acento (ex. `amazon-echo-dot-...`) funcionam normalmente (200, conteúdo correto). Indício de
+    bug de normalização Unicode (NFC/NFD) na rota `/oferta/[slug]`, não relacionado ao
+    double-encoding de categoria reportado pelo Code Review. **Fora do escopo desta correção**
+    (CR restringiu explicitamente a `website/e2e/suggested-carousel.spec.ts`, sem mexer em código
+    de app) — registrado aqui para o Gerente/próxima issue avaliar, não corrigido.
+  - `npm test` (Jest): **176/176 passando** (21 suítes), sem regressão.
+  - `npx next lint`: sem erros/warnings.
+  - App real já em execução via Docker (containers `afiliado_website`/`afiliado_api`/`afiliado_db`
+    da validação anterior do Dev/CR, dados reais do catálogo) — `/health` → `200`, páginas
+    renderizando corretamente durante toda a validação (evidência de boot, não suposição; nenhum
+    código de app foi alterado por este fix, então não há necessidade de rebuild de imagem).
+- Push da branch `feature/ISSUE-280-carrossel-sugeridos` (4 commits: merge de sincronização com
+  `desenv` + fix do teste). Novo PR `feature/ISSUE-280-carrossel-sugeridos → desenv` aberto (PR
+  #286 `desenv→homolog` segue aberto e inalterado; a sub-issue #280 já havia sido mergeada uma vez
+  via squash antes da reprovação do CR).
 
 ---
 

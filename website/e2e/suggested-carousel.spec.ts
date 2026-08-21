@@ -19,7 +19,10 @@ test.describe('Faixa de produtos sugeridos (Issue #231, T-05)', () => {
     const { categoria } = await getRealCategoriaAndSlug(baseURL ?? 'http://localhost:3000');
     test.skip(!categoria, 'Catálogo real sem categoria disponível para exercitar o cenário.');
 
-    await page.goto(`/?category=${encodeURIComponent(categoria!)}`);
+    // `categoria` já vem URL-encoded do sitemap.xml (ver helpers.ts) — não fazer
+    // encodeURIComponent aqui (double-encoding quebraria o match de categoria no backend,
+    // mesmo padrão usado em visual.spec.ts).
+    await page.goto(`/?category=${categoria!}`);
     await page.waitForLoadState('networkidle');
 
     await expect(page.locator('[data-testid="app-error"]')).toHaveCount(0);
