@@ -162,4 +162,92 @@ public class ProductConfigurationTests
 
         index.IsUnique.Should().BeFalse();
     }
+
+    // Issue #231 (sub-issue #276) — click_count desnormalizado + 2 indices compostos novos
+    // (design.md secao 5): ranking por categoria (com filtro ativo) e ranking geral (fallback,
+    // sem filtro de categoria). "status" sempre lidera, coluna(s) de ordenacao por ultimo.
+
+    private static IReadOnlyProperty ObterPropriedadeClickCount()
+    {
+        using var context = CriarContexto();
+        var model = context.GetService<IDesignTimeModel>().Model;
+        var entityType = model.FindEntityType(typeof(Product));
+        entityType.Should().NotBeNull();
+
+        var property = entityType!.FindProperty(nameof(Product.ClickCount));
+        property.Should().NotBeNull("ClickCount deve estar mapeado em ProductConfiguration (Issue #231)");
+        return property!;
+    }
+
+    [Fact]
+    public void ClickCount_MapeadaComoColunaClickCount_ComDefaultZero()
+    {
+        var property = ObterPropriedadeClickCount();
+
+        property.GetColumnName().Should().Be("click_count");
+        property.GetDefaultValue().Should().Be(0);
+        property.IsNullable.Should().BeFalse();
+    }
+
+    private static IReadOnlyIndex ObterIndice(string nome)
+    {
+        using var context = CriarContexto();
+        var model = context.GetService<IDesignTimeModel>().Model;
+        var entityType = model.FindEntityType(typeof(Product));
+        entityType.Should().NotBeNull();
+
+        var index = entityType!.GetIndexes().SingleOrDefault(i => i.GetDatabaseName() == nome);
+        index.Should().NotBeNull($"o indice {nome} deve existir na configuracao de Product (Issue #231)");
+        return index!;
+    }
+
+    [Fact]
+    public void Indice_StatusCategoryClickCount_ColunasNaOrdemCorreta()
+    {
+        var index = ObterIndice("IX_products_status_category_clickcount");
+
+        var nomesColunas = index.Properties.Select(p => p.Name).ToArray();
+        nomesColunas.Should().Equal("Status", "Category", "ClickCount", "CreatedAt");
+    }
+
+    [Fact]
+    public void Indice_StatusCategoryClickCount_ClickCountECreatedAtDescendentes()
+    {
+        var index = ObterIndice("IX_products_status_category_clickcount");
+
+        index.IsDescending.Should().Equal(false, false, true, true);
+    }
+
+    [Fact]
+    public void Indice_StatusCategoryClickCount_NaoEhUnico()
+    {
+        var index = ObterIndice("IX_products_status_category_clickcount");
+
+        index.IsUnique.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Indice_StatusClickCount_ColunasNaOrdemCorreta()
+    {
+        var index = ObterIndice("IX_products_status_clickcount");
+
+        var nomesColunas = index.Properties.Select(p => p.Name).ToArray();
+        nomesColunas.Should().Equal("Status", "ClickCount", "CreatedAt");
+    }
+
+    [Fact]
+    public void Indice_StatusClickCount_ClickCountECreatedAtDescendentes()
+    {
+        var index = ObterIndice("IX_products_status_clickcount");
+
+        index.IsDescending.Should().Equal(false, true, true);
+    }
+
+    [Fact]
+    public void Indice_StatusClickCount_NaoEhUnico()
+    {
+        var index = ObterIndice("IX_products_status_clickcount");
+
+        index.IsUnique.Should().BeFalse();
+    }
 }
