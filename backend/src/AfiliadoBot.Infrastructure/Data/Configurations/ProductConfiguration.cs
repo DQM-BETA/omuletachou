@@ -160,6 +160,24 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .WithOne(x => x.Product)
             .HasForeignKey(x => x.ProductId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Issue #231 (sub-issue #276) — click_count desnormalizado (design.md secao 4),
+        // atualizado sincronamente pelo endpoint publico de clique (T-02, Product.RegisterClick).
+        builder.Property(x => x.ClickCount)
+            .HasColumnName("click_count")
+            .HasDefaultValue(0)
+            .IsRequired();
+
+        // Indices compostos novos para a faixa de sugeridos (design.md secao 5): ranking por
+        // categoria (filtro de categoria ativo) e ranking geral (fallback, sem filtro). Segue o
+        // mesmo padrao dos indices acima — "status" lidera, coluna(s) de ordenacao por ultimo.
+        builder.HasIndex(x => new { x.Status, x.Category, x.ClickCount, x.CreatedAt })
+            .HasDatabaseName("IX_products_status_category_clickcount")
+            .IsDescending(false, false, true, true);
+
+        builder.HasIndex(x => new { x.Status, x.ClickCount, x.CreatedAt })
+            .HasDatabaseName("IX_products_status_clickcount")
+            .IsDescending(false, true, true);
     }
 
     /// <summary>

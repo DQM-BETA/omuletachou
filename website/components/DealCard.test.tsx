@@ -1,9 +1,15 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import DealCard from './DealCard';
 import type { Deal } from '@/lib/types';
+import * as tracking from '@/lib/tracking';
+
+jest.mock('@/lib/tracking', () => ({
+  trackProductClick: jest.fn(),
+}));
 
 function buildDeal(overrides: Partial<Deal> = {}): Deal {
   return {
+    id: '11111111-1111-1111-1111-111111111111',
     title: 'Fone Bluetooth XYZ',
     salePrice: 99.9,
     originalPrice: 149.9,
@@ -19,6 +25,24 @@ function buildDeal(overrides: Partial<Deal> = {}): Deal {
 }
 
 describe('DealCard', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('Issue #231/#279: clique no CTA registra trackProductClick com o id do produto e mantém href/target/rel', () => {
+    render(<DealCard deal={buildDeal({ id: '22222222-2222-2222-2222-222222222222' })} />);
+
+    const cta = screen.getByRole('link', { name: /ver oferta/i });
+    fireEvent.click(cta);
+
+    expect(tracking.trackProductClick).toHaveBeenCalledWith(
+      '22222222-2222-2222-2222-222222222222'
+    );
+    expect(cta).toHaveAttribute('href', 'https://amazon.com/xyz?tag=abc');
+    expect(cta).toHaveAttribute('target', '_blank');
+    expect(cta).toHaveAttribute('rel', 'nofollow');
+  });
+
   it('CA-A3: exibe imagem, título, preço riscado, preço atual, badge de desconto e CTA', () => {
     render(<DealCard deal={buildDeal()} />);
 

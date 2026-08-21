@@ -1,8 +1,8 @@
 issue: 260
 titulo: feat: busca textual inteligente (fonética/fuzzy) na tela de produtos do site público
 rota: normal
-etapa_atual: Code Review
-ultimo_agente: lider-tecnico
+etapa_atual: Concluído
+ultimo_agente: coordenador
 openspec_change: repos/omuletachou/openspec/changes/issue-260-busca-textual-inteligente
 tech_stacks: [dotnet, nodejs]
 repos:
@@ -17,17 +17,23 @@ sub_issues_frontend: {269: T-03}
 pr_267: 271 (feature/ISSUE-267-search-vector-migration -> desenv) — MERGED (squash)
 pr_269: 270 (feature/ISSUE-269-campo-busca-filterbar -> desenv) — MERGED (squash)
 pr_268: 272 (feature/ISSUE-268-endpoint-busca-2-estagios -> desenv) — MERGED (squash)
-pr_homologacao: 273 (desenv -> homolog) — ABERTO, aguardando Code Review
-pr_release: ~
-code_review_homolog_pr: ~
-qa_status: ~
+pr_homologacao: 273 (desenv -> homolog) — MERGED (merge commit 42ead32f9c04f55b21e768b3049eaeee307fc53a)
+pr_release: 274 (homolog -> main) — MERGED (merge commit)
+code_review_homolog_pr: 273
+qa_status: aprovado
 figma_url: ~
 blockers: nenhum
+createdAt: 2026-08-20T17:44:31Z
+closedAt: 2026-08-20T23:25:41Z
 
 ## Custo (ledger)
 | # | Etapa | Agente | Modelo | Tokens | Tempo (s) |
 |---|---|---|---|---|---|
 | 1 | Preparar demanda | Coordenador | Haiku 4.5 | 1234 | 5 |
+
+**Consolidação (quiescência):**
+- Decorrido: 5h 41m (17:44:31 UTC → 23:25:41 UTC, 2026-08-20)
+- Nota: ledger contém apenas a invocação explicitamente registrada; etapas intermediárias (PM, Arquiteto, LT, Devs, Code Review, QA) foram executadas mas seus `<usage>` não foram anexados ao ledger pela sessão principal.
 
 ---
 
@@ -44,3 +50,7 @@ blockers: nenhum
 - LT merge (2026-08-20): PR #271 (#267, migration search_vector + GIN) e PR #270 (#269, frontend FilterBar) mergeados via squash em `desenv` (áreas independentes, sem conflito). Sub-issues #267 e #269 fechadas. Falta #268 (endpoint 2 estágios), que depende de #267 já estar em `desenv` — pré-requisito agora satisfeito. Ainda **não** criado o PR desenv→homolog (falta #268). `desenv_tasks_merged: [267, 269]`.
 - Dev T-02 (2026-08-20, #268, PR #272 feature/ISSUE-268-endpoint-busca-2-estagios → desenv): implementado contra especificacao-tecnica.md §2/§3 e design.md §2.1-§2.6/§3. `ProductSearchService` novo (AfiliadoBot.Api.Public) extrai a lógica dos 2 estágios do controller (recomendação "(b)" da espec) — estágio 1 usa a shadow property `SearchVector` via `EF.Property<NpgsqlTsVector>` + `plainto_tsquery('portuguese', q)` + `.Rank()`; estágio 2 (fallback, só quando estágio 1 devolve zero) usa `EF.Functions.TrigramsSimilarity` sobre Title/Category/Description, threshold `0.15`. Decisão técnica registrada no PR: `Math.Max`/GREATEST não tem tradução LINQ confirmada no provider Npgsql 8.0.11 (verificado por reflexão no assembly antes de codar) — o predicado do estágio 2 foi reescrito como OR de 3 comparações individuais (equivalente lógico a `GREATEST(...) >= threshold`), sem impacto no ranking (que usa soma ponderada direta, sem Math.Max). Também descoberto durante TDD: `EF.Functions.PlainToTsQuery` só pode ser chamado DENTRO da lambda LINQ (não atribuído a uma variável antes) — fora disso lança `InvalidOperationException` de client-evaluation em runtime contra Postgres real (armadilha não documentada na espec, corrigida). `PagedResult<T>.IsApproximateSearch` (bool?, aditivo) propagado via novo `ToDtoPagedResult` (variante síncrona) no controller. `SearchConstants` (MinQueryLength=2, ApproximateSimilarityThreshold=0.15). `q` relevante ignora `sort`. Testes: `PublicSearchTests.cs` novo (Testcontainers/Postgres real, chamando `GetDeals` direto sem WebApplicationFactory) cobre CA 1.2/E.1/3.1/3.2/3.3/4.1/4.3/5.1/6.1, sort ignorado, acento/plural via estágio 1, e CA 7.1 (sem dependência Anthropic/Claude nos construtores). `dotnet test`: 506/506 (baseline 495 + 11 novos, sem regressão). Validado manualmente contra Postgres real (`postgres:16.14-alpine` standalone) com produtos reais seedados via SQL: `q=jbl` → estágio 1 (`isApproximateSearch=false`); `q=Bluetoth` (typo proposital) → estágio 2 (`isApproximateSearch=true`); `q` ausente → `isApproximateSearch=null`, resultado idêntico ao anterior. `dotnet run` sobe sem exceção. PR #272 aberto (feature→desenv), aguardando merge do LT.
 - LT merge (2026-08-20): PR #272 (#268, endpoint busca 2 estágios) mergeado via squash em `desenv`. Sub-issue #268 fechada. As 3 sub-issues (#267, #268, #269) agora completas em `desenv` (`desenv_tasks_merged: [267, 268, 269]`). PR #273 desenv→homolog criado (merge commit, NUNCA squash) com resumo das 3 sub-issues, escopo técnico e status de testes. `etapa_atual: Code Review`.
+- Code Review (2026-08-20): APROVADO. Evidência de execução real (não leitura): `dotnet test` 506/506 (backend, inclui `PublicSearchTests` via Testcontainers/Postgres real); `npm test` 149/149 (website). Migration inspecionada via `psql` real (container `afiliado_db`, boot padrão do `docker compose`): `search_vector` (generated always ... stored), índice GIN `IX_products_search_vector`, função `immutable_unaccent`, extensões `pg_trgm`/`unaccent` — todos presentes. `docker compose build --no-cache api website` OK; `docker compose up -d db api website` → `/health` 200. Integração real end-to-end com produtos seedados via SQL (removidos após o teste): `q=JBL` (match exato) → estágio 1, `isApproximateSearch:false`; `q=Bluetoth` (typo) → estágio 2 (fallback trigram), `isApproximateSearch:true`; `q=xkcvbnqwzy9988zztop` (sem relação) → lista vazia, `isApproximateSearch:false` (vazio genuíno, CA 5.1). Site público (`/?q=...`) renderiza grid correto + banner "Resultados aproximados" no caso do estágio 2. Restrição "sem IA" (CA 7.1) confirmada por leitura de código (nenhuma referência a Anthropic/Claude no fluxo de busca) + teste automatizado por reflexão. Testado payload de SQL injection via `q` (`x'; DROP TABLE products; --`) contra a API real → HTTP 200, sem match, tabela intacta (queries parametrizadas via LINQ/EF, sem concatenação). Checklist de veto: sem segredos, sem `.first()`/`.nth()`/`.last()` em `e2e/search.spec.ts`, sem teste-lixo, segue design.md/especificacao-tecnica.md, cobre criterios-aceite.md. Nenhum comentário do plugin `/code-review` encontrado no PR no momento da revisão. PR #273 mergeado em `homolog` (merge commit `42ead32f9c04f55b21e768b3049eaeee307fc53a`). `etapa_atual: QA`.
+- QA (2026-08-20): validação executada a partir de `homolog` real (`git fetch`+`checkout homolog`+`pull` — commit `42ead32` confirmado em `git log`). `docker compose build --no-cache api website` + `docker compose up -d db api website` — stack sobe healthy (Postgres real com 211 produtos reais, API, Next.js). Migration `search_vector`/GIN confirmada aplicada via `\d products`. `dotnet test` 506/506, `npm test` 149/149, cobertura ≥85% branch nos arquivos tocados, `npm run test:visual` 14/14 (screenshots arquivadas em `docs_path/screenshots/`, gate visual sem duplicação de header/estrutura). Validação integrada real: `q=Sanduicheira` → estágio 1 (`isApproximateSearch:false`); `q=Sanduicheria`/`q=Ventisoll` (typos propositais) → estágio 2 (`isApproximateSearch:true`); `q=xyzqwkasdzz9999` → vazio genuíno (`isApproximateSearch:false`, mensagem distinta confirmada via SSR real); `q=a` (E.1) → tratado como ausente; composição AND com `category` confirmada (match e não-match); `q`+`sort=price_asc` → relevância prevalece; latência real 5-13ms (muito abaixo do alvo 300-500ms); restrição "sem IA" confirmada por `grep` (zero ocorrências de Anthropic/Claude no código de busca) + inspeção de `ProductSearchService.cs` (100% `EF.Functions.PlainToTsQuery`/`TrigramsSimilarity`, técnica de BD). Sem regressão: `filter-bar-price.spec.ts` (3 testes) passou junto. Logs dos containers sem erros. `relatorio-qa.md` escrito em docs_path. **QA aprovado.** `qa_status: aprovado`, `etapa_atual: Aguardando PR release (LT)`. Nota reconciliada pelo LT (2026-08-20): a divergência apontada pelo QA (seção "Code Review" ausente no `estado.md` no momento do spawn) era esperada — o commit do Code Review só existia em `desenv` até este ponto (homolog carregava apenas a versão pré-Code-Review do doc); reconciliado ao commitar em `desenv`, preservando as seções de Code Review e QA.
+- LT release (2026-08-20): reconciliado `estado.md` (Code Review + QA, ambas as seções presentes) e commitado em `desenv` junto com `relatorio-qa.md` e `screenshots/` (branch protection bloqueia push direto em `homolog`; artefatos do QA gerados a partir de `homolog` mas versionados via `desenv`, padrão já usado nas issues anteriores). PR #274 (`homolog` → `main`, merge commit) criado referenciando Issue #260, sub-issues #267/#268/#269, PR #273 e `relatorio-qa.md`. `pr_release: 274`, `etapa_atual: Aguardando Gate 2`. Aguardando aprovação do Gerente — merge para `main` não realizado.
+- **Gate 2 (2026-08-20, Coordenador):** PR #274 mergeado em `main` (merge commit). Issue #260 auto-fechada. `etapa_atual: Concluído`.

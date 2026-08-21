@@ -14,11 +14,34 @@ jest.mock('@/components/FilterBar', () => {
   };
 });
 
+// Issue #231 (sub-issue #280) — mockado aqui porque é Client Component com fetch próprio em
+// useEffect (lib/suggested.ts); os testes de comportamento real vivem em
+// components/SuggestedProductsCarousel.test.tsx. Aqui só verificamos que a página repassa as
+// props corretas (category/hasResults).
+jest.mock('@/components/SuggestedProductsCarousel', () => {
+  return function MockSuggestedProductsCarousel({
+    category,
+    hasResults,
+  }: {
+    category?: string;
+    hasResults: boolean;
+  }) {
+    return (
+      <div
+        data-testid="suggested-carousel-mock"
+        data-category={category ?? ''}
+        data-has-results={String(hasResults)}
+      />
+    );
+  };
+});
+
 const fetchDealsMock = fetchDeals as jest.MockedFunction<typeof fetchDeals>;
 const fetchCategoriesMock = fetchCategories as jest.MockedFunction<typeof fetchCategories>;
 
 function buildDeal(overrides: Partial<Deal> = {}): Deal {
   return {
+    id: '11111111-1111-1111-1111-111111111111',
     title: 'Fone Bluetooth XYZ',
     salePrice: 99.9,
     originalPrice: 149.9,
@@ -128,6 +151,44 @@ describe('Home page', () => {
     fetchDealsMock.mockRejectedValueOnce(new Error('API indisponível'));
 
     await expect(Home({ searchParams: {} })).rejects.toThrow('API indisponível');
+  });
+
+  // Issue #231 (sub-issue #280, T-05) — SuggestedProductsCarousel abaixo do grid/paginação.
+  describe('faixa de produtos sugeridos (Issue #231, T-05)', () => {
+    it('CA 1.1: repassa a categoria ativa e hasResults=true quando o grid tem resultado', async () => {
+      fetchDealsMock.mockResolvedValueOnce(pagedResult([buildDeal()]));
+
+      const jsx = await Home({ searchParams: { category: 'Eletrônicos' } });
+      render(jsx);
+
+      const mock = screen.getByTestId('suggested-carousel-mock');
+      expect(mock).toHaveAttribute('data-category', 'Eletrônicos');
+      expect(mock).toHaveAttribute('data-has-results', 'true');
+    });
+
+    it('CA 1.2: repassa hasResults=false quando o filtro não retorna nenhum produto (fallback)', async () => {
+      fetchDealsMock.mockResolvedValueOnce(pagedResult([]));
+
+      const jsx = await Home({ searchParams: { category: 'Eletrônicos' } });
+      render(jsx);
+
+      const mock = screen.getByTestId('suggested-carousel-mock');
+      expect(mock).toHaveAttribute('data-has-results', 'false');
+      // Faixa aparece mesmo com o grid vazio (ux-ui-spec.md §1) — renderizada fora do bloco
+      // condicional de deals-empty/deals-grid.
+      expect(screen.getByTestId('deals-empty')).toBeInTheDocument();
+    });
+
+    it('renderiza a faixa abaixo da paginação/grid, sem categoria quando nenhum filtro está ativo', async () => {
+      fetchDealsMock.mockResolvedValueOnce(pagedResult([buildDeal()]));
+
+      const jsx = await Home({ searchParams: {} });
+      render(jsx);
+
+      const mock = screen.getByTestId('suggested-carousel-mock');
+      expect(mock).toHaveAttribute('data-category', '');
+      expect(mock).toHaveAttribute('data-has-results', 'true');
+    });
   });
 
   // ISSUE-269 (T-03) — busca textual: propagação de `q` + 3 estados de resultado.

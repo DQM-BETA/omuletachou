@@ -1,6 +1,7 @@
 import type { Deal } from '@/lib/types';
 import { formatPriceBRL, resolveDealImageUrl } from '@/lib/format';
 import { getPlatformLabel } from '@/lib/platform';
+import DealCardLink from './DealCardLink';
 
 interface DealCardProps {
   deal: Deal;
@@ -46,14 +47,11 @@ export default function DealCard({ deal }: DealCardProps) {
       </div>
 
       {deal.affiliateLink ? (
-        <a
-          className="deal-card__cta"
+        <DealCardLink
+          productId={deal.id}
           href={deal.affiliateLink}
-          target="_blank"
-          rel="nofollow"
-        >
-          Ver oferta →
-        </a>
+          className="deal-card__cta"
+        />
       ) : (
         <span className="deal-card__cta deal-card__cta--disabled" aria-disabled="true">
           Indisponível

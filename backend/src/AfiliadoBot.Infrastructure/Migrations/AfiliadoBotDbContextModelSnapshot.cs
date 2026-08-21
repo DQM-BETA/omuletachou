@@ -439,6 +439,12 @@ namespace AfiliadoBot.Infrastructure.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("category");
 
+                    b.Property<int>("ClickCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("click_count");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamptz")
                         .HasColumnName("created_at");
@@ -542,9 +548,17 @@ namespace AfiliadoBot.Infrastructure.Migrations
                         .IsDescending(false, true)
                         .HasDatabaseName("IX_products_status_aiscore");
 
+                    b.HasIndex("Status", "ClickCount", "CreatedAt")
+                        .IsDescending(false, true, true)
+                        .HasDatabaseName("IX_products_status_clickcount");
+
                     b.HasIndex("Status", "Platform", "CreatedAt")
                         .IsDescending(false, false, true)
                         .HasDatabaseName("IX_products_status_platform_createdat");
+
+                    b.HasIndex("Status", "Category", "ClickCount", "CreatedAt")
+                        .IsDescending(false, false, true, true)
+                        .HasDatabaseName("IX_products_status_category_clickcount");
 
                     b.HasIndex("Status", "Category", "Subcategory", "AiScore")
                         .IsDescending(false, false, false, true)
@@ -562,6 +576,31 @@ namespace AfiliadoBot.Infrastructure.Migrations
                         .HasDatabaseName("IX_products_status_category_subcategory_saleprice");
 
                     b.ToTable("products", (string)null);
+                });
+
+            modelBuilder.Entity("AfiliadoBot.Domain.Entities.ProductClick", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("ClickedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("clicked_at");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("IX_product_clicks_product_id");
+
+                    b.ToTable("product_clicks", (string)null);
                 });
 
             modelBuilder.Entity("AfiliadoBot.Domain.Entities.PublicationLog", b =>
@@ -723,6 +762,15 @@ namespace AfiliadoBot.Infrastructure.Migrations
                         .HasDatabaseName("ix_users_email");
 
                     b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("AfiliadoBot.Domain.Entities.ProductClick", b =>
+                {
+                    b.HasOne("AfiliadoBot.Domain.Entities.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("AfiliadoBot.Domain.Entities.PublicationLog", b =>

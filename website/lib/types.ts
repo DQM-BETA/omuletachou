@@ -1,4 +1,8 @@
 export interface Deal {
+  // Issue #231 (sub-issue #278, especificacao-tecnica.md §4.1) — uuid interno do produto,
+  // necessário para o frontend identificar o produto no registro de clique (T-04,
+  // POST /api/public/products/{id}/click). Não é dado sensível (uuid opaco).
+  id: string;
   title: string;
   salePrice: number;
   originalPrice: number;

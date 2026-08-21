@@ -269,4 +269,46 @@ public class ProductTests
         act.Should().Throw<ArgumentException>().WithParameterName("link");
         product.Status.Should().Be(ProductStatus.AwaitingAffiliateLink);
     }
+
+    // Issue #231 (sub-issue #276) — ClickCount desnormalizado, atualizado sincronamente pelo
+    // endpoint de registro de clique (T-02). RegisterClick segue o mesmo padrao de metodo de
+    // dominio ja usado nas demais transicoes (nunca setter publico).
+
+    [Fact]
+    public void Constructor_ClickCountComecaEmZero()
+    {
+        var product = CriarProdutoValido();
+        product.ClickCount.Should().Be(0);
+    }
+
+    [Fact]
+    public void RegisterClick_IncrementaClickCountEmUm()
+    {
+        var product = CriarProdutoValido();
+        product.RegisterClick();
+        product.ClickCount.Should().Be(1);
+    }
+
+    [Fact]
+    public void RegisterClick_AtualizaUpdatedAt()
+    {
+        var product = CriarProdutoValido();
+        var updatedAtAntes = product.UpdatedAt;
+
+        product.RegisterClick();
+
+        product.UpdatedAt.Should().BeOnOrAfter(updatedAtAntes);
+    }
+
+    [Fact]
+    public void RegisterClick_ChamadoMultiplasVezes_AcumulaContagem()
+    {
+        var product = CriarProdutoValido();
+
+        product.RegisterClick();
+        product.RegisterClick();
+        product.RegisterClick();
+
+        product.ClickCount.Should().Be(3);
+    }
 }

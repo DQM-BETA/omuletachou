@@ -11,6 +11,7 @@ const fetchDealsMock = fetchDeals as jest.MockedFunction<typeof fetchDeals>;
 
 function buildDeal(overrides: Partial<Deal> = {}): Deal {
   return {
+    id: '11111111-1111-1111-1111-111111111111',
     title: 'Fone Bluetooth XYZ',
     salePrice: 99.9,
     originalPrice: 149.9,

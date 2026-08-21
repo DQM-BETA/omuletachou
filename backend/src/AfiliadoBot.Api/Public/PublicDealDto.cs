@@ -16,9 +16,15 @@ namespace AfiliadoBot.Api.Public;
 /// responsabilidade do frontend), nao mais como filtro/navegacao. O DTO interno/dashboard
 /// (<c>ProductDtos.cs</c>, usado por <c>ProductsController</c>) nunca foi tocado e sempre expos
 /// <c>Platform</c> normalmente.
+/// Issue #231 (sub-issue #278, especificacao-tecnica.md §4.1): <c>Id</c> (uuid) adicionado — o
+/// frontend precisa dele para identificar o produto no registro de clique (T-04,
+/// <c>POST /api/public/products/{id}/click</c>). Nao e dado sensivel (uuid interno opaco, ja
+/// usado como PK publica em outras APIs REST comuns) — so nao estava no DTO antes por nao haver
+/// necessidade (a rota de clique nao existia).
 /// </summary>
 public class PublicDealDto
 {
+    public Guid Id { get; init; }
     public string Title { get; init; } = string.Empty;
     public decimal SalePrice { get; init; }
     public decimal OriginalPrice { get; init; }
@@ -48,6 +54,7 @@ public class PublicDealDto
 
         return new PublicDealDto
         {
+            Id = product.Id,
             Title = product.Title,
             SalePrice = product.SalePrice,
             OriginalPrice = product.OriginalPrice,
