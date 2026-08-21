@@ -174,6 +174,30 @@ issue mexe em `discount_pct`.
 - #277 (T-02) e #278 (T-03) agora **desbloqueadas**: dependiam de T-01 estar em `desenv` (schema
   `ProductClick`/`ClickCount` disponível).
 
+## Dev — sub-issue #277 (T-02, concluído 2026-08-21)
+
+- Novo `PublicProductsController.cs` (`backend/src/AfiliadoBot.Api/Controllers/`,
+  `api/public/products`, `[AllowAnonymous]`) — separado de `PublicController` (recurso "product"
+  por id, não "deal"/listagem).
+- `POST /api/public/products/{id:guid}/click`: sem corpo (compatível com `navigator.sendBeacon`),
+  sempre `202 Accepted` (mesmo produto inexistente, CA 2.2), protegido por
+  `RateLimiterConfigurator.PublicWritePolicy` (10 req/min/IP, mesma policy de
+  `POST /api/public/push/subscribe`). Insere `ProductClick` + chama `product.RegisterClick()`
+  (da #276) na mesma transação implícita do `SaveChangesAsync`.
+- TDD: `PublicProductsControllerTests.cs` novo (5 testes, `WebApplicationFactory`) cobrindo CA
+  2.1-2.4 — clique em produto existente incrementa `ClickCount` e persiste `ProductClick`, múltiplas
+  chamadas incrementam por chamada, produto inexistente retorna `202` sem criar evento, shape do
+  evento (reflexão de propriedades) confirma ausência de dado de usuário/sessão, endpoint aceita
+  `POST` sem corpo/content-type. Suíte completa: 531/531 passando (100%, sem regressão; eram 526 +
+  5 novos).
+- Boot da aplicação confirmado sem exceção: imagem buildada a partir da branch, container efêmero
+  conectado ao Postgres real via rede Docker (`omuletachou_omuletachou_net`), `/health` → 200.
+  Validação ponta a ponta contra Postgres real: produto seedado via `psql`, `curl -X POST` no
+  endpoint → `202`, `product_clicks` com 1 linha (`product_id`/`clicked_at` corretos),
+  `products.click_count` incrementado de 0 para 1; produto inexistente → `202` sem erro. Dados de
+  teste, container e imagem removidos após validação.
+- PR #282 (`feature/ISSUE-277-endpoint-registrar-clique` → `desenv`) aberto, pronto para merge do LT.
+
 ## Próximos passos
 
 - [x] Arquiteto: completar `design.md`.
@@ -182,9 +206,10 @@ issue mexe em `discount_pct`.
       (loading/vazio/erro), setas de navegação, heurísticas de Nielsen.
 - [x] Dev #276 (T-01): schema `ProductClick` + `Product.ClickCount` + índices — PR #281 aberto.
 - [x] Líder Técnico: merge PR #281 → `desenv` (squash), sub-issue #276 fechada.
-- [ ] Dev(s): implementar T-02 e T-03 (#277, #278 — agora desbloqueadas) e T-04/T-05 (#279, #280,
-      independentes de schema; T-05 consome `ux-ui-spec.md`). Ver `tasks.md` para ordem de
-      dependência/merge restante.
+- [x] Dev #277 (T-02): endpoint `POST /api/public/products/{id}/click` — PR #282 aberto.
+- [ ] Dev(s): implementar T-03 (#278, já desbloqueada) e T-04/T-05 (#279, #280, independentes de
+      schema; T-05 consome `ux-ui-spec.md`). Ver `tasks.md` para ordem de dependência/merge restante.
+- [ ] Líder Técnico: merge PR #282 → `desenv` (squash), sub-issue #277 fechada.
 
 ---
 
@@ -196,3 +221,4 @@ _Atualizado: 2026-08-21 — Líder Técnico (design.md do Arquiteto commitado + 
 _Atualizado: 2026-08-21 — UX/UI (ux-ui-spec.md concluído para a sub-issue #280/T-05; proximo: Dev(s))_
 _Atualizado: 2026-08-21 — Dev (sub-issue #276/T-01 concluída: schema ProductClick + Product.ClickCount + índices, migration aplicada/validada contra Postgres real, PR #281 aberto; proximo: Líder Técnico para merge→desenv)_
 _Atualizado: 2026-08-21 — Líder Técnico (PR #281 mergeado em desenv via squash, sub-issue #276 fechada, desenv_tasks_merged: [#276]; proximo: Dev(s) para #277 e #278)_
+_Atualizado: 2026-08-21 — Dev (sub-issue #277/T-02 concluída: endpoint POST /api/public/products/{id}/click, 531/531 testes passando, validado contra Postgres real, PR #282 aberto; proximo: Líder Técnico para merge→desenv)_
