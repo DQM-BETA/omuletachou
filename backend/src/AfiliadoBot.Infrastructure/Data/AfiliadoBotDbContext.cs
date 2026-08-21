@@ -13,6 +13,7 @@ public class AfiliadoBotDbContext : DbContext
     public DbSet<PublicationLog> PublicationLogs { get; set; } = null!;
     public DbSet<User> Users { get; set; } = null!;
     public DbSet<JobRun> JobRuns { get; set; } = null!;
+    public DbSet<ProductClick> ProductClicks { get; set; } = null!;
 
     public AfiliadoBotDbContext(DbContextOptions<AfiliadoBotDbContext> options) : base(options) { }
 

@@ -38,6 +38,11 @@ public class Product
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
+    // Issue #231 (sub-issue #276) — contador desnormalizado de cliques, atualizado sincronamente
+    // pelo endpoint publico de registro de clique (T-02, mesmo request que insere ProductClick).
+    // Alimenta a ordenacao da faixa de sugeridos (design.md secao 5) sem precisar de GROUP BY/job.
+    public int ClickCount { get; private set; }
+
     public ICollection<PublicationQueue> PublicationQueues { get; private set; } = new List<PublicationQueue>();
 
     // Construtor para EF Core
@@ -280,6 +285,18 @@ public class Product
 
         AffiliateLink = link;
         Status = ProductStatus.Queued;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Registra um clique no produto (Issue #231, endpoint publico de tracking, T-02): incrementa
+    /// o contador desnormalizado. Chamado no mesmo request que insere o evento em ProductClick
+    /// (design.md secao 4/8) — a atomicidade do incremento vem do SaveChangesAsync do Postgres,
+    /// nao precisa de SQL bruto para este volume.
+    /// </summary>
+    public void RegisterClick()
+    {
+        ClickCount++;
         UpdatedAt = DateTime.UtcNow;
     }
 }
