@@ -1,7 +1,7 @@
 ---
 issue: 231
 titulo: feat: rastreio de cliques + faixa de produtos sugeridos (site público)
-etapa_atual: Em Desenvolvimento
+etapa_atual: Code Review
 ultimo_agente: lider-tecnico
 openspec_change: openspec/changes/issue-231-faixa-de-produtos-sugeridos
 tech_stacks:
@@ -24,12 +24,13 @@ desenv_tasks_merged:
   - "#277"
   - "#278"
   - "#279"
+  - "#280"
 sub_issues_frontend:
   T-04: "#279"
   T-05: "#280"
 pr_homologacao: 286
 pr_release: ~
-code_review_homolog_pr: "286 (reprovado 2026-08-21 — bug no teste e2e suggested-carousel.spec.ts, double-encoding de categoria; app aprovado)"
+code_review_homolog_pr: "286 (reprovado 2026-08-21 — bug no teste e2e suggested-carousel.spec.ts, double-encoding de categoria; app aprovado; fix mergeado via PR #287, aguardando novo Code Review)"
 qa_status: ~
 figma_url: "https://www.figma.com/design/yi6YkNAy9HfHus2oiPi3G7/Diego-Mulet-s-team-library (consultado — apenas conteúdo padrão de template do Figma, sem frames/tokens reais do projeto; ver ux-ui-spec.md §0)"
 blockers: ~
@@ -424,41 +425,6 @@ URL/query, já vem codificada) ou `decodeURIComponent` antes de repassar para `U
 Reexecutar a suíte Playwright completa contra o site real (não só `next build`/`next start`) e
 confirmar os 17 specs passando, incluindo a CA 1.1 com uma categoria real, antes de abrir novo PR.
 
-## Próximos passos
-
-- [x] Arquiteto: completar `design.md`.
-- [x] Líder Técnico: refinamento técnico + task breakdown + sub-issues.
-- [x] UX/UI: `ux-ui-spec.md` da sub-issue #280 (T-05) — posição, título, layout responsivo, estados
-      (loading/vazio/erro), setas de navegação, heurísticas de Nielsen.
-- [x] Dev #276 (T-01): schema `ProductClick` + `Product.ClickCount` + índices — PR #281 aberto.
-- [x] Líder Técnico: merge PR #281 → `desenv` (squash), sub-issue #276 fechada.
-- [x] Dev #277 (T-02): endpoint `POST /api/public/products/{id}/click` — PR #282 aberto.
-- [x] Dev #278 (T-03): endpoint `GET /api/public/products/suggested` — PR #283 aberto.
-- [x] Líder Técnico: merge PR #282 (#277) → `desenv` (squash), sub-issue #277 fechada.
-- [x] Dev #278 (T-03): conflito do PR #283 com `desenv` resolvido — branch
-      `feature/ISSUE-278-endpoint-suggested` sincronizada (merge com `desenv`), ambas as actions
-      (`RegisterClick` de #277 + `GetSuggested` de #278) mantidas em `PublicProductsController.cs`,
-      539/539 testes passando, boot real validado, branch pushada. PR #283 pronto para o LT tentar
-      o merge novamente.
-- [x] Líder Técnico: merge PR #283 (#278) → `desenv` (squash), sub-issue #278 fechada.
-- [x] Dev #279 (T-04): rastreio de clique no card (frontend) — `lib/tracking.ts` +
-      `DealCardLink.tsx` + `Deal.id`, 156/156 testes passando, `next build`/`next start` validados,
-      PR #284 aberto.
-- [x] Líder Técnico: merge PR #284 (#279) → `desenv` (squash), sub-issue #279 fechada.
-- [x] Dev #280 (T-05): faixa/carrossel de produtos sugeridos — `lib/suggested.ts` +
-      `SuggestedProductsCarousel.tsx` + `app/page.tsx`, 176/176 testes passando, `next
-      build`/`lint`/`start` validados, PR #285 aberto.
-- [x] Líder Técnico: merge PR #285 (#280) → `desenv` (squash), sub-issue #280 fechada. Todas as
-      sub-issues de #231 concluídas — PR #286 `desenv→homolog` criado.
-- [x] Sessão principal: `/code-review` no PR #286 + spawn do agente Code Review.
-- [x] Code Review: PR #286 **reprovado** — bug no teste e2e novo (`suggested-carousel.spec.ts`,
-      double-encoding de categoria). App aprovado sem ressalvas. Líder Técnico mapeou a falha para
-      #280, reabriu a sub-issue.
-- [x] Dev #280 (T-05, stack:nodejs): corrigir `website/e2e/suggested-carousel.spec.ts` (removido
-      `encodeURIComponent` redundante, seguindo padrão de `visual.spec.ts`), suíte Playwright
-      reexecutada contra site real, PR #287 aberto para `desenv`.
-- [ ] Líder Técnico: merge do PR #287 (#280) → `desenv`, novo Code Review do PR #286.
-
 ## Dev — correção da sub-issue #280 (T-05, fix pós-Code Review, concluído 2026-08-21)
 
 - Worktree existente sincronizado com `desenv` (`git fetch` + `git merge origin/desenv`, sem
@@ -505,6 +471,56 @@ confirmar os 17 specs passando, incluindo a CA 1.1 com uma categoria real, antes
   sido mergeada uma vez via squash antes da reprovação do CR — este é um PR novo para o commit de
   correção).
 
+## Líder Técnico — merge do fix da sub-issue #280 (concluído 2026-08-21)
+
+- PR #287 mergeado via **squash** em `desenv` (`gh pr merge 287 --squash`, confirmado `state:
+  MERGED`, commit `5dc299e4f5701686b33fddc498b7dbc4692506fb`).
+- Sub-issue #280 fechada novamente (`gh issue close 280 --reason completed`).
+- `desenv_tasks_merged: ["#276", "#277", "#278", "#279", "#280"]` — todas as 5 sub-issues de #231
+  concluídas outra vez.
+- PR #286 (`desenv→homolog`) confirmado `mergeable: MERGEABLE` / `mergeStateStatus: CLEAN` após o
+  merge do #287 — absorveu o commit de correção automaticamente, sem ação adicional necessária no
+  PR.
+- `etapa_atual: Code Review` (novamente). `blockers` limpo. `code_review_homolog_pr` anotado com o
+  status do fix.
+
+## Próximos passos
+
+- [x] Arquiteto: completar `design.md`.
+- [x] Líder Técnico: refinamento técnico + task breakdown + sub-issues.
+- [x] UX/UI: `ux-ui-spec.md` da sub-issue #280 (T-05) — posição, título, layout responsivo, estados
+      (loading/vazio/erro), setas de navegação, heurísticas de Nielsen.
+- [x] Dev #276 (T-01): schema `ProductClick` + `Product.ClickCount` + índices — PR #281 aberto.
+- [x] Líder Técnico: merge PR #281 → `desenv` (squash), sub-issue #276 fechada.
+- [x] Dev #277 (T-02): endpoint `POST /api/public/products/{id}/click` — PR #282 aberto.
+- [x] Dev #278 (T-03): endpoint `GET /api/public/products/suggested` — PR #283 aberto.
+- [x] Líder Técnico: merge PR #282 (#277) → `desenv` (squash), sub-issue #277 fechada.
+- [x] Dev #278 (T-03): conflito do PR #283 com `desenv` resolvido — branch
+      `feature/ISSUE-278-endpoint-suggested` sincronizada (merge com `desenv`), ambas as actions
+      (`RegisterClick` de #277 + `GetSuggested` de #278) mantidas em `PublicProductsController.cs`,
+      539/539 testes passando, boot real validado, branch pushada. PR #283 pronto para o LT tentar
+      o merge novamente.
+- [x] Líder Técnico: merge PR #283 (#278) → `desenv` (squash), sub-issue #278 fechada.
+- [x] Dev #279 (T-04): rastreio de clique no card (frontend) — `lib/tracking.ts` +
+      `DealCardLink.tsx` + `Deal.id`, 156/156 testes passando, `next build`/`next start` validados,
+      PR #284 aberto.
+- [x] Líder Técnico: merge PR #284 (#279) → `desenv` (squash), sub-issue #279 fechada.
+- [x] Dev #280 (T-05): faixa/carrossel de produtos sugeridos — `lib/suggested.ts` +
+      `SuggestedProductsCarousel.tsx` + `app/page.tsx`, 176/176 testes passando, `next
+      build`/`lint`/`start` validados, PR #285 aberto.
+- [x] Líder Técnico: merge PR #285 (#280) → `desenv` (squash), sub-issue #280 fechada. Todas as
+      sub-issues de #231 concluídas — PR #286 `desenv→homolog` criado.
+- [x] Sessão principal: `/code-review` no PR #286 + spawn do agente Code Review.
+- [x] Code Review: PR #286 **reprovado** — bug no teste e2e novo (`suggested-carousel.spec.ts`,
+      double-encoding de categoria). App aprovado sem ressalvas. Líder Técnico mapeou a falha para
+      #280, reabriu a sub-issue.
+- [x] Dev #280 (T-05, stack:nodejs): corrigir `website/e2e/suggested-carousel.spec.ts` (removido
+      `encodeURIComponent` redundante, seguindo padrão de `visual.spec.ts`), suíte Playwright
+      reexecutada contra site real, PR #287 aberto para `desenv`.
+- [x] Líder Técnico: merge do PR #287 (#280) → `desenv` (squash), sub-issue #280 fechada
+      novamente. PR #286 confirmado `MERGEABLE`/`CLEAN`, absorveu o fix automaticamente.
+- [ ] Sessão principal: novo Code Review do PR #286 (agente Code Review).
+
 ---
 
 _Criado: 2026-08-19 — Coordenador_
@@ -526,3 +542,4 @@ _Atualizado: 2026-08-21 — Dev (sub-issue #280/T-05 concluída: lib/suggested.t
 _Atualizado: 2026-08-21 — Líder Técnico (PR #285 mergeado em desenv via squash, commit f5eafc620c152cbf13babd442cfc9e89ffa0c528, sub-issue #280 fechada, desenv_tasks_merged: [#276, #277, #278, #279, #280] — todas concluídas; PR #286 desenv→homolog criado via merge commit; etapa_atual: Code Review; proximo: sessão principal roda /code-review + spawna Code Review)_
 _Atualizado: 2026-08-21 — Líder Técnico (Code Review reprovou PR #286: bug isolado em website/e2e/suggested-carousel.spec.ts, double-encoding de categoria em encodeURIComponent sobre valor já codificado de getRealCategoriaAndSlug; app aprovado sem ressalvas. Mapeado para sub-issue #280, reaberta com comentário de correção; desenv_tasks_merged volta a [#276, #277, #278, #279]; etapa_atual: Em Desenvolvimento; proximo: Dev (nodejs, sub-issue #280) corrigir o teste e2e)_
 _Atualizado: 2026-08-21 — Dev (correção da sub-issue #280 concluída: encodeURIComponent redundante removido de suggested-carousel.spec.ts, CA 1.1 validada de fato contra staging real ("Em alta em Casa e Cozinha"), 16/17 specs Playwright passando (1 falha pré-existente/fora de escopo em visual.spec.ts, não relacionada, arquivo sem diff nesta branch), 176/176 testes Jest passando, next lint sem erros; blockers limpo; PR #287 feature→desenv aberto; proximo: Líder Técnico para merge do PR #287 e novo Code Review do PR #286)_
+_Atualizado: 2026-08-21 — Líder Técnico (PR #287 mergeado em desenv via squash, commit 5dc299e4f5701686b33fddc498b7dbc4692506fb, sub-issue #280 fechada novamente, desenv_tasks_merged: [#276, #277, #278, #279, #280] — todas concluídas outra vez; PR #286 confirmado MERGEABLE/CLEAN, absorveu o fix automaticamente; etapa_atual: Code Review; proximo: sessão principal spawna novo Code Review do PR #286)_
