@@ -1,5 +1,6 @@
 using AfiliadoBot.Api.Public;
 using AfiliadoBot.Api.RateLimiting;
+using AfiliadoBot.Domain.Entities;
 using AfiliadoBot.Domain.Enums;
 using AfiliadoBot.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
@@ -11,10 +12,9 @@ namespace AfiliadoBot.Api.Controllers;
 
 /// <summary>
 /// Endpoints publicos por produto (Issue #231), separado de <see cref="PublicController"/>
-/// (recurso "deal", por slug/filtro) — os endpoints aqui giram em torno do recurso "product" por
-/// id (design.md secao 12.1 / especificacao-tecnica.md §3.1). Sem autenticacao (evento anonimo /
-/// leitura publica), sem rate limit de classe (policies diferentes por metodo — ver 3.2/3.3 da
-/// especificacao-tecnica.md).
+/// (api/public/deals, recurso "deal"/listagem por filtro) por girar em torno do recurso "product"
+/// por id (especificacao-tecnica.md secao 3.1, design.md secao 12.1). Sem autenticacao — mesmo
+/// padrao dos demais endpoints publicos do site (CA-D1/CA-A9).
 /// </summary>
 [ApiController]
 [Route("api/public/products")]
@@ -67,5 +67,31 @@ public class PublicProductsController : ControllerBase
             return Ok(new List<PublicDealDto>());
 
         return Ok(products.Select(p => PublicDealDto.FromProduct(p, Request)).ToList());
+    }
+
+    /// <summary>
+    /// Registra um clique anonimo em um produto (Issue #231 / sub-issue #277, T-02,
+    /// especificacao-tecnica.md secao 3.2, design.md secao 7). Sem corpo de request — pensado para
+    /// <c>navigator.sendBeacon(url)</c>, que nao envia payload. Sempre <c>202 Accepted</c>, mesmo
+    /// quando o produto nao existe (CA 2.2): o <c>sendBeacon</c> do frontend nunca le a resposta,
+    /// entao nao ha motivo para expor um 404 que nenhum client vai consumir. Insere o evento
+    /// anonimo (<see cref="ProductClick"/>: apenas produto + timestamp, CA 2.3) e incrementa
+    /// <c>Product.ClickCount</c> (<see cref="Product.RegisterClick"/>) na mesma transacao
+    /// implicita do <c>SaveChangesAsync</c> (design.md secao 4 — atomicidade garantida pelo
+    /// Postgres, sem necessidade de SQL bruto neste volume).
+    /// </summary>
+    [HttpPost("{id:guid}/click")]
+    [EnableRateLimiting(RateLimiterConfigurator.PublicWritePolicy)]
+    public async Task<IActionResult> RegisterClick(Guid id, CancellationToken ct)
+    {
+        var product = await _db.Products.FindAsync(new object[] { id }, ct);
+        if (product is null)
+            return Accepted();
+
+        product.RegisterClick();
+        _db.ProductClicks.Add(new ProductClick(id));
+        await _db.SaveChangesAsync(ct);
+
+        return Accepted();
     }
 }

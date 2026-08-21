@@ -21,6 +21,7 @@ sub_issues:
   - "#280 (stack:nodejs, task_id:T-05) — Faixa/carrossel de produtos sugeridos (frontend)"
 desenv_tasks_merged:
   - "#276"
+  - "#277"
 sub_issues_frontend:
   T-04: "#279"
   T-05: "#280"
@@ -174,6 +175,103 @@ issue mexe em `discount_pct`.
 - #277 (T-02) e #278 (T-03) agora **desbloqueadas**: dependiam de T-01 estar em `desenv` (schema
   `ProductClick`/`ClickCount` disponível).
 
+## Dev — sub-issue #277 (T-02, concluído 2026-08-21)
+
+- Novo `PublicProductsController.cs` (`backend/src/AfiliadoBot.Api/Controllers/`,
+  `api/public/products`, `[AllowAnonymous]`) — separado de `PublicController` (recurso "product"
+  por id, não "deal"/listagem).
+- `POST /api/public/products/{id:guid}/click`: sem corpo (compatível com `navigator.sendBeacon`),
+  sempre `202 Accepted` (mesmo produto inexistente, CA 2.2), protegido por
+  `RateLimiterConfigurator.PublicWritePolicy` (10 req/min/IP, mesma policy de
+  `POST /api/public/push/subscribe`). Insere `ProductClick` + chama `product.RegisterClick()`
+  (da #276) na mesma transação implícita do `SaveChangesAsync`.
+- TDD: `PublicProductsControllerTests.cs` novo (5 testes, `WebApplicationFactory`) cobrindo CA
+  2.1-2.4 — clique em produto existente incrementa `ClickCount` e persiste `ProductClick`, múltiplas
+  chamadas incrementam por chamada, produto inexistente retorna `202` sem criar evento, shape do
+  evento (reflexão de propriedades) confirma ausência de dado de usuário/sessão, endpoint aceita
+  `POST` sem corpo/content-type. Suíte completa: 531/531 passando (100%, sem regressão; eram 526 +
+  5 novos).
+- Boot da aplicação confirmado sem exceção: imagem buildada a partir da branch, container efêmero
+  conectado ao Postgres real via rede Docker (`omuletachou_omuletachou_net`), `/health` → 200.
+  Validação ponta a ponta contra Postgres real: produto seedado via `psql`, `curl -X POST` no
+  endpoint → `202`, `product_clicks` com 1 linha (`product_id`/`clicked_at` corretos),
+  `products.click_count` incrementado de 0 para 1; produto inexistente → `202` sem erro. Dados de
+  teste, container e imagem removidos após validação.
+- PR #282 (`feature/ISSUE-277-endpoint-registrar-clique` → `desenv`) aberto, pronto para merge do LT.
+
+## Dev — sub-issue #278 (T-03, concluído 2026-08-21)
+
+- `PublicProductsController.cs` (mesmo arquivo de T-02/#277 — conflito trivial esperado no merge
+  sequencial, já sinalizado em `tasks.md`) ganha `GET /api/public/products/suggested?categories=&hasResults=`,
+  `[EnableRateLimiting(RateLimiterConfigurator.PublicReadPolicy)]` (mesma policy de `GetDeals`).
+- Fallback decidido no backend (design.md §6): `categories` vazio/ausente OU `hasResults=false`
+  ignora o filtro de categoria e retorna o ranking geral; caso contrário, restringe às categorias
+  informadas (CSV, `Contains`). Ordenação `ClickCount DESC, CreatedAt DESC`, `LIMIT 10`, corte
+  mínimo de 4 (`< 4` → `[]`, não erro).
+- `PublicDealDto` ganha `Id` (uuid) — reaproveitado sem novo contrato, campo adicionado conforme
+  especificacao-tecnica.md §4.1. Teste existente `GetDeals_ApenasCamposAutorizados_...` (CA-D2)
+  atualizado para incluir `"id"` na lista de campos autorizados (Gate g — verificado, nenhuma outra
+  asserção de shape de `PublicDealDto` na suíte precisou de ajuste).
+- TDD: `PublicProductsControllerTests.cs` novo (8 testes, `WebApplicationFactory` + InMemory)
+  cobrindo ranking por categoria (`ClickCount` desc), presença de `id` no item, fallback geral
+  (`hasResults=false` ignora categoria), fallback com `categories` ausente, corte mínimo (`< 4` →
+  `[]`), desempate por `CreatedAt` desc quando nenhum produto tem clique, filtro de status
+  `Published`, limite de 10. Suíte completa: 534/534 passando (100%, sem regressão; eram 531 + 8
+  novos − 5 já contados de #277 aplicados nesta branch a partir de `desenv`).
+- Boot da aplicação confirmado sem exceção: imagem buildada a partir da branch, container efêmero
+  conectado ao Postgres real (`afiliado_db`) via rede Docker (`omuletachou_omuletachou_net`).
+  Validação ponta a ponta contra dados reais via `psql`: 4 produtos com `click_count` distintos
+  numa categoria de teste → ranking retornado na ordem correta (mais clicado primeiro); categoria
+  com apenas 1 produto → `[]` (corte mínimo confirmado); `hasResults=false` com categoria filtrada
+  → fallback geral (ignora a categoria, traz produtos reais do catálogo). Dados de teste, container
+  e imagem removidos após validação.
+- PR #283 (`feature/ISSUE-278-endpoint-suggested` → `desenv`) aberto, pronto para merge do LT.
+
+## Líder Técnico — merge sub-issue #277 (concluído 2026-08-21)
+
+- PR #282 mergeado via **squash** em `desenv` (`gh pr merge 282 --squash`, confirmado `state: MERGED`).
+- Sub-issue #277 fechada (`gh issue close 277 --reason completed`).
+- `desenv_tasks_merged: ["#276", "#277"]`.
+- **PR #283 (#278) NÃO mergeado** — conflito real em `PublicProductsController.cs` (mesmo arquivo
+  criado por #277 e alterado por #278, ambos com ações no mesmo controller). `gh pr merge 283
+  --squash` falhou (`the merge commit cannot be cleanly created`); `gh pr update-branch 283`
+  também falhou (`Cannot update PR branch due to conflicts`) — GitHub não consegue sincronizar
+  automaticamente via API, é preciso resolução manual local (rebase/merge da branch
+  `feature/ISSUE-278-endpoint-suggested` com `desenv`, mantendo **ambas** as actions —
+  `RegisterClick`/`RegisterClickAsync` de #277 e `GetSuggested` de #278 — no mesmo controller).
+  Resolução de conflito em código é fora do escopo do LT (não edita src/); devolvido ao Dev.
+- Suíte de testes **não executada pelo LT** (fora do escopo do LT — rodar/validar código de
+  aplicação é responsabilidade do Dev/Code Review, não do LT).
+
+## Dev — resolução do conflito do PR #283 (#278, concluído 2026-08-21)
+
+- `git fetch origin desenv` + `git merge origin/desenv` no worktree existente
+  (`.worktrees/feature-ISSUE-278-endpoint-suggested`). 2 conflitos, ambos `add/add` (mesmo
+  arquivo criado nos dois lados do merge sequencial já sinalizado em `tasks.md`):
+  - `PublicProductsController.cs`: resolvido mantendo **ambas** as actions no mesmo controller —
+    `RegisterClick` (POST `{id}/click`, #277) e `GetSuggested` (GET `suggested`, #278) — usings
+    unificados (`AfiliadoBot.Api.Public`, `AfiliadoBot.Domain.Entities`, `AfiliadoBot.Domain.Enums`,
+    `Microsoft.EntityFrameworkCore`), doc-comment de classe consolidado com a versão de #277 (menciona
+    ambos os recursos "product" por id) e as constantes/campo `SuggestedLimit`/`SuggestedMinimumToShow`
+    de #278 preservados.
+  - `PublicProductsControllerTests.cs`: resolvido mantendo os 2 conjuntos de testes (helpers
+    `SeedProductAsync` de #277 + `SeedPublishedProductAsync`/`SeedPendingProductAsync` de #278, sem
+    colisão de nomes) na mesma classe `PublicProductsControllerTests`, doc-comment de classe
+    consolidado citando os dois escopos (CA 2.1-2.4 de #277 + T-03 de #278).
+- `dotnet build`: sucesso, 0 erros (1 warning pré-existente do Hangfire, não relacionado).
+- `dotnet test`: **539/539 passando (100%)**, sem regressão (esperado ~540+; 531 de #277 + 8 novos
+  de #278 = 539 — o "540+" da estimativa original incluía uma contagem aproximada, confirmado exato).
+- Boot real confirmado: `dotnet publish` da branch mergeada, container efêmero
+  (`omuletachou-api:latest` como runtime base, dll publicada montada) conectado ao Postgres real
+  `afiliado_db` via rede Docker `omuletachou_omuletachou_net`, `Jwt__SigningKey`/`ConnectionStrings`
+  via `.env` local. Log limpo: migrations aplicadas, Hangfire instalado/iniciado, `Application
+  started` sem exceção. Endpoints das duas actions testados ponta a ponta contra dados reais:
+  `GET /api/public/products/suggested?hasResults=false` → `200` com produtos reais do catálogo;
+  `POST /api/public/products/{id-inexistente}/click` → `202`; `GET /health` → `200`. Container e
+  build de publicação removidos após validação.
+- Push da branch `feature/ISSUE-278-endpoint-suggested` (merge commit com `desenv`) para o remoto.
+  PR #283 já existente, não recriado.
+
 ## Próximos passos
 
 - [x] Arquiteto: completar `design.md`.
@@ -182,9 +280,16 @@ issue mexe em `discount_pct`.
       (loading/vazio/erro), setas de navegação, heurísticas de Nielsen.
 - [x] Dev #276 (T-01): schema `ProductClick` + `Product.ClickCount` + índices — PR #281 aberto.
 - [x] Líder Técnico: merge PR #281 → `desenv` (squash), sub-issue #276 fechada.
-- [ ] Dev(s): implementar T-02 e T-03 (#277, #278 — agora desbloqueadas) e T-04/T-05 (#279, #280,
-      independentes de schema; T-05 consome `ux-ui-spec.md`). Ver `tasks.md` para ordem de
-      dependência/merge restante.
+- [x] Dev #277 (T-02): endpoint `POST /api/public/products/{id}/click` — PR #282 aberto.
+- [x] Dev #278 (T-03): endpoint `GET /api/public/products/suggested` — PR #283 aberto.
+- [x] Líder Técnico: merge PR #282 (#277) → `desenv` (squash), sub-issue #277 fechada.
+- [x] Dev #278 (T-03): conflito do PR #283 com `desenv` resolvido — branch
+      `feature/ISSUE-278-endpoint-suggested` sincronizada (merge com `desenv`), ambas as actions
+      (`RegisterClick` de #277 + `GetSuggested` de #278) mantidas em `PublicProductsController.cs`,
+      539/539 testes passando, boot real validado, branch pushada. PR #283 pronto para o LT tentar
+      o merge novamente.
+- [ ] Dev(s): implementar T-04/T-05 (#279, #280, independentes de schema; T-05 consome
+      `ux-ui-spec.md`, depende de T-02+T-03 mergeados). Ver `tasks.md` para ordem de merge restante.
 
 ---
 
@@ -196,3 +301,7 @@ _Atualizado: 2026-08-21 — Líder Técnico (design.md do Arquiteto commitado + 
 _Atualizado: 2026-08-21 — UX/UI (ux-ui-spec.md concluído para a sub-issue #280/T-05; proximo: Dev(s))_
 _Atualizado: 2026-08-21 — Dev (sub-issue #276/T-01 concluída: schema ProductClick + Product.ClickCount + índices, migration aplicada/validada contra Postgres real, PR #281 aberto; proximo: Líder Técnico para merge→desenv)_
 _Atualizado: 2026-08-21 — Líder Técnico (PR #281 mergeado em desenv via squash, sub-issue #276 fechada, desenv_tasks_merged: [#276]; proximo: Dev(s) para #277 e #278)_
+_Atualizado: 2026-08-21 — Dev (sub-issue #277/T-02 concluída: endpoint POST /api/public/products/{id}/click, 531/531 testes passando, validado contra Postgres real, PR #282 aberto; proximo: Líder Técnico para merge→desenv)_
+_Atualizado: 2026-08-21 — Dev (sub-issue #278/T-03 concluída: endpoint GET /api/public/products/suggested + Id no PublicDealDto, 534/534 testes passando, validado contra Postgres real, PR #283 aberto; proximo: Líder Técnico para merge→desenv de #277 e #278)_
+_Atualizado: 2026-08-21 — Líder Técnico (PR #282 mergeado em desenv via squash, sub-issue #277 fechada, desenv_tasks_merged: [#276, #277]; PR #283 (#278) em conflito real com desenv em PublicProductsController.cs — gh pr merge e gh pr update-branch falharam; resolução de código é escopo do Dev, não do LT; proximo: Dev(s) resolver conflito do #283 e depois LT tenta merge novamente)_
+_Atualizado: 2026-08-21 — Dev (conflito do PR #283 com desenv resolvido: merge local mantendo RegisterClick de #277 + GetSuggested de #278 no mesmo controller, 539/539 testes passando, boot real validado contra Postgres, branch pushada; proximo: Líder Técnico para merge de #283)_
