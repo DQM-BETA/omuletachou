@@ -1,18 +1,18 @@
 ---
 issue: 231
-titulo: feat: faixa de produtos sugeridos (site) + rastreio de cliques + melhorias no grid de Products (dashboard)
-etapa_atual: Refinamento de Negócio — levantamento Fase 1 postado, aguardando respostas do Gerente
+titulo: feat: rastreio de cliques + faixa de produtos sugeridos (site público)
+etapa_atual: Refinamento Técnico — aguardando Arquiteto (ambiguidade arquitetural identificada)
 ultimo_agente: pm-analista-negocios
-openspec_change: ~
-tech_stacks: 
+openspec_change: openspec/changes/issue-231-faixa-de-produtos-sugeridos
+tech_stacks:
   - Backend (ASP.NET Core 8.0)
-  - Frontend (Angular 17+, Next.js 14+)
+  - Frontend (Next.js 14+ — website público)
   - Banco (PostgreSQL 16)
 repos:
   - omuletachou
 repo_path: repos/omuletachou
 docs_path: repos/omuletachou/documentacoes/ISSUE-231-faixa-de-produtos-sugeridos
-openspec_path: repos/omuletachou/openspec/changes/ISSUE-231-faixa-de-produtos-sugeridos
+openspec_path: repos/omuletachou/openspec/changes/issue-231-faixa-de-produtos-sugeridos
 sub_issues: []
 desenv_tasks_merged: []
 sub_issues_frontend: {}
@@ -21,54 +21,55 @@ pr_release: ~
 code_review_homolog_pr: ~
 qa_status: ~
 figma_url: ~
-blockers: ~ (Issue #230 concluída — desbloqueada)
+blockers: ~
 status_comment_id: ~
 ---
 
 ## Descrição
 
-Pedido do Gerente. Estava bloqueada pela Issue #230 (filtros do site público) — **#230 concluída, #231 desbloqueada em 2026-08-21**.
+Pedido do Gerente. Escopo restrito aos itens 1-2 do pedido original (rastreio de cliques + faixa de produtos sugeridos) — o item 3 (grid do dashboard Products) virou a **Issue #275** (issue separada, independente).
 
 ### 1. Faixa de produtos sugeridos inteligente (site público, tela de produtos)
-- Adicionar uma faixa/linha de "produtos sugeridos" na tela de listagem de produtos do site, baseada na categoria dos produtos atualmente filtrados pelo usuário.
-- Se o filtro atual não retornar nenhum produto (lista vazia), a faixa de sugeridos deve mostrar os produtos **mais clicados** em vez de sugestões por categoria.
-- **Detalhe UI (complemento 2026-08-19):** a faixa de produtos sugeridos deve ser um **carrossel horizontal com navegação por seta para a direita e seta para a esquerda**, permitindo ao usuário navegar entre os produtos sugeridos.
+- Carrossel horizontal com setas de navegação, baseado na categoria dos produtos atualmente filtrados.
+- Fallback "mais clicados em geral" quando o filtro atual não retorna produtos.
 
-### 2. Rastreio de cliques (nova funcionalidade, pré-requisito dos itens 1 e 3)
-- Registrar quando um produto é clicado (provavelmente ao clicar no card/link de afiliado no site público) para alimentar o ranking de "mais clicados".
+### 2. Rastreio de cliques (pré-requisito do item 1)
+- Evento anônimo (produto + timestamp), disparado ao clicar em qualquer card de produto (listagem normal ou carrossel de sugeridos), sem alterar o destino atual do clique.
 
-### 3. Dashboard — tela Products
-- Adicionar coluna mostrando a contagem de cliques de cada produto (usando rastreio do item 2).
-- Adicionar ordenação clicável diretamente nos títulos das colunas do grid (clicar no cabeçalho ordena por ela).
-- Remover coluna "Desconto" da tabela.
+## Gate 1 — respostas do Gerente (2026-08-21, postadas na Issue)
 
-### 4. Banco de dados
-- Remover o campo de desconto (`discount_pct`) do banco **somente se** essa informação não existir de fato para o Mercado Livre.
-- **Investigar no refinamento**: confirmar se Amazon e/ou Shopee ainda fornecem desconto real (Issue #208 isentou Mercado Livre por falta do dado, mas outras plataformas podem ter dados reais). Investigação técnica (query real ao banco) delegada ao Arquiteto/LT — fora do escopo de acesso do PM.
-- Não remover a coluna se isso quebrar dados reais de outras plataformas — decisão final é do Arquiteto/PM no refinamento.
+1. Escopo confirmado: separar. Item 3 → Issue #275. Esta issue fica só com itens 1-2.
+2. Critério de ordenação dentro da categoria: **mais clicados** (não AI Score, não mais recentes). Quantidade/fallback/mínimo: decisão de produto do PM (ver proposal.md).
+3. Destino do clique **não muda**. Evento **anônimo** confirmado. Cliques no carrossel de sugeridos contam igual aos da listagem normal.
+4. Investigação de `discount_pct` fica para Arquiteto/LT decidir, não é obrigatória nesta issue.
+5. Rota: **`normal`**.
 
-## Levantamento Fase 1 (postado na Issue 2026-08-21)
+## Refinamento de Negócio (Fase 2 — concluído 2026-08-21)
 
-Perguntas postadas cobrindo:
-- [ ] Escopo: 1 issue-pai só, ou split (Issue A: rastreio de cliques + faixa de sugeridos; Issue B: melhorias de grid do dashboard)?
-- [ ] Faixa de sugeridos: quantidade de produtos no carrossel, critério de ordenação dentro da categoria, regra do fallback "mais clicados", quando a faixa aparece.
-- [ ] Rastreio de cliques: destino do clique (link de afiliado direto vs. página de detalhe primeiro), confirmação de que é evento anônimo (sem dado pessoal/sessão de usuário), se cliques dentro do carrossel de sugeridos contam junto com cliques da listagem normal.
-- [ ] discount_pct: investigação técnica (query real Amazon/Shopee/Mercado Livre) delegada ao Arquiteto/LT no refinamento técnico.
-- [ ] Rota: mantém `backlog` ou muda para `normal` (pipeline completo), agora que está desbloqueada?
+- `proposal.md` e `criterios-aceite.md` escritos em `openspec/changes/issue-231-faixa-de-produtos-sugeridos/proposal.md` e `documentacoes/ISSUE-231-faixa-de-produtos-sugeridos/criterios-aceite.md`.
+- **Decisões de produto do PM** (não especificadas pelo Gerente, documentadas na proposal.md, sujeitas a ajuste no Code Review/QA):
+  - Quantidade por carregamento do carrossel: 10 produtos.
+  - Fallback "mais clicados": geral, sem corte por plataforma (apenas produtos ativos/disponíveis).
+  - Mínimo de produtos para a faixa aparecer: 4.
+  - Critério de desempate em 0 cliques/empate: delegado ao refinamento técnico (ex.: mais recentes primeiro).
+- Sumário do PRD postado como comentário na Issue #231.
 
-## Investigação necessária (trabalho de refinamento)
+## Ambiguidade arquitetural — avaliação do PM
 
-- [ ] Confirmar respostas do Gerente às perguntas acima.
-- [ ] Definir lógica de "sugestão por categoria" (quantos produtos, critério de ordenação — ex. AI Score, mais recentes).
-- [ ] Arquiteto: decidir onde persistir contagem de cliques (novo campo no `Product` ou tabela separada de eventos de clique).
-- [ ] Arquiteto/LT: verificar dados reais de Amazon/Shopee antes de remover coluna `discount_pct`.
+**Sim, há ambiguidade.** Pontos que exigem decisão do Arquiteto antes do refinamento do LT:
+1. Onde persistir a contagem de cliques (campo agregado no `Product` vs. tabela de eventos `product_clicks`).
+2. Estratégia de agregação de "mais clicados por categoria" com performance aceitável (query on-the-fly vs. contador desnormalizado/job).
+3. Contrato do endpoint da faixa de sugeridos (payload, síncrono vs. fila/Hangfire para registro de clique).
+4. Investigação de `discount_pct` (Amazon/Shopee vs. Mercado Livre) — não obrigatória, mas pode ser registrada se relevante à modelagem do `Product`.
 
-## Rota
+## Próximos passos
 
-Nasceu como `backlog` (bloqueada por #230). Pergunta ao Gerente se muda para `normal` agora que desbloqueada (ver Levantamento Fase 1 acima).
+- [ ] Arquiteto: completar `design.md` (decisões dos 4 pontos acima).
+- [ ] Líder Técnico: refinamento técnico + task breakdown + sub-issues.
 
 ---
 
 _Criado: 2026-08-19 — Coordenador_
 _Atualizado: 2026-08-19 — Coordenador (complemento UI: detalhe de navegação do carrossel)_
 _Atualizado: 2026-08-21 — PM (levantamento Fase 1 postado na Issue, blocker #230 removido)_
+_Atualizado: 2026-08-21 — PM (Fase 2: PRD completo, escopo restrito aos itens 1-2 após split para Issue #275, ambiguidade arquitetural identificada, proximo: Arquiteto)_
