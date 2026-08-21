@@ -1,7 +1,7 @@
 ---
 issue: 231
 titulo: feat: rastreio de cliques + faixa de produtos sugeridos (site público)
-etapa_atual: Code Review
+etapa_atual: Em Desenvolvimento
 ultimo_agente: lider-tecnico
 openspec_change: openspec/changes/issue-231-faixa-de-produtos-sugeridos
 tech_stacks:
@@ -24,16 +24,15 @@ desenv_tasks_merged:
   - "#277"
   - "#278"
   - "#279"
-  - "#280"
 sub_issues_frontend:
   T-04: "#279"
   T-05: "#280"
 pr_homologacao: 286
 pr_release: ~
-code_review_homolog_pr: ~
+code_review_homolog_pr: "286 (reprovado 2026-08-21 — bug no teste e2e suggested-carousel.spec.ts, double-encoding de categoria; app aprovado)"
 qa_status: ~
 figma_url: "https://www.figma.com/design/yi6YkNAy9HfHus2oiPi3G7/Diego-Mulet-s-team-library (consultado — apenas conteúdo padrão de template do Figma, sem frames/tokens reais do projeto; ver ux-ui-spec.md §0)"
-blockers: ~
+blockers: "PR #286 reprovado pelo Code Review — sub-issue #280 reaberta, aguardando fix de website/e2e/suggested-carousel.spec.ts (double-encoding de categoria em getRealCategoriaAndSlug/encodeURIComponent)"
 status_comment_id: ~
 ---
 
@@ -389,6 +388,42 @@ issue mexe em `discount_pct`.
 - PR #286 (`desenv` → `homolog`, **merge commit**, não squash) criado.
 - `pr_homologacao: 286`, `etapa_atual: Code Review`.
 
+## Code Review reprovou o PR #286 — mapeamento (Líder Técnico, concluído 2026-08-21)
+
+**Veredito do CR:** todo o app (build/boot Docker real, migration/schema real, `dotnet test`
+539/539, `npm test` 176/176, integração ponta a ponta contra Postgres real, OWASP básico,
+`discount_pct` confirmado fora de escopo) **aprovado sem ressalvas**. O único blocker é um bug
+isolado no teste e2e novo, não no app.
+
+**Causa raiz:** `website/e2e/suggested-carousel.spec.ts` (introduzido por #280/T-05) faz
+`encodeURIComponent()` sobre o valor de categoria retornado por `getRealCategoriaAndSlug()`
+(`e2e/helpers.ts`), que **já vem URL-encoded** do `sitemap.xml`. Isso gera double-encoding
+(`Casa%20e%20Cozinha` → `Casa%2520e%2520Cozinha`) na URL de teste, o backend não reconhece a
+categoria (`hasResults=false`), e o teste sempre cai no fallback "Em alta na loja" em vez de
+validar de fato a CA 1.1 ("Em alta em {Categoria}"). Confirmado pelo CR via curl: encoding único
+funciona, double-encoded retorna vazio. O padrão correto já existe em `e2e/visual.spec.ts` (não
+usa `encodeURIComponent`, porque o helper já entrega o valor codificado).
+
+**Mapeamento:**
+- Falha → sub-issue **#280** (T-05, único arquivo tocado: `website/e2e/suggested-carousel.spec.ts`).
+  Não há impacto em código de app (backend/frontend) nem nas demais sub-issues (#276-#279,
+  aprovadas sem ressalvas pelo CR).
+- Sub-issue #280 **reaberta** (`gh issue reopen 280`, mesmo padrão de #228/#229/#230), com
+  comentário de mapeamento detalhado postado
+  (https://github.com/DQM-BETA/omuletachou/issues/280#issuecomment-5370894388).
+- `desenv_tasks_merged` volta a `["#276", "#277", "#278", "#279"]` (remove #280 — pendente de
+  novo merge após o fix). `code_review_homolog_pr` registrado como reprovado. `blockers` setado.
+  `etapa_atual: Em Desenvolvimento`.
+- PR #286 (`desenv→homolog`) segue **aberto**; o LT não fecha/recria — o próximo merge de #280
+  soma um commit novo à branch `desenv`, que já está incluída no PR #286 (nenhuma ação adicional
+  necessária no PR além do dev corrigir e o LT mergear a nova sub-issue).
+
+**Escopo da correção (Dev, stack:nodejs):** ajustar `suggested-carousel.spec.ts` para não fazer
+double-encode da categoria — seguir o padrão de `visual.spec.ts` (usar `categoria` direto na
+URL/query, já vem codificada) ou `decodeURIComponent` antes de repassar para `URLSearchParams`.
+Reexecutar a suíte Playwright completa contra o site real (não só `next build`/`next start`) e
+confirmar os 17 specs passando, incluindo a CA 1.1 com uma categoria real, antes de abrir novo PR.
+
 ## Próximos passos
 
 - [x] Arquiteto: completar `design.md`.
@@ -415,7 +450,14 @@ issue mexe em `discount_pct`.
       build`/`lint`/`start` validados, PR #285 aberto.
 - [x] Líder Técnico: merge PR #285 (#280) → `desenv` (squash), sub-issue #280 fechada. Todas as
       sub-issues de #231 concluídas — PR #286 `desenv→homolog` criado.
-- [ ] Sessão principal: `/code-review` no PR #286 + spawn do agente Code Review.
+- [x] Sessão principal: `/code-review` no PR #286 + spawn do agente Code Review.
+- [x] Code Review: PR #286 **reprovado** — bug no teste e2e novo (`suggested-carousel.spec.ts`,
+      double-encoding de categoria). App aprovado sem ressalvas. Líder Técnico mapeou a falha para
+      #280, reabriu a sub-issue.
+- [ ] Dev #280 (T-05, stack:nodejs): corrigir `website/e2e/suggested-carousel.spec.ts` (remover
+      `encodeURIComponent` redundante, seguir padrão de `visual.spec.ts`), reexecutar suíte
+      Playwright completa contra site real, abrir novo PR para `desenv`.
+- [ ] Líder Técnico: merge do novo PR de #280 → `desenv`, novo Code Review do PR #286.
 
 ---
 
@@ -436,3 +478,4 @@ _Atualizado: 2026-08-21 — Dev (sub-issue #279/T-04 concluída: lib/tracking.ts
 _Atualizado: 2026-08-21 — Líder Técnico (PR #284 mergeado em desenv via squash, commit b4ef817e6ebc2aa623ba25086d1db9eda30787aa, sub-issue #279 fechada, desenv_tasks_merged: [#276, #277, #278, #279]; falta só #280 (carrossel), NÃO criado PR desenv→homolog ainda; proximo: Dev (nodejs, sub-issue #280))_
 _Atualizado: 2026-08-21 — Dev (sub-issue #280/T-05 concluída: lib/suggested.ts + SuggestedProductsCarousel.tsx + app/page.tsx + suggested-carousel.css + e2e, 176/176 testes passando (sem regressão, eram 156), next build/lint/start validados, PR #285 aberto; última sub-issue pendente de #231; proximo: Líder Técnico para merge→desenv e, com todas as sub-issues concluídas, PR desenv→homolog)_
 _Atualizado: 2026-08-21 — Líder Técnico (PR #285 mergeado em desenv via squash, commit f5eafc620c152cbf13babd442cfc9e89ffa0c528, sub-issue #280 fechada, desenv_tasks_merged: [#276, #277, #278, #279, #280] — todas concluídas; PR #286 desenv→homolog criado via merge commit; etapa_atual: Code Review; proximo: sessão principal roda /code-review + spawna Code Review)_
+_Atualizado: 2026-08-21 — Líder Técnico (Code Review reprovou PR #286: bug isolado em website/e2e/suggested-carousel.spec.ts, double-encoding de categoria em encodeURIComponent sobre valor já codificado de getRealCategoriaAndSlug; app aprovado sem ressalvas. Mapeado para sub-issue #280, reaberta com comentário de correção; desenv_tasks_merged volta a [#276, #277, #278, #279]; etapa_atual: Em Desenvolvimento; proximo: Dev (nodejs, sub-issue #280) corrigir o teste e2e)_
