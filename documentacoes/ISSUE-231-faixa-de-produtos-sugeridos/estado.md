@@ -2,7 +2,7 @@
 issue: 231
 titulo: feat: rastreio de cliques + faixa de produtos sugeridos (site público)
 etapa_atual: Em Desenvolvimento
-ultimo_agente: lider-tecnico
+ultimo_agente: ux-ui
 openspec_change: openspec/changes/issue-231-faixa-de-produtos-sugeridos
 tech_stacks:
   - Backend (ASP.NET Core 8.0)
@@ -27,7 +27,7 @@ pr_homologacao: ~
 pr_release: ~
 code_review_homolog_pr: ~
 qa_status: ~
-figma_url: ~
+figma_url: "https://www.figma.com/design/yi6YkNAy9HfHus2oiPi3G7/Diego-Mulet-s-team-library (consultado — apenas conteúdo padrão de template do Figma, sem frames/tokens reais do projeto; ver ux-ui-spec.md §0)"
 blockers: ~
 status_comment_id: ~
 ---
@@ -118,14 +118,39 @@ issue mexe em `discount_pct`.
   com a seção 9 (`discount_pct`) atualizada com o achado real e uma seção 12 nova registrando os
   ajustes de nomes/arquitetura do refinamento técnico face ao código real.
 
+## UX/UI (concluído 2026-08-21)
+
+`documentacoes/ISSUE-231-faixa-de-produtos-sugeridos/ux-ui-spec.md` escrito para a sub-issue #280
+(T-05, `SuggestedProductsCarousel`):
+- **Design System no Figma consultado, mas sem conteúdo utilizável para este projeto** — o arquivo
+  contém apenas o template padrão do Figma (paleta/tipografia de exemplo, telas de onboarding), sem
+  frames do site público real. A spec usa tokens semânticos e determina reaproveitar as
+  classes/variáveis CSS já existentes em `DealCard.tsx`/`filter-bar.css` (fora do escopo de leitura
+  do UX/UI) em vez de hardcodar valores novos. Registrada sugestão (fora de escopo desta issue) para
+  o Gerente popular o Figma com o design real do site.
+- **Posição:** abaixo do grid principal, acima da paginação (confirma o default do LT, com racional
+  de UX).
+- **Título:** "Em alta em {Categoria}" (categoria com resultado) / "Em alta na loja" (fallback) —
+  mesma palavra nos dois cenários para dar identidade reconhecível à faixa.
+- **Layout:** 1 card + peek (mobile) / 2 + peek (tablet) / 4 + peek (desktop), cards reaproveitando
+  exatamente as dimensões do `DealCard` do grid (não redefinidas).
+- **Setas:** obrigatórias em todos os breakpoints (decisão do Gerente), 40×40px com hit area 44×44px,
+  `disabled` nativo nos extremos, recalculado a cada `onScroll` (inclui arrasto manual).
+- **Loading:** skeleton (título + N cards esqueleto, mesma quantidade visível do breakpoint) — não
+  espaço em branco nem spinner central.
+- **Sem sugestões (fallback também vazio) ou erro:** faixa desaparece completamente, sem mensagem —
+  confirma a decisão técnica já registrada (`return null`), com racional de UX (evita empilhar duas
+  mensagens de "nada aqui" quando o grid principal também está vazio).
+- Checklist de heurísticas de Nielsen verificável pelo QA incluído (§10 da spec).
+
 ## Próximos passos
 
 - [x] Arquiteto: completar `design.md`.
 - [x] Líder Técnico: refinamento técnico + task breakdown + sub-issues.
-- [ ] UX/UI: `SuggestedProductsCarousel` é um componente de UI novo (carrossel horizontal com setas)
-      — confirmar posição exata na página e comportamento visual antes/junto dos devs de frontend
-      (T-04/T-05).
-- [ ] Dev(s): implementar T-01 a T-05 (ver `tasks.md` para ordem de dependência/merge).
+- [x] UX/UI: `ux-ui-spec.md` da sub-issue #280 (T-05) — posição, título, layout responsivo, estados
+      (loading/vazio/erro), setas de navegação, heurísticas de Nielsen.
+- [ ] Dev(s): implementar T-01 a T-05 (ver `tasks.md` para ordem de dependência/merge; T-05 consome
+      `ux-ui-spec.md`).
 
 ---
 
@@ -134,3 +159,4 @@ _Atualizado: 2026-08-19 — Coordenador (complemento UI: detalhe de navegação 
 _Atualizado: 2026-08-21 — PM (levantamento Fase 1 postado na Issue, blocker #230 removido)_
 _Atualizado: 2026-08-21 — PM (Fase 2: PRD completo, escopo restrito aos itens 1-2 após split para Issue #275, ambiguidade arquitetural identificada, proximo: Arquiteto)_
 _Atualizado: 2026-08-21 — Líder Técnico (design.md do Arquiteto commitado + investigação discount_pct registrada + especificacao-tecnica.md + tasks.md + 5 sub-issues criadas: #276-#280; proximo: UX/UI depois Dev(s))_
+_Atualizado: 2026-08-21 — UX/UI (ux-ui-spec.md concluído para a sub-issue #280/T-05; proximo: Dev(s))_
