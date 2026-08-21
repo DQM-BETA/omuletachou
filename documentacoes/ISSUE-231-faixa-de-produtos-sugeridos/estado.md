@@ -21,6 +21,7 @@ sub_issues:
   - "#280 (stack:nodejs, task_id:T-05) — Faixa/carrossel de produtos sugeridos (frontend)"
 desenv_tasks_merged:
   - "#276"
+  - "#277"
 sub_issues_frontend:
   T-04: "#279"
   T-05: "#280"
@@ -29,7 +30,7 @@ pr_release: ~
 code_review_homolog_pr: ~
 qa_status: ~
 figma_url: "https://www.figma.com/design/yi6YkNAy9HfHus2oiPi3G7/Diego-Mulet-s-team-library (consultado — apenas conteúdo padrão de template do Figma, sem frames/tokens reais do projeto; ver ux-ui-spec.md §0)"
-blockers: ~
+blockers: "PR #283 (#278) em conflito com desenv (mesmo arquivo PublicProductsController.cs alterado por #277, já mergeado). gh pr update-branch falhou (conflito não trivial de sincronizar via API). Fora do escopo do LT resolver (não edita código) — devolvido ao Dev responsável por #278 para rebase/merge manual com desenv e push."
 status_comment_id: ~
 ---
 
@@ -226,6 +227,22 @@ issue mexe em `discount_pct`.
   e imagem removidos após validação.
 - PR #283 (`feature/ISSUE-278-endpoint-suggested` → `desenv`) aberto, pronto para merge do LT.
 
+## Líder Técnico — merge sub-issue #277 (concluído 2026-08-21)
+
+- PR #282 mergeado via **squash** em `desenv` (`gh pr merge 282 --squash`, confirmado `state: MERGED`).
+- Sub-issue #277 fechada (`gh issue close 277 --reason completed`).
+- `desenv_tasks_merged: ["#276", "#277"]`.
+- **PR #283 (#278) NÃO mergeado** — conflito real em `PublicProductsController.cs` (mesmo arquivo
+  criado por #277 e alterado por #278, ambos com ações no mesmo controller). `gh pr merge 283
+  --squash` falhou (`the merge commit cannot be cleanly created`); `gh pr update-branch 283`
+  também falhou (`Cannot update PR branch due to conflicts`) — GitHub não consegue sincronizar
+  automaticamente via API, é preciso resolução manual local (rebase/merge da branch
+  `feature/ISSUE-278-endpoint-suggested` com `desenv`, mantendo **ambas** as actions —
+  `RegisterClick`/`RegisterClickAsync` de #277 e `GetSuggested` de #278 — no mesmo controller).
+  Resolução de conflito em código é fora do escopo do LT (não edita src/); devolvido ao Dev.
+- Suíte de testes **não executada pelo LT** (fora do escopo do LT — rodar/validar código de
+  aplicação é responsabilidade do Dev/Code Review, não do LT).
+
 ## Próximos passos
 
 - [x] Arquiteto: completar `design.md`.
@@ -236,11 +253,14 @@ issue mexe em `discount_pct`.
 - [x] Líder Técnico: merge PR #281 → `desenv` (squash), sub-issue #276 fechada.
 - [x] Dev #277 (T-02): endpoint `POST /api/public/products/{id}/click` — PR #282 aberto.
 - [x] Dev #278 (T-03): endpoint `GET /api/public/products/suggested` — PR #283 aberto.
+- [x] Líder Técnico: merge PR #282 (#277) → `desenv` (squash), sub-issue #277 fechada.
+- [ ] **Dev #278 (T-03): resolver conflito do PR #283 com `desenv`** — sincronizar a branch
+      `feature/ISSUE-278-endpoint-suggested` com `desenv` localmente (merge ou rebase), mantendo as
+      duas actions (`RegisterClick` de #277 + `GetSuggested` de #278) em
+      `PublicProductsController.cs`, rodar a suíte completa (~534-540 testes esperados, sem
+      regressão) e fazer push da branch. Depois disso o LT tenta o merge de #283 novamente.
 - [ ] Dev(s): implementar T-04/T-05 (#279, #280, independentes de schema; T-05 consome
       `ux-ui-spec.md`, depende de T-02+T-03 mergeados). Ver `tasks.md` para ordem de merge restante.
-- [ ] Líder Técnico: merge PR #282 (#277) e PR #283 (#278) → `desenv` (squash sequencial — mesmo
-      arquivo `PublicProductsController.cs`, conflito trivial esperado), sub-issues #277/#278
-      fechadas.
 
 ---
 
@@ -254,3 +274,4 @@ _Atualizado: 2026-08-21 — Dev (sub-issue #276/T-01 concluída: schema ProductC
 _Atualizado: 2026-08-21 — Líder Técnico (PR #281 mergeado em desenv via squash, sub-issue #276 fechada, desenv_tasks_merged: [#276]; proximo: Dev(s) para #277 e #278)_
 _Atualizado: 2026-08-21 — Dev (sub-issue #277/T-02 concluída: endpoint POST /api/public/products/{id}/click, 531/531 testes passando, validado contra Postgres real, PR #282 aberto; proximo: Líder Técnico para merge→desenv)_
 _Atualizado: 2026-08-21 — Dev (sub-issue #278/T-03 concluída: endpoint GET /api/public/products/suggested + Id no PublicDealDto, 534/534 testes passando, validado contra Postgres real, PR #283 aberto; proximo: Líder Técnico para merge→desenv de #277 e #278)_
+_Atualizado: 2026-08-21 — Líder Técnico (PR #282 mergeado em desenv via squash, sub-issue #277 fechada, desenv_tasks_merged: [#276, #277]; PR #283 (#278) em conflito real com desenv em PublicProductsController.cs — gh pr merge e gh pr update-branch falharam; resolução de código é escopo do Dev, não do LT; proximo: Dev(s) resolver conflito do #283 e depois LT tenta merge novamente)_
