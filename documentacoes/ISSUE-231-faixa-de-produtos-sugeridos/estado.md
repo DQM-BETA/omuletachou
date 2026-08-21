@@ -198,6 +198,34 @@ issue mexe em `discount_pct`.
   teste, container e imagem removidos após validação.
 - PR #282 (`feature/ISSUE-277-endpoint-registrar-clique` → `desenv`) aberto, pronto para merge do LT.
 
+## Dev — sub-issue #278 (T-03, concluído 2026-08-21)
+
+- `PublicProductsController.cs` (mesmo arquivo de T-02/#277 — conflito trivial esperado no merge
+  sequencial, já sinalizado em `tasks.md`) ganha `GET /api/public/products/suggested?categories=&hasResults=`,
+  `[EnableRateLimiting(RateLimiterConfigurator.PublicReadPolicy)]` (mesma policy de `GetDeals`).
+- Fallback decidido no backend (design.md §6): `categories` vazio/ausente OU `hasResults=false`
+  ignora o filtro de categoria e retorna o ranking geral; caso contrário, restringe às categorias
+  informadas (CSV, `Contains`). Ordenação `ClickCount DESC, CreatedAt DESC`, `LIMIT 10`, corte
+  mínimo de 4 (`< 4` → `[]`, não erro).
+- `PublicDealDto` ganha `Id` (uuid) — reaproveitado sem novo contrato, campo adicionado conforme
+  especificacao-tecnica.md §4.1. Teste existente `GetDeals_ApenasCamposAutorizados_...` (CA-D2)
+  atualizado para incluir `"id"` na lista de campos autorizados (Gate g — verificado, nenhuma outra
+  asserção de shape de `PublicDealDto` na suíte precisou de ajuste).
+- TDD: `PublicProductsControllerTests.cs` novo (8 testes, `WebApplicationFactory` + InMemory)
+  cobrindo ranking por categoria (`ClickCount` desc), presença de `id` no item, fallback geral
+  (`hasResults=false` ignora categoria), fallback com `categories` ausente, corte mínimo (`< 4` →
+  `[]`), desempate por `CreatedAt` desc quando nenhum produto tem clique, filtro de status
+  `Published`, limite de 10. Suíte completa: 534/534 passando (100%, sem regressão; eram 531 + 8
+  novos − 5 já contados de #277 aplicados nesta branch a partir de `desenv`).
+- Boot da aplicação confirmado sem exceção: imagem buildada a partir da branch, container efêmero
+  conectado ao Postgres real (`afiliado_db`) via rede Docker (`omuletachou_omuletachou_net`).
+  Validação ponta a ponta contra dados reais via `psql`: 4 produtos com `click_count` distintos
+  numa categoria de teste → ranking retornado na ordem correta (mais clicado primeiro); categoria
+  com apenas 1 produto → `[]` (corte mínimo confirmado); `hasResults=false` com categoria filtrada
+  → fallback geral (ignora a categoria, traz produtos reais do catálogo). Dados de teste, container
+  e imagem removidos após validação.
+- PR #283 (`feature/ISSUE-278-endpoint-suggested` → `desenv`) aberto, pronto para merge do LT.
+
 ## Próximos passos
 
 - [x] Arquiteto: completar `design.md`.
@@ -207,9 +235,12 @@ issue mexe em `discount_pct`.
 - [x] Dev #276 (T-01): schema `ProductClick` + `Product.ClickCount` + índices — PR #281 aberto.
 - [x] Líder Técnico: merge PR #281 → `desenv` (squash), sub-issue #276 fechada.
 - [x] Dev #277 (T-02): endpoint `POST /api/public/products/{id}/click` — PR #282 aberto.
-- [ ] Dev(s): implementar T-03 (#278, já desbloqueada) e T-04/T-05 (#279, #280, independentes de
-      schema; T-05 consome `ux-ui-spec.md`). Ver `tasks.md` para ordem de dependência/merge restante.
-- [ ] Líder Técnico: merge PR #282 → `desenv` (squash), sub-issue #277 fechada.
+- [x] Dev #278 (T-03): endpoint `GET /api/public/products/suggested` — PR #283 aberto.
+- [ ] Dev(s): implementar T-04/T-05 (#279, #280, independentes de schema; T-05 consome
+      `ux-ui-spec.md`, depende de T-02+T-03 mergeados). Ver `tasks.md` para ordem de merge restante.
+- [ ] Líder Técnico: merge PR #282 (#277) e PR #283 (#278) → `desenv` (squash sequencial — mesmo
+      arquivo `PublicProductsController.cs`, conflito trivial esperado), sub-issues #277/#278
+      fechadas.
 
 ---
 
@@ -222,3 +253,4 @@ _Atualizado: 2026-08-21 — UX/UI (ux-ui-spec.md concluído para a sub-issue #28
 _Atualizado: 2026-08-21 — Dev (sub-issue #276/T-01 concluída: schema ProductClick + Product.ClickCount + índices, migration aplicada/validada contra Postgres real, PR #281 aberto; proximo: Líder Técnico para merge→desenv)_
 _Atualizado: 2026-08-21 — Líder Técnico (PR #281 mergeado em desenv via squash, sub-issue #276 fechada, desenv_tasks_merged: [#276]; proximo: Dev(s) para #277 e #278)_
 _Atualizado: 2026-08-21 — Dev (sub-issue #277/T-02 concluída: endpoint POST /api/public/products/{id}/click, 531/531 testes passando, validado contra Postgres real, PR #282 aberto; proximo: Líder Técnico para merge→desenv)_
+_Atualizado: 2026-08-21 — Dev (sub-issue #278/T-03 concluída: endpoint GET /api/public/products/suggested + Id no PublicDealDto, 534/534 testes passando, validado contra Postgres real, PR #283 aberto; proximo: Líder Técnico para merge→desenv de #277 e #278)_
